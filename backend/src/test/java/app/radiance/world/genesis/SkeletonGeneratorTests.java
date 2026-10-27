@@ -40,7 +40,7 @@ class SkeletonGeneratorTests {
     assertThat(json(generate(7))).isNotEqualTo(json(generate(8)));
   }
 
-  @Property(tries = 15)
+  @Property(tries = 100) // 1,000 pass; CI draws different seeds every run
   void everySeedHonoursTheRosterAndTheGraphRules(@ForAll @LongRange(min = 1, max = 1_000_000) long seed) {
     var s = generate(seed);
     var byHandle = s.residents().stream().collect(Collectors.toMap(WorldSeed.Resident::handle, r -> r));

@@ -405,7 +405,8 @@ public final class SkeletonGenerator {
       var e = edge(pair[0], pair[1]);
       var t = temperaments.get(pair[0]);
       e.kind = kind;
-      e.familiarity = clampRange(fam + rng.nextGaussian(0, 4), 0, 100);
+      // An acquaintance stays below the meaningful-tie threshold (familiarity 40).
+      e.familiarity = clampRange(fam + rng.nextGaussian(0, 4), 0, kind.equals("ACQUAINTANCE") ? 38 : 100);
       double aff = band(kind, "aff", rng) + t.baseline() * 0.5 + chem(a, b) * 12 + rng.nextGaussian(0, 5);
       e.affinity = clampRange(aff, t.floor(), t.ceiling());
       e.trust = clampRange(band(kind, "trust", rng) + rng.nextGaussian(0, 6), 0, 100);
@@ -583,16 +584,22 @@ public final class SkeletonGenerator {
     // Two or three more debate rivalries: opposite politics, both argumentative enough.
     int rivals = 1 + rng.nextInt(2);
     var all = new ArrayList<>(traits.keySet());
-    for (int tries = 0; tries < 300 && rivals > 0; tries++) {
-      String a = rng.pick(all);
-      String b = rng.pick(all);
-      if (a.equals(b) || !hasTie(a, b) || edge(a, b).tags.stream().anyMatch(t -> t.startsWith("debate_rival"))) continue;
-      if (Math.signum(politics.get(a).economic()) == Math.signum(politics.get(b).economic())) continue;
-      if (traits.get(a).get("argumentativeness") < 50 || traits.get(b).get("argumentativeness") < 50) continue;
-      String topic = rng.pick(List.of("politics", "immigration", "religion", "sports", "economics"));
-      edge(a, b).tags.add("debate_rival:" + topic);
-      edge(b, a).tags.add("debate_rival:" + topic);
-      rivals--;
+    for (int bar : new int[] {50, 35, 0}) { // relax the argumentativeness bar until someone qualifies
+      var candidates = new ArrayList<String[]>();
+      for (var e : edges.values()) {
+        if (e.from.compareTo(e.to) >= 0 || e.tags.stream().anyMatch(t -> t.startsWith("debate_rival"))) continue;
+        if (Math.signum(politics.get(e.from).economic()) == Math.signum(politics.get(e.to).economic())) continue;
+        if (traits.get(e.from).get("argumentativeness") < bar || traits.get(e.to).get("argumentativeness") < bar) continue;
+        candidates.add(new String[] {e.from, e.to});
+      }
+      while (rivals > 0 && !candidates.isEmpty()) {
+        var pair = candidates.remove(rng.nextInt(candidates.size()));
+        String topic = rng.pick(List.of("politics", "immigration", "religion", "sports", "economics"));
+        edge(pair[0], pair[1]).tags.add("debate_rival:" + topic);
+        edge(pair[1], pair[0]).tags.add("debate_rival:" + topic);
+        rivals--;
+      }
+      if (rivals == 0) break;
     }
     // One real feud.
     for (int tries = 0; tries < 300; tries++) {
@@ -630,41 +637,49 @@ public final class SkeletonGenerator {
     return hasTie(a, b) && "FAMILY".equals(edge(a, b).kind);
   }
 
-  /** 5–12 meaningful ties each (§5.3): upgrade the loneliest, downgrade the busiest. */
+  /**
+   * 5–12 meaningful ties each (§5.3). Two passes, so fixing one person can't break another: first
+   * demote the busiest down to 12, then deepen ties for the loneliest, only toward people under 12.
+   */
   private void balanceMeaningfulTies(RandomSource rng) {
     for (String h : traits.keySet()) {
-      var mine = edges.values().stream().filter(e -> e.from.equals(h)).toList();
-      var meaningful = mine.stream().filter(this::meaningful).toList();
-      if (meaningful.size() > 12) {
-        var demote = new ArrayList<>(meaningful.stream()
-            .filter(e -> e.kind.equals("FRIEND") || e.kind.equals("COWORKER") || e.kind.equals("ACQUAINTANCE"))
-            .filter(e -> e.tags.isEmpty())
-            .sorted(Comparator.comparingDouble((Edge e) -> e.familiarity).thenComparing(e -> e.to))
-            .toList());
-        for (int i = 0; i < meaningful.size() - 12 && i < demote.size(); i++) {
-          var e = demote.get(i);
-          tie(e.from, e.to, "ACQUAINTANCE", true);
-        }
+      var meaningful = edges.values().stream().filter(e -> e.from.equals(h)).filter(this::meaningful).toList();
+      if (meaningful.size() <= 12) continue;
+      var demote = new ArrayList<>(meaningful.stream()
+          .filter(e -> e.kind.equals("FRIEND") || e.kind.equals("COWORKER") || e.kind.equals("ACQUAINTANCE"))
+          .filter(e -> e.tags.isEmpty())
+          .sorted(Comparator.comparingDouble((Edge e) -> e.familiarity).thenComparing(e -> e.to))
+          .toList());
+      for (int i = 0; i < meaningful.size() - 12 && i < demote.size(); i++) {
+        tie(demote.get(i).from, demote.get(i).to, "ACQUAINTANCE", true);
       }
-      int have = (int) edges.values().stream().filter(e -> e.from.equals(h)).filter(this::meaningful).count();
+    }
+    var all = new ArrayList<>(traits.keySet());
+    for (String h : traits.keySet()) {
+      int have = meaningfulCount(h);
       // Prefer deepening an existing acquaintance to inventing a new tie.
       var shallow = new ArrayList<>(edges.values().stream()
           .filter(e -> e.from.equals(h) && !meaningful(e) && e.tags.isEmpty())
           .sorted(Comparator.comparing((Edge e) -> -chem(e.from, e.to)).thenComparing(e -> e.to))
           .toList());
       for (int i = 0; i < shallow.size() && have < 5; i++) {
-        tie(h, shallow.get(i).to, "FRIEND", true);
+        String other = shallow.get(i).to;
+        if (meaningfulCount(other) >= 12) continue;
+        tie(h, other, "FRIEND", true);
         have++;
       }
-      var all = new ArrayList<>(traits.keySet());
-      for (int tries = 0; tries < 100 && have < 5; tries++) {
+      for (int tries = 0; tries < 200 && have < 5; tries++) {
         String other = rng.pick(all);
-        if (other.equals(h)) continue;
+        if (other.equals(h) || meaningfulCount(other) >= 12) continue;
         if (hasTie(h, other) && (meaningful(edge(h, other)) || !edge(h, other).tags.isEmpty())) continue;
         tie(h, other, "FRIEND", true);
         have++;
       }
     }
+  }
+
+  private int meaningfulCount(String h) {
+    return (int) edges.values().stream().filter(e -> e.from.equals(h)).filter(this::meaningful).count();
   }
 
   private boolean meaningful(Edge e) {
