@@ -5,8 +5,9 @@
 - **Blocked on R:** confirm CI is green for `m1-persistence` in GitHub Actions (private repo; `gh` not
   installed). Then fast-forward `main` to `m1-persistence` and push:
   `git checkout main && git merge --ff-only m1-persistence && git push origin main`.
-- Next: **M3 — Content library & genesis** (SPEC §12; M2 is the LLM gateway and comes first:
-  **start M2** on a new branch `m2-llm-gateway` from `m1-persistence`).
+- Next: **M2 — LLM gateway, providers & cost meter** (SPEC §12), on a new branch `m2-llm-gateway`
+  from `m1-persistence`. Its live contract tests need provider keys in `.env`; everything else runs
+  on fakes.
 - Half-done: nothing.
 
 ## Done
