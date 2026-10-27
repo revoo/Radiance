@@ -7,7 +7,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 
-/** {@code world-seed.json}: pretty, stable field order, written atomically so a crash never leaves half a file. */
+/**
+ * {@code world-seed.json}: pretty, stable field order, written atomically so a crash never leaves half a
+ * file. A readable {@code world-seed.md} cast sheet is written beside it.
+ */
 public final class SeedFiles {
 
   private SeedFiles() {}
@@ -23,6 +26,9 @@ public final class SeedFiles {
       var tmp = parent.resolve(file.getFileName() + ".tmp");
       Files.writeString(tmp, toJson(seed));
       Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+      String name = file.getFileName().toString();
+      var report = parent.resolve(name.endsWith(".json") ? name.substring(0, name.length() - 5) + ".md" : name + ".md");
+      Files.writeString(report, SeedReport.markdown(seed));
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }

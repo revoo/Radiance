@@ -523,6 +523,15 @@ public final class SkeletonGenerator {
       edge(jessica, megan).tags.add("best_friend");
       edge(megan, jessica).tags.add("best_friend");
     }
+    // A pinned relationship "showing cracks" (§6.3) shows it on the edge, not just in satisfaction.
+    for (var p : lib.roster().pinned()) {
+      var r = byName.get(p.name());
+      if (p.archetype() != null && p.archetype().toLowerCase().contains("cracks") && r.status().with() != null) {
+        var e = edge(handleOf.get(p.name()), handleOf.get(r.status().with()));
+        e.affinity = 38 + rng.nextInt(8);
+        e.trust = 45 + rng.nextInt(10);
+      }
+    }
     // Pinned debate rivals.
     for (var p : lib.roster().pinned()) {
       for (String tag : pinnedSeeds(p.name()).tags()) {

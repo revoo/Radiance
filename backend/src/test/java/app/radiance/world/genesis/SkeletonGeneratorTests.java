@@ -96,6 +96,7 @@ class SkeletonGeneratorTests {
     assertThat(edge(s, "megan.quinlan", "jessica.vogel").tags()).contains("best_friend", "suspects");
     assertThat(edge(s, "sarah.brennan", "tim.kaczmarek").tags()).contains("debate_rival:economics");
     assertThat(edge(s, "sarah.brennan", "ryan.kessler").kind()).isEqualTo("PARTNER");
+    assertThat(edge(s, "sarah.brennan", "ryan.kessler").affinity()).as("showing cracks").isLessThan(50);
 
     // starting arcs: the pinned seeds plus others; at least 5 active
     assertThat(s.arcs()).hasSizeGreaterThanOrEqualTo(5);

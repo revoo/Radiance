@@ -1,26 +1,36 @@
 # Progress
 
 ## Resume here
-- Milestone: **M3 — Content library & genesis**, branch `m3-content-genesis` (from `main` at 0615af7,
-  which holds M0–M2, CI green). Ends at ⏸ REVIEW.
-- Current step: 6 — onboarding + first impressions (steps 1–5 committed: content module, starter library,
-  roster, skeleton generator, flesh-out + seed import + genesis task).
+- Milestone: **M3 — Content library & genesis**, branch `m3-content-genesis` (from `main` at 0615af7).
+  All steps done and pushed; **stopped at ⏸ REVIEW** (R reads the cast and the world bible's
+  Chicagoland section, edits either). `main` is fast-forwarded after R signs off.
+- Review material: `backend/data/world-seed.md` (cast sheet, seed 7 skeleton) and
+  `backend/src/main/resources/content/prompts/world-bible.md` (Chicagoland section).
+- Real prose needs a model: put `ANTHROPIC_API_KEY` in `.env`, then
+  `./gradlew :backend:genesis --args='--seed 7'` (fills prose into the existing skeleton; resumable).
+- After R's edits: `./gradlew :backend:genesis --args='--import'`, then start **M4** on a new branch.
 - Half-done: nothing.
-- M2's live-provider ACs need R's keys: put them in `.env` and run `./gradlew :backend:liveTest`.
-- CI runs: `https://api.github.com/repos/revoo/Radiance/actions/runs` (public repo).
 
-## M3 steps
-1. `content` module: def schemas, YAML loader, cross-validation, blacklist, theme linter (ADR 0015) ✔
-2. Starter library: 26 quirks, 58 events, 16 arcs, 16 constraint tags, rules files ✔
-3. `roster.yaml` (30 + you + pinned) with §6.2 validation ✔
-4. Skeleton generator (seeded) ✔: traits, politics, biases, quirks, interests, taste, temperament,
-   faithfulness, routines, relationship graph, starting arcs, entities
-5. ✔ Flesh-out on the `genesis` route (5 per call) + relationship backstories; theme-linter rejection;
-   `world-seed.json` export/import; `genesis` Gradle task; director endpoints; regenerate one resident
-6. R's onboarding and first impressions
-7. World bible (Chicagoland section for review), PROGRESS, ⏸ REVIEW handoff
+## M3 steps (all ✔)
+1. `content` module: def schemas, YAML loader, cross-validation, blacklist, theme linter (ADR 0015)
+2. Starter library: 26 quirks, 58 events, 16 arcs, 16 constraint tags, rules files, curated tables
+3. `roster.yaml` (30 + you + pinned) with §6.2 validation
+4. Skeleton generator (seeded)
+5. Flesh-out (genesis route) + relationship backstories; `world-seed.json`/`.md`; import; `genesis`
+   task; director endpoints; regenerate one resident (ADR 0016)
+6. R's onboarding and first impressions (`PUT /api/profile`)
+7. World bible with the Chicagoland section
 
 ## Done
+- **M3 — Content library & genesis** (2026-10-27), branch `m3-content-genesis` — at ⏸ REVIEW:
+  - AC: `genesis --seed 7` is deterministic at the skeleton level ✔ (byte-identical JSON; 15 random seeds
+    property-tested); import yields exactly the roster's 30 residents with identities unchanged, 206
+    relationship rows (150–300 ✔) and 8 active arcs including the pinned seeds ✔; invalid defs, an
+    invalid roster or a pinned seed naming a blacklisted arc fail startup with a clear message ✔; genesis
+    output never mentions a blacklisted theme ✔ (regenerated once, then rejected; import re-checks).
+  - Verified end to end offline: `./gradlew genesis --args='--seed 7 --import'` → 30 residents, 206–208
+    ties, 8 arcs, 8 entities, 40 family facts.
+  - Tests: 120 in `check`.
 - **M2 — LLM gateway, providers & cost meter** (2026-10-27), branch `m2-llm-gateway`:
   - `LlmGateway` by purpose; `RouteTable` from `radiance.llm` (§9) with startup checks; FAKE mode for
     `offline`/`test`; keyless models skipped in LIVE mode, empty routes served by FakeLlm with a warning.
@@ -95,12 +105,16 @@ Resolutions of spec issues raised at kickoff. Each gets an ADR when its mileston
 - Schema: `ux_job_active` covers WAITING; `render_status` CHECKs on comment/dm_message; two extra
   read-path indexes (ADR 0013).
 - Writes outside the writer lane exist for bootstrap and the lease only, via `SqlAdmin` (ADR 0012).
+- New `content` module (not in §3.5) for defs, rules, roster, tables and prompts (ADR 0015).
+- Genesis backfill + first script deferred to M4/M6; avatars to M12; onboarding UI to M7 (ADR 0016).
+- Flesh-out resumes from file checkpoints until the JobRunner exists (M5) (ADR 0016).
 - Shared vocabulary enums (`AirStatus`, `RenderStatus`, `Visibility`, `Fidelity`, `ContentOrigin`) live
   in `kernel`, beyond §3.5's list for it, to keep modules acyclic (ADR 0013).
 
 - `LlmRequest` has an extra `priority` component; `Usage.input` means uncached input (ADR 0014).
 
 ## Open questions for R
+- M3 REVIEW: see the review list in the M3 hand-off (cast sheet, world bible, quirk spread, prejudice).
 - Provider keys: which providers will you use? Put their keys in `.env` and run
   `./gradlew :backend:liveTest` (well under a cent at default models) to close M2's live ACs, including
   two unverified Anthropic details (Appendix C note).

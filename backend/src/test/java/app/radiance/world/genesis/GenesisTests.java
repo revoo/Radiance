@@ -186,5 +186,6 @@ class GenesisTests {
     var file = dir.resolve("data/world-seed.json");
     SeedFiles.write(file, s);
     assertThat(SeedFiles.read(file)).isEqualTo(s);
+    assertThat(dir.resolve("data/world-seed.md")).content().contains("### Sarah Brennan ★", "Known only to Jessica Vogel and");
   }
 }
