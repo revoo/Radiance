@@ -1,27 +1,35 @@
 # Progress
 
 ## Resume here
-- Milestone: **M2 — LLM gateway, providers & cost meter**, branch `m2-llm-gateway` (from `main` at
-  6bc40df, which holds M0+M1; CI green; repo is public, so CI runs are readable at
-  `https://api.github.com/repos/revoo/Radiance/actions/runs`).
-- Current step: 6 — Spring wiring, live contract tests, ADRs (steps 1–5 committed).
+- M0, M1 and M2 are complete. M2 is on `m2-llm-gateway`; once its CI run is green, `main` is
+  fast-forwarded to it. CI runs are readable at
+  `https://api.github.com/repos/revoo/Radiance/actions/runs` (public repo).
+- M2's live-provider ACs need R's keys: put them in `.env` and run `./gradlew :backend:liveTest`.
+- Next: **M3 — Content library & genesis** on a new branch `m3-content-genesis` from `main`. It ends
+  at ⏸ REVIEW (R reads the cast and the world bible's Chicagoland section).
 - Half-done: nothing.
-- Next command: `./gradlew check`.
-
-## M2 steps
-1. `llm` types (Purpose, LlmRequest/Result, Usage, Outcome, Block/Part, Priority), `LlmProperties`,
-   record → JSON Schema generator, output parser/validator (fences, extraction, enum casing)
-2. Provider SPI, `FakeLlm`, route table with capability checks and keyless-model skipping
-3. Gateway: retries with backoff, one repair call, fallbacks, truncation retry, circuit breaker,
-   per-provider priority semaphores, cost from alias prices, `llm_call` log, Micrometer, batch warm-up
-4. Budget windows (daily/monthly/batch USD + provider quotas) persisted in `budget_window`; quota
-   errors close a provider until reset; `BudgetExhaustedException(window, resumeAt)` for parking;
-   degradation level from budget pressure
-5. `OpenAiCompatibleLlm`, `AnthropicLlm` (tested with MockRestServiceServer), `ReplayLlm` + recorder
-6. Spring wiring + profiles (`offline`/`test` = fake), `.env` import, `@Tag("live")` contract tests and
-   a `liveTest` Gradle task, prompt store; ADRs; PROGRESS; push; CI; fast-forward main
 
 ## Done
+- **M2 — LLM gateway, providers & cost meter** (2026-10-27), branch `m2-llm-gateway`:
+  - `LlmGateway` by purpose; `RouteTable` from `radiance.llm` (§9) with startup checks; FAKE mode for
+    `offline`/`test`; keyless models skipped in LIVE mode, empty routes served by FakeLlm with a warning.
+  - Output records → JSON Schema; parser strips fences/prose, validates with paths, normalizes enum
+    casing; one repair call; fallbacks; transient retries; truncation retry; 5×/5-min circuit breaker;
+    priority-ordered per-provider concurrency; batch warm-up (`callAll`); prompt notes per alias.
+  - Adapters: `AnthropicLlm` (Messages, cache_control, output_config, effort/thinking from params,
+    never sampling params) and `OpenAiCompatibleLlm` (json_schema/json_object/prompt, Workers AI
+    envelope); `FakeLlm`; record/replay (`Recordings`).
+  - Cost from alias prices; `llm_call` rows; Micrometer `radiance.llm.*`; budget windows
+    (daily/monthly/per-batch USD, provider quotas, 429 closures) in `budget_window`;
+    `BudgetExhaustedException` parks non-live work; degradation level 0–6.
+  - Tests: 99 in `check` (fakes, MockRestServiceServer); `liveTest` runs only by hand.
+  - AC: offline runs with no keys ✔; moving a purpose between providers is config only ✔ (unit test;
+    the live half needs keys); a route lacking a needed capability fails startup ✔; JSON-only output is
+    validated and repaired ✔; a simulated outage falls over ✔; cache reads recorded wherever reported
+    ✔ (adapter + gateway tests; live check needs keys); haiku returns no thinking blocks — **live test
+    written, not yet run (no keys)**; a budget breach parks work until its window resets (fake clock) ✔;
+    a quota error closes the provider's window until its reset ✔.
+  - ADR 0014.
 - **M1 — Persistence & schema** (2026-10-27), branch `m1-persistence`:
   - Kernel: deterministic `Ulid` (time + seeded stream), `WallClock`/`ManualClock`, in-house
     xoshiro256** `RandomSource` (reference vector + golden values pinned), `Json` (Jackson 3).
@@ -79,6 +87,9 @@ Resolutions of spec issues raised at kickoff. Each gets an ADR when its mileston
 - Shared vocabulary enums (`AirStatus`, `RenderStatus`, `Visibility`, `Fidelity`, `ContentOrigin`) live
   in `kernel`, beyond §3.5's list for it, to keep modules acyclic (ADR 0013).
 
+- `LlmRequest` has an extra `priority` component; `Usage.input` means uncached input (ADR 0014).
+
 ## Open questions for R
-- Please confirm the CI runs for `m0-scaffold` and `m1-persistence` are green in GitHub Actions (or
-  install `gh` and run `gh auth login` so I can check runs myself).
+- Provider keys: which providers will you use? Put their keys in `.env` and run
+  `./gradlew :backend:liveTest` (well under a cent at default models) to close M2's live ACs, including
+  two unverified Anthropic details (Appendix C note).

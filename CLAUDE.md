@@ -28,6 +28,7 @@ Source of truth: SPEC.md. Status: PROGRESS.md. Decisions: docs/adr/.
 - Nightly batch, one-shot: `./gradlew batch` (runs `batch nightly` and exits)
 - Simulation harness: `./gradlew simulate --args='--days=30 --seed=42'`
 - Model bake-off: `./gradlew llm-bakeoff --args='--purpose=render-thread --models=haiku,<candidate>'`
+- Live LLM contract tests (opt-in, costs cents; keys from env or .env): `./gradlew :backend:liveTest`
 - Frontend: `npm run dev` · `npm test` · `npm run build`
 
 ## Conventions
