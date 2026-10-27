@@ -2,14 +2,32 @@
 
 ## Resume here
 - Milestone: **M3 — Content library & genesis**, branch `m3-content-genesis` (from `main` at 0615af7).
-  All steps done and pushed; **stopped at ⏸ REVIEW** (R reads the cast and the world bible's
-  Chicagoland section, edits either). `main` is fast-forwarded after R signs off.
-- Review material: `backend/data/world-seed.md` (cast sheet, seed 7 skeleton) and
-  `backend/src/main/resources/content/prompts/world-bible.md` (Chicagoland section).
-- Real prose needs a model: put `ANTHROPIC_API_KEY` in `.env`, then
-  `./gradlew :backend:genesis --args='--seed 7'` (fills prose into the existing skeleton; resumable).
-- After R's edits: `./gradlew :backend:genesis --args='--import'`, then start **M4** on a new branch.
-- Half-done: nothing.
+  Steps 1–7 done and pushed (last code commit cd81df4, which fixed the CI failure in the genesis graph
+  property). **Paused for R's 5-hour budget window** before the in-session authoring step R asked for
+  (decisions 13–15 below, ADR 0017). Don't start M4.
+- Next, in order (each ends green and committed):
+  1. **Appearance + provenance + authored source** (code). Add `String appearance` last in
+     `FleshOut.Person` and `WorldSeed.Resident`, and `String provenance` last in `WorldSeed`; update every
+     constructor call (SkeletonGenerator.resident/run, FleshOut.merge/clearProse/withEntityLooks/replace/
+     tieChunk, GenesisTests' renamed-Jake and poisoned-person cases), GenesisFakes (placeholder
+     appearance), SeedImporter (`identity.appearance`), SeedReport ("Looks:" line, "Prose:" line), and the
+     `genesis.md` prompt (an appearance rule). In FleshOut, include `appearance` in the theme-linter text.
+     Then extract a `FleshOut.Source` (gateway vs authored): the authored one reads
+     `content/genesis/seed-7/residents-*.json` (`{"residents":[Person…]}`) and `ties-*.json`
+     (`{"pairs":[Tie…]}`), parses each file with `OutputParser.parse(text, Batch.class|Ties.class)`, and
+     answers only the requested handles/pairs. Add `--authored` to GenesisCommand, GenesisService.preview
+     and the director endpoint; set provenance "authored in-session by Opus (content/genesis/seed-7)".
+  2. **Regenerate the seed-7 skeleton first** (`./gradlew :backend:genesis -Pprofile=offline
+     --args='--seed 7 --skeleton-only'`; delete `backend/data/world-seed.*` beforehand) — commit cd81df4
+     changed the graph, so author against the new `world-seed.md`.
+  3. **Author residents in 6 batches of 5**, one commit each (`residents-1.json` … `residents-6.json`):
+     bio, ~150-word backstory, voice card with 3 posts + 2 comments, values/fears/desires, entity looks,
+     appearance. Consistent with every skeleton fact; no new named people; nothing blacklisted.
+  4. **Author relationship backstories** (`ties-*.json`) for every pair in the seed.
+  5. Add a test that the shipped authored files cover seed 7 (30 handles, all pairs, schema, linter),
+     run `--seed 7 --authored`, then hand off ⏸ REVIEW with `backend/data/world-seed.md`.
+- Check that CI is green for cd81df4 at `https://api.github.com/repos/revoo/Radiance/actions/runs`.
+- Half-done: nothing (an attempted edit for step 1 was reverted; the tree matches cd81df4 plus docs).
 
 ## M3 steps (all ✔)
 1. `content` module: def schemas, YAML loader, cross-validation, blacklist, theme linter (ADR 0015)
@@ -98,6 +116,35 @@ Resolutions of spec issues raised at kickoff. Each gets an ADR when its mileston
 11. `offline` means no network: fake weather, fixture headlines.
 12. Real-world ties outside a shared circle (Kristen–Deepa neighbors, Eleni–Sam realtor) are seeded
     as genesis edges despite the "Online" circle's definition.
+
+## Decisions from R (2026-10-27, during M3; relayed by the planning session)
+13. **Build-time content is authored in-session by Opus** (ADR 0017): the content library, the world
+    bible and prompt templates, model prompt-notes, bake-off fixture packets, and the genesis
+    flesh-out (bios, backstories, voice cards, values/fears/desires, entity looks, relationship
+    backstories, per-resident appearance). It goes through the same validation as model output and
+    records its provenance. The API flesh-out path and per-resident regeneration stay built and tested
+    on FakeLlm; the genesis route config is unchanged. Runtime work (nightly renders, live replies,
+    appraisals, headline classification) still needs a model API; keys become necessary at M5 and for
+    M2's live checks.
+14. **Images by purpose (M12, open until then).** Image fidelity matters, especially for people; some
+    spend is fine if it's worth it.
+    - A PREMIUM provider for avatars (generated once at genesis, reused everywhere) and arc-milestone
+      photos (soft launch, new car, finished kitchen, engagement…); FREE Workers AI FLUX for everyday
+      photos (food, sunsets, weather, memes, low-stakes shots).
+    - Candidates: Black Forest Labs' top FLUX models (BFL API, fal.ai or Replicate), Google's Gemini
+      image models (strong reference-image character consistency), OpenAI's image model. Verify current
+      prices and APIs at the time; don't trust memory.
+    - Before choosing: an image bake-off of ~6 fixed prompts (2 avatars, a car in a driveway, a group
+      from behind at a bar, a snowy Berwyn street, a kitchen mid-renovation) on 2–3 premium candidates
+      plus the free tier, side by side with cost per image; R picks by eye.
+    - An ADR before adding the new external service (§0); images get their own budget window so image
+      spend can't eat the LLM budget; §5.13 rules hold (no identifiable faces except avatars, no
+      children, no real people, no logos or text).
+    - M3 adds a canonical per-resident appearance line (age, build, hair, style, typical setting); the
+      avatar prompt is built from it, and it's kept for future reference-image consistency (same face
+      across posts stays V2).
+15. **Budget:** R works in 5-hour usage windows. Finish M3 and stop at its REVIEW; don't start M4.
+    Authoring the 30 residents is its own resumable step (batches of 5, one commit each).
 
 ## Deviations from spec
 - TypeScript pinned to 6.0.x, not latest (7.x), for typescript-eslint compatibility (ADR 0009).
