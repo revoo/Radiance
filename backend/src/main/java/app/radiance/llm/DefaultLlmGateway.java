@@ -58,6 +58,7 @@ public final class DefaultLlmGateway implements LlmGateway {
   private final Map<String, PrioritySemaphore> slots = new ConcurrentHashMap<>();
   private final Map<String, Double> charsPerToken = new ConcurrentHashMap<>();
   private final RandomSource ids = RandomSource.seeded(new SecureRandom().nextLong());
+  private volatile PromptStore promptStore = PromptStore.NONE;
 
   public DefaultLlmGateway(
       RouteTable routes,
@@ -79,6 +80,12 @@ public final class DefaultLlmGateway implements LlmGateway {
     this.backoff = backoff;
     this.promptNotes = promptNotes;
     this.breaker = new CircuitBreaker(clock);
+  }
+
+  /** Keeps prompts and responses for the prompt inspector ({@code store-prompts}). */
+  public DefaultLlmGateway promptStore(PromptStore store) {
+    this.promptStore = store;
+    return this;
   }
 
   /** Swaps in new routes (live-tuned from the Director's console, M13). */
@@ -273,10 +280,12 @@ public final class DefaultLlmGateway implements LlmGateway {
     synchronized (ids) {
       id = Ulid.next(clock.nowMs(), ids);
     }
+    long now = clock.nowMs();
+    String promptRef = promptStore.store(id, now, providerRequest, resp);
     callLog.record(new LlmCallLog.Entry(id, request.purpose(), target.providerName(), target.alias(),
         resp.modelId() != null ? resp.modelId() : target.model().id(), attemptNo, resp.outcome(),
         tokens.input(), tokens.cachedInput(), tokens.cacheWrite(), tokens.output(), tokens.reasoning(),
-        cost, latency, resp.error(), null, clock.nowMs()));
+        cost, latency, resp.error(), promptRef, now));
     meter(request.purpose(), target, resp.outcome(), tokens, cost, latency);
     return new Attempt(resp, usage, id);
   }

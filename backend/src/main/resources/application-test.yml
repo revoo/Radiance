@@ -1,4 +1,8 @@
 # Each test context gets its own throwaway database (SPEC §4.1: tests use separate files).
+# Automated tests never call a paid API (SPEC §0): every route is FakeLlm.
 radiance:
   persistence:
     db-path: ${java.io.tmpdir}/radiance-test/${random.uuid}.db
+  llm:
+    mode: fake
+    store-prompts: false

@@ -1,6 +1,9 @@
 spring:
   application:
     name: radiance
+  config:
+    # Secrets from a git-ignored .env at the repo root (bootRun runs in backend/) or the working dir.
+    import: "optional:file:../.env[.properties],optional:file:.env[.properties]"
   threads:
     virtual:
       enabled: true
@@ -32,3 +35,62 @@ radiance:
     network-name: Radiance
     roster: content/cast/roster.yaml
     seed: 42                           # placeholder world row only; genesis picks the real seed
+  llm:                                 # SPEC §9. The offline and test profiles set mode: fake.
+    mode: live                         # live: real providers whose keys are present; fake: FakeLlm everywhere
+    providers:                         # one entry per endpoint; keys come from env or .env
+      anthropic:  { kind: anthropic, api-key: "${ANTHROPIC_API_KEY:}", max-concurrency: 6 }
+      openai:     { kind: openai-compatible, base-url: "https://api.openai.com/v1", api-key: "${OPENAI_API_KEY:}", max-concurrency: 6, max-tokens-field: max_completion_tokens }
+      gemini:     { kind: openai-compatible, base-url: "https://generativelanguage.googleapis.com/v1beta/openai/", api-key: "${GEMINI_API_KEY:}", max-concurrency: 4 }
+      workers-ai: { kind: openai-compatible, base-url: "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID:}/ai/v1", api-key: "${CF_AI_API_TOKEN:}", max-concurrency: 4 }
+      ollama:     { kind: openai-compatible, base-url: "http://localhost:11434/v1", max-concurrency: 1 }   # local models for dev; needs no key
+      # A plan with limits gets quota windows, e.g. quotas: [{ requests: 1500, per: day, resets-at: "00:00", zone: America/Los_Angeles }]
+      # or [{ tokens: 250000, per: minute }]. Copy them from your plan; free tiers usually have them.
+    models:                            # aliases; prices in USD per million tokens, update when they change
+      haiku:
+        provider: anthropic
+        id: claude-haiku-5-5
+        capabilities: { structured-output: SCHEMA, vision: true, prompt-caching: EXPLICIT, max-context: 100000 }   # under Haiku 5.5's 100k price step
+        params: { effort: low, thinking: disabled }        # Haiku 5.5 thinks by default otherwise
+        pricing: { input: 0.10, cached-input: 0.01, cache-write: 0.125, output: 0.50 }
+      sonnet:
+        provider: anthropic
+        id: claude-sonnet-5-5
+        capabilities: { structured-output: SCHEMA, vision: true, prompt-caching: EXPLICIT, max-context: 100000 }
+        params: { effort: medium, thinking: between_tools } # Sonnet 5.5's lowest thinking setting
+        pricing: { input: 2.00, cached-input: 0.10, cache-write: 2.50, output: 10.00 }
+      # Bake-off candidates (Appendix C). Verify capabilities with ./gradlew :backend:liveTest before routing to them.
+      # luna:
+      #   provider: openai
+      #   id: gpt-6-luna
+      #   capabilities: { structured-output: SCHEMA, vision: true, prompt-caching: AUTOMATIC, max-context: 100000 }
+      #   params: { reasoning_effort: none }               # reasons at medium by default
+      #   pricing: { input: 0.10, cached-input: 0.01, cache-write: 0.125, output: 0.50 }
+      # flash-lite:
+      #   provider: gemini
+      #   id: gemini-3.1-flash-lite
+      #   capabilities: { structured-output: SCHEMA, vision: true, prompt-caching: AUTOMATIC, max-context: 100000 }
+      #   params: { reasoning_effort: low }                # Gemini 3 models can't turn reasoning off
+      #   pricing: { input: 0.25, cached-input: 0.025, output: 1.50 }
+      # llama-8b:
+      #   provider: workers-ai
+      #   id: "@cf/meta/llama-3.1-8b-instruct"
+      #   capabilities: { structured-output: JSON, vision: false, prompt-caching: NONE, max-context: 8000 }
+      #   pricing: { input: 0.282, output: 0.827 }         # billed once the free daily neurons run out
+      # local-dev: { provider: ollama, id: "<a model you've pulled>", capabilities: { structured-output: JSON }, pricing: { input: 0, output: 0 } }
+    routes:                            # purpose → model alias + fallbacks; live-tunable (M13)
+      render-thread:     { model: haiku }
+      render-dm:         { model: haiku }
+      live-comment:      { model: haiku }
+      appraisal:         { model: haiku }
+      vision-appraisal:  { model: haiku }
+      headline-classify: { model: haiku }
+      linter-judge:      { model: haiku }
+      compaction:        { model: haiku }
+      summary:           { model: haiku }
+      recap:             { model: sonnet, fallback: [haiku] }
+      genesis:           { model: sonnet, fallback: [haiku] }
+    max-prompt-tokens: 24000           # hard cap; a route's smallest max-context applies too
+    budgets: { daily-usd: 1.00, per-batch-usd: 0.30, monthly-usd: 10.00 }   # daily resets at midnight Central, monthly on the 1st
+    store-prompts: true                # feeds the prompt inspector and the bake-off
+    prompt-store-dir: data/prompts
+    recordings: { mode: "OFF", dir: data/llm-recordings }   # OFF | RECORD | REPLAY

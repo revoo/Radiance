@@ -1,0 +1,5 @@
+# Opt-in live contract tests (./gradlew :backend:liveTest): real providers whose keys are present.
+radiance:
+  llm:
+    mode: live
+    store-prompts: false

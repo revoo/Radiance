@@ -1,7 +1,6 @@
 package app.radiance.llm.provider;
 
 import app.radiance.llm.Outcome;
-import java.net.http.HttpClient;
 import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -12,7 +11,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 /** What the HTTP adapters share: the client, the per-request timeout and status mapping. */
@@ -24,11 +22,6 @@ final class Http {
   private static final Pattern RETRY_DELAY = Pattern.compile("\"retryDelay\"\\s*:\\s*\"(\\d+)s\"");
 
   private Http() {}
-
-  static RestClient.Builder clientBuilder() {
-    var http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
-    return RestClient.builder().requestFactory(new JdkClientHttpRequestFactory(http));
-  }
 
   static RestClient.RequestHeadersSpec.ExchangeFunction<Raw> raw() {
     return (req, res) -> new Raw(res.getStatusCode().value(), res.getHeaders(),

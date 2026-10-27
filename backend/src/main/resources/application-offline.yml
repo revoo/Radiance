@@ -2,3 +2,5 @@
 radiance:
   security:
     dev-login: true
+  llm:
+    mode: fake

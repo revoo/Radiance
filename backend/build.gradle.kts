@@ -46,9 +46,25 @@ val nativeAccess = "--enable-native-access=ALL-UNNAMED"
 tasks.test {
     useJUnitPlatform {
         includeEngines("junit-jupiter", "jqwik")
+        excludeTags("live") // never call paid APIs in automated runs (SPEC §0)
     }
     systemProperty("user.timezone", "UTC")
     jvmArgs(nativeAccess)
+}
+
+// Opt-in contract tests against real providers whose keys are in the environment or .env.
+val liveTest by tasks.registering(Test::class) {
+    description = "Runs @Tag(\"live\") contract tests against real LLM providers (costs a few cents)."
+    group = "verification"
+    testClassesDirs = sourceSets["test"].output.classesDirs
+    classpath = sourceSets["test"].runtimeClasspath
+    useJUnitPlatform {
+        includeEngines("junit-jupiter")
+        includeTags("live")
+    }
+    systemProperty("user.timezone", "UTC")
+    jvmArgs(nativeAccess)
+    outputs.upToDateWhen { false }
 }
 
 tasks.bootRun {
