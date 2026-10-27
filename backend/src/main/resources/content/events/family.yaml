@@ -1,0 +1,81 @@
+# FAMILY (SPEC §5.4): off-network family, holidays together, births in the wider family (announced as
+# births, never as pregnancies: the pregnancy theme is blacklisted, §5.5).
+- id: kid_milestone
+  category: FAMILY
+  base_rate: 0.05
+  modifiers: { has_kids: 6.0, quirk.oversharer: 2.0 }
+  importance: 3
+  tags: [ parenting ]
+  output: { post: STATUS, brief: "a kid milestone or a kid quote; no photos of children" }
+
+- id: parent_visit
+  category: FAMILY
+  base_rate: 0.01
+  importance: 2
+  tags: [ family_visit ]
+  output: { post: STATUS, brief: "a visit with their parents: a grandmother's recipe, a family argument, an old neighborhood" }
+
+- id: family_birth_announcement
+  category: FAMILY
+  base_rate: 0.0015
+  cooldown_days: 365
+  importance: 5
+  output: { post: STATUS, brief: "a new niece, nephew or first grandchild in the off-network family, announced as a birth: 'Welcome to the world, <name>!'" }
+  effects: { mood: 0.4 }
+
+- id: holiday_family_photo
+  category: FAMILY
+  when: { calendar: [ thanksgiving, christmas, christmas_eve, easter ] }
+  base_rate: 0.35
+  importance: 3
+  output: { post: PHOTO, brief: "the holiday table, the tree, or the chaos; family drama hinted at",
+            media: "a crowded holiday dinner table seen from one end, no faces" }
+
+- id: mothers_day_post
+  category: FAMILY
+  when: { calendar: [ mothers_day ] }
+  base_rate: 0.45
+  importance: 3
+  output: { post: STATUS, brief: "a Mother's Day post for their mom, grandmother, or wife" }
+
+- id: fathers_day_post
+  category: FAMILY
+  when: { calendar: [ fathers_day ] }
+  base_rate: 0.40
+  importance: 3
+  output: { post: STATUS, brief: "a Father's Day post for their dad, grandfather, or husband" }
+
+- id: diwali_lights
+  category: FAMILY
+  when: { calendar: [ diwali ] }
+  base_rate: 0.7
+  requires: { traditions: [ hindu ] }
+  importance: 3
+  output: { post: PHOTO, brief: "Diwali at home: diyas, sweets, family over",
+            media: "lit clay diyas on a windowsill at night" }
+
+- id: eid_celebration
+  category: FAMILY
+  when: { calendar: [ eid_al_fitr ] }
+  base_rate: 0.7
+  requires: { traditions: [ muslim ] }
+  importance: 3
+  output: { post: PHOTO, brief: "Eid with family after Ramadan: food, visits, new clothes",
+            media: "a table of sweets and tea glasses at a family gathering" }
+
+- id: orthodox_easter
+  category: FAMILY
+  when: { calendar: [ orthodox_easter ] }
+  base_rate: 0.6
+  requires: { traditions: [ serbian orthodox, greek orthodox ] }
+  importance: 3
+  output: { post: PHOTO, brief: "Orthodox Easter: red eggs, lamb, church at midnight",
+            media: "a bowl of red-dyed Easter eggs on a lace tablecloth" }
+
+- id: high_holidays
+  category: FAMILY
+  when: { calendar: [ rosh_hashanah, hanukkah, passover ] }
+  base_rate: 0.4
+  requires: { traditions: [ jewish ] }
+  importance: 3
+  output: { post: STATUS, brief: "a holiday with family: brisket debates, latkes, a seder that ran long" }

@@ -1,0 +1,31 @@
+id: breakup_aftermath
+category: LIFE
+description: "The weeks after a breakup: raw, then healing, then a new normal."
+roles:
+  person: {}
+  ex: {}
+start:
+  base_rate_per_year: 0                 # only ever started by a breakup or a split
+max_silence_days: 10
+abandon: moved_on
+phases:
+  - id: raw
+    duration_days: [5, 14]
+    visibility: PUBLIC
+    constraints: [ "avoids:{ex}" ]
+    beats:
+      - { kind: STATUS, brief: "a vague post about people showing who they really are", max_per_week: 2 }
+      - { kind: REACTIONS, brief: "close friends rally in the comments" }
+    next: healing
+  - id: healing
+    duration_days: [14, 45]
+    visibility: PUBLIC
+    constraints: [ "avoids:{ex}" ]
+    beats:
+      - { kind: STATUS, brief: "self-care, new routines, a girls'/guys' night out" }
+      - { kind: PHOTO, brief: "a fresh start: new haircut, rearranged apartment, a solo trip to the lake" }
+    next: moved_on
+  - id: moved_on
+    visibility: PUBLIC
+    entry_event: { type: MOVED_ON, importance: 3, post: STATUS, effects: { mood: 0.2 } }
+    terminal: true

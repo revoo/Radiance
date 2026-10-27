@@ -1,0 +1,45 @@
+id: feud
+category: DRAMA
+description: "Two residents who can't stand each other, and everyone picks a side."
+roles:
+  a: {}
+  b: { requires: { relationship_with: { affinity_max: -20 } } }
+start:
+  base_rate_per_year: 0.05             # per eligible pair
+  requires: { affinity_max: -30 }
+exclusive_with: [ feud ]
+max_silence_days: 10
+abandon: truce
+phases:
+  - id: simmering
+    duration_days: [7, 21]
+    visibility: PUBLIC
+    beats: [ { kind: STATUS, brief: "a vague post aimed at someone everyone can identify" } ]
+    next: open
+  - id: open
+    duration_days: [5, 14]
+    visibility: PUBLIC
+    entry_event:
+      type: FEUD_ERUPTS
+      importance: 7
+      post: STATUS
+      effects: { add_relationship_tags: [ "a <-> b: feud" ], tension: 6, "a <-> b": { affinity: -15, respect: -10 } }
+    constraints: [ "avoids:{b}" ]
+    beats: [ { kind: REACTIONS, brief: "friends take sides in the comments" } ]
+    next: cold_war
+  - id: cold_war
+    duration_days: [14, 45]
+    visibility: PUBLIC
+    constraints: [ "avoids:{b}" ]
+    beats: [ { kind: MENTION, brief: "a pointed jab in someone else's thread" } ]
+    transitions: [ { to: truce, p: 0.5 }, { to: unfriended, p: 0.5 } ]
+  - id: truce
+    visibility: PUBLIC
+    entry_event: { type: FEUD_TRUCE, importance: 4, post: STATUS,
+                   effects: { remove_relationship_tags: [ "a <-> b: feud" ] } }
+    terminal: true
+  - id: unfriended
+    visibility: PUBLIC
+    entry_event: { type: UNFRIENDED, importance: 5, post: STATUS,
+                   effects: { add_relationship_tags: [ "a <-> b: avoiding" ] } }
+    terminal: true

@@ -1,0 +1,360 @@
+# content/cast/roster.yaml — the fixed V1 cast (SPEC §6.2, §6.3). Edit freely before genesis; it's
+# validated at startup: exactly 30 residents (15 women, 15 men), ages 22–70, unique names and handles,
+# known circles, partners and family links that agree in both directions, pinned names in the roster.
+# A `with` partner must be another resident who lists them back; MARRIED or DATING without `with` means
+# the partner is off-network. `knows` records real-world ties outside the shared circles.
+residents:
+  - name: Sarah Brennan
+    gender: F
+    age: 33
+    heritage: Irish-American
+    faith: { tradition: Catholic, observance: NOMINAL }
+    lives-in: "Lakeview, Chicago"
+    work: { title: Marketing manager, employer: Lakeshore Mutual }
+    status: { kind: DATING, with: Ryan Kessler }
+    circles: [ uiuc, lakeshore ]
+
+  - name: Tim Kaczmarek
+    gender: M
+    age: 34
+    heritage: Polish-American
+    faith: { tradition: Catholic (lapsed), observance: NONE }
+    lives-in: "Portage Park, Chicago"
+    work: { title: Economics teacher, employer: a CPS high school }
+    status: { kind: MARRIED }
+    circles: [ uiuc, softball, family ]
+    family: [ { with: Nick Grabowski, relation: cousin } ]
+    notes: "one toddler"
+
+  - name: Jesse Hensley
+    gender: M
+    age: 29
+    heritage: Scots-Irish, from downstate Illinois
+    faith: { observance: NONE }
+    lives-in: "Des Plaines"
+    work: { title: Warehouse lead, employer: Kinzie Freight }
+    status: { kind: SINGLE }
+    circles: [ kinzie, family, online ]
+    family: [ { with: Amanda Sheehan, relation: sister } ]
+
+  - name: Mike Rinaldi
+    gender: M
+    age: 42
+    heritage: Italian-American
+    faith: { tradition: Catholic, observance: NOMINAL }
+    lives-in: "Schaumburg"
+    work: { title: Mortgage loan officer }
+    status: { kind: DIVORCED }
+    circles: [ softball, online ]
+    notes: "two kids every other weekend"
+
+  - name: Jake Zielinski
+    gender: M
+    age: 27
+    heritage: Polish-American
+    faith: { observance: NONE }
+    lives-in: "Mount Prospect"
+    work: { title: Inventory analyst, employer: Kinzie Freight }
+    status: { kind: SINGLE }
+    circles: [ kinzie, online ]
+
+  - name: Jessica Vogel
+    gender: F
+    age: 32
+    heritage: German-American
+    faith: { tradition: Lutheran, observance: NOMINAL }
+    lives-in: "West Loop, Chicago"
+    work: { title: Management consultant }
+    status: { kind: SINGLE }              # secretly seeing someone (pinned below)
+    circles: [ uiuc, online ]
+
+  - name: Samantha Dvorak
+    display-name: Sam Dvorak
+    gender: F
+    age: 41
+    heritage: Czech-American
+    faith: { tradition: Catholic, observance: NOMINAL }
+    lives-in: "Berwyn"
+    work: { title: Respiratory therapist, employer: Prairie Path Medical Center }
+    status: { kind: MARRIED }
+    circles: [ prairie-path, berwyn-block ]
+
+  - name: Ryan Kessler
+    gender: M
+    age: 36
+    heritage: German-American
+    faith: { observance: NONE }
+    lives-in: "Lincoln Square, Chicago"
+    work: { title: Sales engineer, employer: a software company }
+    status: { kind: DATING, with: Sarah Brennan }
+    circles: [ softball, online ]
+
+  - name: Megan Quinlan
+    gender: F
+    age: 32
+    heritage: Irish-American
+    faith: { tradition: Catholic, observance: NOMINAL }
+    lives-in: "Wicker Park, Chicago"
+    work: { title: ICU nurse, employer: Prairie Path Medical Center }
+    status: { kind: SINGLE }
+    circles: [ uiuc, prairie-path ]
+
+  - name: Daniel Shin
+    gender: M
+    age: 35
+    heritage: Korean-American
+    faith: { tradition: Presbyterian (raised), observance: NONE }
+    lives-in: "Roscoe Village, Chicago"
+    work: { title: Producer, employer: a sports-talk radio station }
+    status: { kind: SINGLE }
+    circles: [ uiuc, online ]
+
+  - name: Lisa Marchetti
+    gender: F
+    age: 56
+    heritage: Italian-American
+    faith: { tradition: Catholic, observance: NOMINAL }
+    lives-in: "Elmhurst"
+    work: { title: HR director, employer: Lakeshore Mutual }
+    status: { kind: MARRIED }
+    circles: [ lakeshore ]
+    notes: "two grown kids"
+
+  - name: Brian Whitlock
+    gender: M
+    age: 44
+    heritage: English and German
+    faith: { tradition: Evangelical, observance: DEVOUT }
+    lives-in: "Wheaton"
+    work: { title: IT project manager, employer: Lakeshore Mutual }
+    status: { kind: MARRIED }
+    circles: [ lakeshore, online ]
+    notes: "four kids"
+
+  - name: Amra Hodžić
+    gender: F
+    age: 34
+    heritage: Bosnian-American
+    faith: { tradition: Muslim, observance: DEVOUT }
+    lives-in: "Skokie"
+    work: { title: Staff accountant, employer: Lakeshore Mutual }
+    status: { kind: MARRIED }
+    circles: [ lakeshore, online ]
+    notes: "one son"
+
+  - name: Gabriela Barajas
+    display-name: Gaby Barajas
+    gender: F
+    age: 29
+    heritage: Mexican-American
+    faith: { tradition: Catholic, observance: NOMINAL }
+    lives-in: "Pilsen, Chicago"
+    work: { title: Claims adjuster, employer: Lakeshore Mutual }
+    status: { kind: SINGLE }
+    circles: [ lakeshore, family ]
+    family: [ { with: Ricardo Ocampo, relation: cousin } ]
+
+  - name: Kendra Gaines
+    gender: F
+    age: 34
+    heritage: Black American
+    faith: { tradition: Baptist, observance: PRACTICING }
+    lives-in: "Oak Park"
+    work: { title: Nurse practitioner, employer: Prairie Path Medical Center }
+    status: { kind: SINGLE }
+    circles: [ prairie-path, online ]
+
+  - name: Marko Jovanović
+    gender: M
+    age: 47
+    heritage: Serbian-American
+    faith: { tradition: Serbian Orthodox, observance: NOMINAL }
+    lives-in: "Norridge"
+    work: { title: Operations manager, employer: Kinzie Freight }
+    status: { kind: MARRIED }
+    circles: [ kinzie ]
+    notes: "two teens"
+
+  - name: Amanda Sheehan
+    gender: F
+    age: 38
+    heritage: Scots-Irish, from downstate Illinois (née Hensley)
+    faith: { tradition: Methodist, observance: NOMINAL }
+    lives-in: "Plainfield"
+    work: { title: Preschool teacher }
+    status: { kind: MARRIED }
+    circles: [ family, online ]
+    family: [ { with: Jesse Hensley, relation: brother } ]
+    notes: "two kids"
+
+  - name: Nick Grabowski
+    gender: M
+    age: 30
+    heritage: Polish-American
+    faith: { tradition: Catholic (Latin Mass), observance: DEVOUT }
+    lives-in: "Jefferson Park, Chicago"
+    work: { title: Firefighter-EMT, employer: Chicago Fire Department }
+    status: { kind: SINGLE }
+    circles: [ softball, family ]
+    family: [ { with: Tim Kaczmarek, relation: cousin } ]
+
+  - name: Ricardo Ocampo
+    display-name: Rick Ocampo
+    gender: M
+    age: 37
+    heritage: Mexican-American
+    faith: { tradition: Catholic, observance: NOMINAL }
+    lives-in: "Berwyn"
+    work: { title: Union electrician }
+    status: { kind: MARRIED }
+    circles: [ berwyn-block, softball, family ]
+    family: [ { with: Gabriela Barajas, relation: cousin } ]
+    notes: "two kids"
+
+  - name: Donna Novotny
+    gender: F
+    age: 67
+    heritage: Czech-American
+    faith: { tradition: Catholic, observance: PRACTICING }
+    lives-in: "Berwyn"
+    work: { title: Retired grade-school teacher }
+    status: { kind: WIDOWED }
+    circles: [ berwyn-block, online ]
+
+  - name: Gary Moran
+    gender: M
+    age: 69
+    heritage: Irish-American
+    faith: { tradition: Catholic, observance: NOMINAL }
+    lives-in: "Berwyn"
+    work: { title: Retired union pipefitter }
+    status: { kind: MARRIED }
+    circles: [ berwyn-block ]
+
+  - name: Hannah Lindqvist
+    gender: F
+    age: 24
+    heritage: Swedish-American
+    faith: { observance: NONE }
+    lives-in: "Andersonville, Chicago"
+    work: { title: Junior graphic designer, employer: an ad agency }
+    status: { kind: SINGLE }
+    circles: [ softball, online ]
+
+  - name: Oksana Melnyk
+    gender: F
+    age: 28
+    heritage: Ukrainian-American
+    faith: { tradition: Ukrainian Catholic, observance: NOMINAL }
+    lives-in: "Ukrainian Village, Chicago"
+    work: { title: Public-health PhD student at UIC; bartends weekends }
+    status: { kind: SINGLE }
+    circles: [ softball, online ]
+
+  - name: Lukas Petrauskas
+    gender: M
+    age: 26
+    heritage: Lithuanian-American
+    faith: { observance: NONE }
+    lives-in: "Bridgeport, Chicago"
+    work: { title: Brewer, employer: a small brewery }
+    status: { kind: SINGLE }
+    circles: [ softball, online ]
+
+  - name: Cody Garrett
+    gender: M
+    age: 25
+    heritage: Scots-Irish, from Effingham
+    faith: { tradition: Baptist (raised), observance: NONE }
+    lives-in: "Logan Square, Chicago"
+    work: { title: Line cook; open-mic comic }
+    status: { kind: SINGLE }
+    circles: [ softball, online ]
+
+  - name: Andre Whitfield
+    gender: M
+    age: 45
+    heritage: Black American
+    faith: { observance: NONE }
+    lives-in: "Bronzeville, Chicago"
+    work: { title: Architect, employer: a Loop firm }
+    status: { kind: DIVORCED }
+    circles: [ softball, online ]
+
+  - name: Eleni Galanis
+    gender: F
+    age: 52
+    heritage: Greek-American
+    faith: { tradition: Greek Orthodox, observance: DEVOUT }
+    lives-in: "Park Ridge"
+    work: { title: Realtor }
+    status: { kind: MARRIED }
+    circles: [ online ]
+    knows: [ { with: Samantha Dvorak, how: "sold Sam her Berwyn bungalow" } ]
+    notes: "two kids in college"
+
+  - name: Kristen Wagner
+    gender: F
+    age: 44
+    heritage: German-American
+    faith: { tradition: Methodist, observance: PRACTICING }
+    lives-in: "Naperville"
+    work: { title: Stay-at-home mom of three; PTA president }
+    status: { kind: MARRIED }
+    circles: [ online ]
+    knows: [ { with: Deepa Kulkarni, how: "next-door neighbors" } ]
+    notes: "three kids"
+
+  - name: Deepa Kulkarni
+    gender: F
+    age: 40
+    heritage: Indian-American
+    faith: { tradition: Hindu, observance: PRACTICING }
+    lives-in: "Naperville"
+    work: { title: Veterinarian }
+    status: { kind: MARRIED }
+    circles: [ online ]
+    knows: [ { with: Kristen Wagner, how: "next-door neighbors" } ]
+    notes: "one daughter"
+
+  - name: Adam Rosen
+    gender: M
+    age: 43
+    heritage: Jewish-American
+    faith: { tradition: Jewish, observance: NOMINAL }   # cultural
+    lives-in: "Evanston"
+    work: { title: Litigation attorney, employer: a Loop firm }
+    status: { kind: MARRIED }
+    circles: [ online ]
+    notes: "twins"
+
+you:                                               # R, the 31st member; onboarding pre-fills these (§5.9)
+  gender: M
+  age: 31
+  heritage: White
+  faith: { observance: NONE }                      # not religious
+  work: { title: Software engineer }               # employer: asked at onboarding
+  status: { kind: SINGLE }
+
+pinned:                                            # storyline seeds (§6.3). Edit, add or delete freely.
+  - name: Sarah Brennan
+    archetype: "Opinionated, loyal, funny when she isn't furious. Long-running political sparring partner of Tim (economics, socialism). Her relationship with Ryan is showing cracks."
+    seeds: { arcs: ["romance:official"], tags: ["debate_rival:economics -> Tim Kaczmarek"] }   # with Ryan Kessler, per her roster status
+  - name: Tim Kaczmarek
+    archetype: "Sarah's favorite opponent since their U of I days; enjoys the fight more than winning it."
+    seeds: { tags: ["debate_rival:economics -> Sarah Brennan"] }
+  - name: Jesse Hensley
+    archetype: "Buys beat-up cars on impulse, overpays every time, neglects them within weeks, never learns. Nobody at Kinzie Freight lets it go."
+    seeds: { quirks: [serial_fixer_upper_buyer] }
+  - name: Mike Rinaldi
+    archetype: "Shameless flirt who shows up in the DMs of any woman who's newly single."
+    seeds: { quirks: [serial_flirt] }
+  - name: Jake Zielinski
+    archetype: "The troll. Needles people for sport; occasionally genuinely funny."
+    seeds: { quirks: [troll] }
+  - name: Jessica Vogel
+    archetype: "Ambitious, polished consultant who has been quietly seeing someone for a month and hasn't told anyone — not even Megan."
+    seeds: { arcs: ["romance:secret_dating"] }   # genesis picks her partner from the roster's single men; knowers are the couple only (decision 6)
+  - name: Samantha Dvorak
+    archetype: "DIY overreacher whose bungalow kitchen has been 'almost done' for months; the whole block has opinions."
+    seeds: { quirks: [diy_overreacher], arcs: ["home_project:progress"] }

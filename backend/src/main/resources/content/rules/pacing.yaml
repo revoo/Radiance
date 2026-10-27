@@ -1,0 +1,20 @@
+# When things aimed at R become visible during live play (SPEC §5.1, A.6). Live-tunable.
+# Who responds is decided by the engagement model (§5.8); this file only shapes timing and order.
+response_curve:
+  reflex_reaction: { first: [2s, 6s], spacing: [3s, 15s] }
+  comment: { first: [8s, 25s], gap_growth: 1.5, tail: 4m }
+  reply_to_r: { addressee_first: [5s, 20s], max_pile_on: 2 }
+  drama_tail_multiplier: 2.0            # controversial threads keep going while R stays engaged
+buckets:                                # token buckets across the whole session
+  comments: { per_minute: 6, burst: 3 }
+  reactions: { per_minute: 12, burst: 5 }
+  notifications: { per_minute: 4, burst: 2, group_reactions: true }
+priority_weights: { closeness_to_r: 1.0, relevance: 1.0, drama: 0.5 }
+hold: { reactions_max: 2m, comments: until_next_slot }
+breathing_room: { after_releases: 3, within: 30s, pause: [20s, 40s] }
+typing: { show_when_late: true, give_up_after: 45s }
+dm: { typing_starts: [1s, 3s], ms_per_char: 30, max_typing_delay: 6s, burst_gap: [2s, 5s] }
+hooks:
+  quiet_gap: 4m
+  min_interval: 10m
+  kinds: [ comment_on_older_post, dm_from_motivated_resident, pull_scripted_post_forward ]

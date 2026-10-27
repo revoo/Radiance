@@ -1,0 +1,33 @@
+id: new_pet
+category: LIFE
+description: "Considering a dog or cat, adopting one, and the first weeks."
+roles:
+  owner: {}
+start:
+  base_rate_per_year: 0.06
+exclusive_with: [ new_pet, moving ]
+max_silence_days: 10
+abandon: settled_in
+phases:
+  - id: considering
+    duration_days: [5, 20]
+    visibility: PUBLIC
+    beats: [ { kind: STATUS, brief: "scrolling shelter listings; asks dog people or cat people" } ]
+    next: adopted
+  - id: adopted
+    duration_days: [14, 30]
+    visibility: PUBLIC
+    entry_event:
+      type: PET_ADOPTED
+      importance: 6
+      post: PHOTO
+      creates_entity: { kind: PET, from_table: shelter_pets }
+      media: "amateur smartphone photo of {entity.visual_description} on a living room rug"
+      effects: { mood: 0.5 }
+    beats: [ { kind: PHOTO, brief: "the new pet doing something ridiculous" } ]
+    next: settled_in
+  - id: settled_in
+    visibility: PUBLIC
+    entry_event: { type: PET_SETTLED, importance: 2, post: PHOTO,
+                   media: "{entity.visual_description} asleep in a sunny spot" }
+    terminal: true

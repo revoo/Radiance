@@ -1,0 +1,37 @@
+id: new_hobby
+category: HOBBY
+description: "Pottery, pickleball, sourdough, climbing: curious, beginner, then hooked or fizzled."
+roles:
+  hobbyist: {}
+start:
+  base_rate_per_year: 0.2
+exclusive_with: [ new_hobby ]
+max_silence_days: 12
+abandon: fizzled
+phases:
+  - id: curious
+    duration_days: [3, 10]
+    visibility: PUBLIC
+    beats: [ { kind: STATUS, brief: "thinking about trying something; asks if anyone's done it" } ]
+    next: beginner
+  - id: beginner
+    duration_days: [14, 30]
+    visibility: PUBLIC
+    entry_event: { type: HOBBY_STARTED, importance: 3, post: PHOTO,
+                   media: "brand-new hobby gear still with tags, laid out on a floor" }
+    beats: [ { kind: PHOTO, brief: "a lopsided first attempt, proudly posted" } ]
+    transitions: [ { to: hooked, p: 0.55 }, { to: fizzled, p: 0.45 } ]
+  - id: hooked
+    duration_days: [30, 90]
+    visibility: PUBLIC
+    beats: [ { kind: PHOTO, brief: "visible progress; talks about it a little too much" } ]
+    next: milestone
+  - id: milestone
+    visibility: PUBLIC
+    entry_event: { type: HOBBY_MILESTONE, importance: 4, post: PHOTO,
+                   media: "a finished piece or a small trophy, proudly displayed" }
+    terminal: true
+  - id: fizzled
+    visibility: PUBLIC
+    entry_event: { type: HOBBY_FIZZLED, importance: 2, post: STATUS }   # a joke at their own expense
+    terminal: true

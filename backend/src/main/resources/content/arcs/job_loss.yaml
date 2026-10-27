@@ -1,0 +1,45 @@
+id: job_loss
+category: LIFE
+description: "Laid off, then the scramble, then the next thing."
+roles:
+  person: { requires: { employed: true } }
+start:
+  base_rate_per_year: 0.04
+exclusive_with: [ job_loss, job_search ]
+max_silence_days: 10
+abandon: landed
+phases:
+  - id: laid_off
+    duration_days: [3, 10]
+    visibility: PUBLIC
+    entry_event:
+      type: LAID_OFF
+      importance: 8
+      post: STATUS
+      effects: { mood: -0.5, stress: 0.4, add_constraints: [ unemployed, "budget_tight:60d" ] }
+    constraints: [ unemployed ]
+    next: searching
+  - id: searching
+    duration_days: [21, 90]
+    visibility: PUBLIC
+    constraints: [ unemployed, "budget_tight:30d" ]
+    beats:
+      - { kind: STATUS, brief: "the job hunt grind; asks if anyone's hiring" }
+      - { kind: REACTIONS, brief: "friends share leads and pep talks" }
+    transitions: [ { to: landed, p: 0.8 }, { to: gig_work, p: 0.2 } ]
+  - id: landed
+    visibility: PUBLIC
+    entry_event:
+      type: NEW_JOB
+      importance: 7
+      post: LIFE_EVENT
+      effects: { mood: 0.6, stress: -0.3, remove_constraints: [ unemployed, budget_tight ], add_constraints: [ new_job ] }
+    terminal: true
+  - id: gig_work
+    visibility: PUBLIC
+    entry_event:
+      type: GIG_WORK
+      importance: 5
+      post: STATUS
+      effects: { remove_constraints: [ unemployed ], start_arc: side_hustle }
+    terminal: true

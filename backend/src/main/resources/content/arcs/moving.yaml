@@ -1,0 +1,26 @@
+id: moving
+category: LIFE
+description: "Apartment hunting, packing, the move, the first night in the new place."
+roles:
+  mover: {}
+start:
+  base_rate_per_year: 0.07
+exclusive_with: [ moving, home_project ]
+max_silence_days: 10
+abandon: moved
+phases:
+  - id: looking
+    duration_days: [14, 45]
+    visibility: PUBLIC
+    beats: [ { kind: STATUS, brief: "rents are insane; landlords are worse" } ]
+    next: packing
+  - id: packing
+    duration_days: [7, 21]
+    visibility: PUBLIC
+    constraints: [ busy_weekends ]
+    beats: [ { kind: PHOTO, brief: "a wall of boxes; asks who has a truck" } ]
+    next: moved
+  - id: moved
+    visibility: PUBLIC
+    entry_event: { type: MOVED, importance: 7, post: LIFE_EVENT, effects: { stress: -0.2 } }
+    terminal: true

@@ -27,6 +27,7 @@ dependencies {
     implementation("org.springframework:spring-jdbc")
     implementation("com.zaxxer:HikariCP")
     implementation("org.xerial:sqlite-jdbc")
+    implementation("tools.jackson.dataformat:jackson-dataformat-yaml")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")

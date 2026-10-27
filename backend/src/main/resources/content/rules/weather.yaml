@@ -1,0 +1,9 @@
+# Named weather conditions that defs can require: when: { weather: snow_day } (SPEC §5.12, A.7).
+# Computed per world-day from hourly weather; every given test must hold. Thresholds are live-tunable.
+snow_day:       { snowfall_in: { min: 2 } }                          # over the day
+first_warm_day: { high_f: { min: 60 }, prior_week_high_f: { max: 45 } }
+brutal_cold:    { feels_like_low_f: { max: -10 } }
+heat_wave:      { high_f: { min: 90 }, streak_days: 2 }
+thunderstorm:   { wmo_any: [95, 96, 97, 99] }                        # in any hour of the day
+washout:        { precip_in: { min: 0.5 } }
+perfect_day:    { high_f: { min: 70, max: 80 }, wmo_max: 1, precip_in: { max: 0 } }

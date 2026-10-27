@@ -1,0 +1,74 @@
+# Phases, secrets, knowers and constraints in one arc (SPEC A.1). Every romance pairs a man and a woman.
+id: romance
+category: LIFE
+description: "Two single people go from talking to official — or not."
+roles:
+  a: { requires: { relationship_status: SINGLE } }
+  b: { requires: { relationship_status: SINGLE, attracted_to: a, mutual: true } }
+start:
+  base_rate_per_year: 0.4               # per eligible pair
+  requires: { chemistry_min: 0.3 }
+exclusive_with: [ romance, affair ]     # one romance at a time per person
+max_silence_days: 10
+abandon: fizzled
+phases:
+  - id: talking
+    duration_days: [5, 20]
+    visibility: PRIVATE
+    knowers: [ a, b ]
+    beats: [ { kind: REACTIONS, brief: "suddenly like and comment on each other's posts a lot" } ]
+    transitions: [ { to: secret_dating, p: 0.6 }, { to: fizzled, p: 0.4 } ]
+  - id: secret_dating
+    duration_days: [14, 45]
+    visibility: SECRET
+    knowers: [ a, b, "closest_friend_of:a", "closest_friend_of:b" ]
+    constraints: [ "in_relationship:{partner}", "secret:relationship" ]
+    beats:
+      - { kind: DECLINE_PLANS, brief: "bails on group plans with a vague excuse" }
+      - { kind: STATUS, brief: "in a suspiciously good mood; won't say why", max_per_week: 1 }
+    transitions: [ { to: soft_launch, p: 0.75 }, { to: breakup, p: 0.25 } ]
+  - id: soft_launch                      # the Facebook classic
+    duration_days: [5, 14]
+    visibility: PUBLIC
+    entry_event:
+      type: SOFT_LAUNCH
+      importance: 6
+      post: PHOTO
+      media: "two coffee cups on a cafe table, a second person's hand just in frame"
+    constraints: [ "in_relationship:{partner}" ]
+    next: official
+  - id: official
+    duration_days: [60, 240]
+    visibility: PUBLIC
+    entry_event:
+      type: RELATIONSHIP_OFFICIAL
+      importance: 8
+      post: LIFE_EVENT
+      effects: { relationship_status: DATING, relationship_kind: PARTNER }
+    constraints: [ "in_relationship:{partner}" ]
+    transitions: [ { to: engaged, p: 0.3 }, { to: breakup, p: 0.35 }, { to: official, p: 0.35 } ]  # official again = still together
+  - id: engaged
+    duration_days: [120, 365]
+    visibility: PUBLIC
+    entry_event: { type: ENGAGEMENT, importance: 9, post: LIFE_EVENT,
+                   media: "close-up of a hand with an engagement ring on a restaurant table" }
+    constraints: [ "in_relationship:{partner}" ]
+    transitions: [ { to: married, p: 0.85 }, { to: breakup, p: 0.15 } ]
+  - id: married
+    visibility: PUBLIC
+    entry_event: { type: WEDDING, importance: 10, post: LIFE_EVENT,
+                   media: "string lights over an empty reception tent at dusk",
+                   effects: { relationship_status: MARRIED } }
+    terminal: true
+  - id: breakup
+    visibility: PUBLIC
+    entry_event:
+      type: BREAKUP
+      importance: 8
+      post: STATUS
+      effects: { relationship_status: SINGLE, relationship_kind: EX, mood: -0.6, stress: 0.4,
+                 add_relationship_tags: [ "a <-> b: avoiding" ], start_arc: breakup_aftermath }
+    terminal: true
+  - id: fizzled
+    entry_event: { type: FIZZLED, importance: 2, post: NONE }   # memories only
+    terminal: true

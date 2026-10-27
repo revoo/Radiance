@@ -1,0 +1,135 @@
+# Constraint tags (SPEC §5.5, A.4): planner semantics, a prose line for briefs, a linter lexicon and a
+# yes/no judge question, and whether the reason is public. {name} is the actor; {param} the tag's parameter.
+- id: no_alcohol
+  planner: { excludes_event_tags: [ alcohol, nightlife ] }
+  prose: "{name} isn't drinking right now{public_reason}."
+  reason_public: false
+  linter:
+    lexicon: [ beer, wine, cocktail, shots, drunk, hungover, bar crawl, "happy hour", tequila, whiskey, margarita ]
+    judge: "Does this text show {name} drinking alcohol or planning to?"
+
+- id: no_travel
+  planner: { excludes_event_tags: [ travel, long_trip ] }
+  prose: "{name} can't travel right now{public_reason}."
+  reason_public: true
+  linter:
+    lexicon: [ flight, airport, "road trip", vacation, getaway, hotel, "out of town", "o'hare", midway ]
+    judge: "Does this text show {name} traveling or about to travel?"
+
+- id: no_long_travel
+  planner: { excludes_event_tags: [ long_trip ] }
+  prose: "{name} can't go anywhere far right now{public_reason}; day trips at most."
+  reason_public: true
+  linter:
+    lexicon: [ flight, airport, "abroad", overseas, cruise, resort, "week away" ]
+    judge: "Does this text show {name} taking or planning a long trip?"
+
+- id: budget_tight
+  params: [ duration ]
+  planner: { excludes_event_tags: [ expensive, long_trip, big_purchase ] }
+  prose: "{name} is broke right now{public_reason} and skips anything that costs real money."
+  reason_public: true
+  linter:
+    lexicon: [ vacation, flight, resort, cruise, bahamas, cancun, "first class", splurge, "treat myself",
+               "bottle service", "concert tickets", "new tv", designer ]
+    judge: "Does this text show {name} spending serious money or heading off on an expensive trip?"
+
+- id: homebound
+  planner: { excludes_event_tags: [ outing, nightlife, travel, physical ] }
+  prose: "{name} is stuck at home right now{public_reason}."
+  reason_public: true
+  linter:
+    lexicon: [ "went out", bar, concert, "at the game", hike, gym, festival, "night out", brunch ]
+    judge: "Does this text show {name} out of the house doing something?"
+
+- id: low_energy
+  planner: { excludes_event_tags: [ physical, nightlife ] }
+  prose: "{name} is running on empty lately{public_reason}."
+  reason_public: false
+  linter:
+    lexicon: [ "personal record", " pr ", "crushed it", "all night", "so much energy" ]
+    judge: "Does this text show {name} full of energy or doing something strenuous?"
+
+- id: sleep_deprived
+  planner: { excludes_event_tags: [ nightlife ] }
+  prose: "{name} is barely sleeping{public_reason}."
+  reason_public: true
+  linter:
+    lexicon: [ "well rested", "slept in", "great sleep", "ten hours" ]
+    judge: "Does this text suggest {name} is well rested?"
+
+- id: grieving
+  planner: { excludes_event_tags: [ party, nightlife, celebration ], blocks_categories: [ DRAMA ] }
+  prose: "{name} is grieving{public_reason}; light, celebratory posts would be out of character."
+  reason_public: true
+  linter:
+    lexicon: [ party, "best day ever", "so blessed", lit, turnt, "living my best life" ]
+    judge: "Does this text show {name} celebrating or acting carefree?"
+
+- id: injured
+  params: [ part ]
+  planner: { excludes_event_tags: [ physical ] }
+  prose: "{name} has an injured {param} and can't do anything physical with it."
+  reason_public: true
+  linter:
+    lexicon: [ run, ran, hike, hiked, gym, lifting, softball, "bar crawl", dancing, "5k", marathon, "leg day" ]
+    judge: "Does this text show {name} doing something physical that an injured {param} rules out?"
+
+- id: secret
+  params: [ topic ]
+  planner: { excludes_event_tags: [] }
+  prose: "{name} is keeping something private ({param}) and won't say it outright."
+  reason_public: false
+  linter:
+    lexicon: [ boyfriend, girlfriend, "seeing someone", "dating", "my man", "my girl", date, "hard launch", affair, "new guy", "new girl" ]
+    judge: "Does this text reveal or hint that {name} has a secret ({param})?"
+
+- id: in_relationship
+  params: [ actor ]
+  planner: { excludes_event_tags: [ dating_apps ] }
+  prose: "{name} is in a relationship with {param}."
+  reason_public: true
+  linter:
+    lexicon: [ "single life", "dating apps", "on the apps", "bumble", "hinge", "tinder", "forever alone" ]
+    judge: "Does this text present {name} as single and looking?"
+
+- id: single
+  planner: { excludes_event_tags: [ couple ] }
+  prose: "{name} is single."
+  reason_public: true
+  linter:
+    lexicon: [ "my husband", "my wife", "my boyfriend", "my girlfriend", "my partner", "date night with" ]
+    judge: "Does this text present {name} as having a partner?"
+
+- id: avoids
+  params: [ actor ]
+  planner: { excludes_event_tags: [] }
+  prose: "{name} is avoiding {param} and won't engage with them."
+  reason_public: false
+  linter:
+    lexicon: [ "miss you", "hang out", "catch up", "grab a drink" ]
+    judge: "Does this text show {name} warmly engaging with {param}?"
+
+- id: busy_weekends
+  planner: { excludes_event_tags: [ weekend_plans ] }
+  prose: "{name}'s weekends are spoken for right now{public_reason}."
+  reason_public: true
+  linter:
+    lexicon: [ "lazy weekend", "nothing planned", "free this weekend", "sleeping in saturday" ]
+    judge: "Does this text show {name} with a free, open weekend?"
+
+- id: new_job
+  planner: { excludes_event_tags: [ job_hunting ] }
+  prose: "{name} just started a new job."
+  reason_public: true
+  linter:
+    lexicon: [ "job hunting", "unemployed", "between jobs", "applications", "laid off" ]
+    judge: "Does this text present {name} as job hunting or out of work?"
+
+- id: unemployed
+  planner: { excludes_event_tags: [ work, expensive, big_purchase ] }
+  prose: "{name} is out of work right now and money is tight."
+  reason_public: true
+  linter:
+    lexicon: [ "at work", "my boss", "the office", "coworker", "shift", "meeting ran long", promotion ]
+    judge: "Does this text show {name} going to work or having a job?"

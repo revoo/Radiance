@@ -1,0 +1,147 @@
+# DAILY (SPEC §5.4): everyday moments — food, commutes, pets, work gripes, weekend plans, the weather.
+# base_rate is per resident per world-day before modifiers, tension and the event-mix calibration.
+- id: food_photo
+  category: DAILY
+  base_rate: 0.10
+  modifiers: { interest.food: 2.0, quirk.foodie_photographer: 4.0 }
+  importance: 2
+  tags: [ food ]
+  output: { post: PHOTO, brief: "a plate, a takeout bag or a homemade attempt; a one-line caption",
+            media: "amateur smartphone photo of a meal on a table, natural light" }
+
+- id: commute_gripe
+  category: DAILY
+  base_rate: 0.06
+  modifiers: { quirk.chronic_complainer: 3.0, weekend: 0.1 }
+  importance: 1
+  tags: [ work ]
+  excludes: { tags: [ unemployed, homebound ] }
+  output: { post: STATUS, brief: "the Kennedy, the Ike, the Blue Line or Metra did something unforgivable today" }
+
+- id: work_gripe
+  category: DAILY
+  base_rate: 0.05
+  modifiers: { quirk.chronic_complainer: 3.0, stress: 2.0, weekend: 0.3 }
+  importance: 1
+  tags: [ work ]
+  excludes: { tags: [ unemployed ] }
+  output: { post: STATUS, brief: "a vague complaint about a meeting, a manager or a customer; no names" }
+
+- id: pet_moment
+  category: DAILY
+  base_rate: 0.12
+  modifiers: { quirk.pet_obsessed: 4.0 }
+  requires: { entities: [ PET ] }
+  importance: 2
+  tags: [ pets ]
+  output: { post: PHOTO, brief: "the pet doing something dumb or adorable",
+            media: "amateur smartphone photo of {entity.visual_description} at home" }
+
+- id: weekend_plans
+  category: DAILY
+  base_rate: 0.05
+  modifiers: { extraversion: 1.5, weekend: 0.5 }
+  importance: 2
+  tags: [ outing, weekend_plans ]
+  excludes: { tags: [ homebound, grieving, busy_weekends ] }
+  output: { post: STATUS, brief: "plans for the weekend: a festival, a game, a brunch spot, or nothing at all on purpose" }
+
+- id: car_talk
+  category: DAILY
+  base_rate: 0.03
+  modifiers: { interest.cars: 3.0, quirk.serial_fixer_upper_buyer: 3.0 }
+  importance: 2
+  tags: [ cars ]
+  output: { post: STATUS, brief: "a car opinion, a dashboard light, gas prices, or a parking ticket" }
+
+- id: sports_reaction
+  category: DAILY
+  base_rate: 0.05
+  modifiers: { quirk.sports_diehard: 5.0, interest.sports: 3.0 }
+  importance: 2
+  tags: [ sports ]
+  output: { post: STATUS, brief: "a reaction to last night's Bears, Cubs, Sox, Bulls or Hawks game; suffering is communal" }
+
+- id: mood_post
+  category: DAILY
+  base_rate: 0.04
+  modifiers: { quirk.oversharer: 3.0, attention_seeking: 1.5, neuroticism: 1.3 }
+  importance: 2
+  output: { post: STATUS, brief: "a post that is pure mood: tired, grateful, annoyed, or quoting a song title only" }
+
+- id: gym_checkin
+  category: DAILY
+  base_rate: 0.04
+  modifiers: { quirk.gym_rat: 8.0, interest.fitness: 2.0 }
+  importance: 1
+  tags: [ physical, fitness ]
+  excludes: { tags: [ injured, low_energy, homebound ] }
+  output: { post: CHECKIN, brief: "checked in at the gym; a short brag or a complaint about leg day" }
+
+- id: snow_day_dibs
+  category: DAILY
+  when: { weather: snow_day }
+  base_rate: 0.30
+  importance: 3
+  output: { post: PHOTO, brief: "snow day: shoveling, dibs chairs in parking spots, or refusing to leave the house",
+            media: "a snowy Chicago side street with a lawn chair holding a shoveled parking spot" }
+
+- id: first_warm_day_patio
+  category: DAILY
+  when: { weather: first_warm_day }
+  base_rate: 0.35
+  importance: 3
+  tags: [ outing, alcohol ]
+  excludes: { tags: [ homebound, no_alcohol ] }
+  output: { post: PHOTO, brief: "first patio night of the year; shorts at 60 degrees",
+            media: "a drink on a crowded patio table, people in jackets and shorts, late afternoon sun" }
+
+- id: brutal_cold
+  category: DAILY
+  when: { weather: brutal_cold }
+  base_rate: 0.30
+  importance: 2
+  output: { post: STATUS, brief: "the windchill; a car that won't start; questioning why anyone lives here" }
+
+- id: heat_wave_ac
+  category: DAILY
+  when: { weather: heat_wave }
+  base_rate: 0.25
+  importance: 2
+  output: { post: STATUS, brief: "the AC died or the AC bill arrived; lake versus pool versus staying inside" }
+
+- id: storm_photo
+  category: DAILY
+  when: { weather: thunderstorm }
+  base_rate: 0.15
+  importance: 2
+  output: { post: PHOTO, brief: "the storm rolling in over the city or the yard",
+            media: "dark storm clouds over Chicago rooftops, wet street" }
+
+- id: perfect_day_lakefront
+  category: DAILY
+  when: { weather: perfect_day }
+  base_rate: 0.20
+  importance: 2
+  tags: [ outing, physical ]
+  excludes: { tags: [ homebound, injured ] }
+  output: { post: PHOTO, brief: "out on the lakefront path, a beach, or a park; smug about the weather",
+            media: "the Chicago lakefront path on a sunny day, the skyline in the distance, people from behind" }
+
+- id: washout_complaint
+  category: DAILY
+  when: { weather: washout }
+  base_rate: 0.15
+  importance: 1
+  output: { post: STATUS, brief: "soaked commute, flooded viaduct, or plans ruined by rain" }
+
+- id: fish_fry_friday
+  category: DAILY
+  when: { calendar: [ lent_friday ] }
+  base_rate: 0.15
+  modifiers: { observance.practicing: 2.0, observance.devout: 2.5 }
+  requires: { traditions: [ catholic, ukrainian catholic ] }
+  importance: 2
+  tags: [ food ]
+  output: { post: PHOTO, brief: "Friday fish fry at a parish hall or a tavern",
+            media: "a paper plate of fried fish, fries and coleslaw on a long folding table" }

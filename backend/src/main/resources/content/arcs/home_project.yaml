@@ -1,0 +1,53 @@
+id: home_project
+category: HOBBY
+description: "A renovation that's always almost done; setbacks, opinions, and eventually an ending."
+roles:
+  owner: { requires: { has_entity: HOME } }
+start:
+  base_rate_per_year: 0.15
+exclusive_with: [ home_project, moving ]   # moving only after the project transitions to selling
+max_silence_days: 10
+abandon: finished
+phases:
+  - id: planning
+    duration_days: [7, 30]
+    visibility: PUBLIC
+    beats: [ { kind: STATUS, brief: "Pinterest boards, contractor quotes, big plans" } ]
+    next: demo
+  - id: demo
+    duration_days: [7, 21]
+    visibility: PUBLIC
+    constraints: [ busy_weekends ]
+    beats: [ { kind: PHOTO, brief: "a gutted room, debris everywhere, way too proud of it" } ]
+    next: progress
+  - id: progress
+    duration_days: [30, 150]
+    visibility: PUBLIC
+    constraints: [ busy_weekends ]
+    beats:
+      - { kind: PHOTO, brief: "small progress shot; 'almost done' again" }
+      - { kind: STATUS, brief: "asks for advice on grout, tile or paint; everyone has opinions" }
+    transitions: [ { to: finished, p: 0.5 }, { to: setback, p: 0.35 }, { to: selling, p: 0.15 } ]
+  - id: setback
+    duration_days: [7, 30]
+    visibility: PUBLIC
+    entry_event: { type: RENO_SETBACK, importance: 5, post: PHOTO,
+                   media: "{entity.visual_description}, an open wall with old plumbing exposed",
+                   effects: { mood: -0.3, stress: 0.3 } }
+    constraints: [ busy_weekends, "budget_tight:21d" ]
+    next: progress
+  - id: selling
+    duration_days: [14, 45]
+    visibility: PUBLIC
+    entry_event: { type: LISTED_HOUSE, importance: 6, post: STATUS }
+    next: sold
+  - id: finished
+    visibility: PUBLIC
+    entry_event: { type: RENO_DONE, importance: 6, post: PHOTO,
+                   media: "{entity.visual_description}, the finished room in afternoon light",
+                   effects: { mood: 0.5, stress: -0.3, entity_status: FINISHED } }
+    terminal: true
+  - id: sold
+    visibility: PUBLIC
+    entry_event: { type: HOUSE_SOLD, importance: 7, post: LIFE_EVENT, effects: { entity_status: SOLD, start_arc: moving } }
+    terminal: true

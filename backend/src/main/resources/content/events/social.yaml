@@ -1,0 +1,86 @@
+# SOCIAL (SPEC §5.4): friends — hangouts, shout-outs, birthday wishes, tagging people.
+- id: birthday_wish
+  category: SOCIAL
+  when: { calendar: [ birthday ] }        # a friend's birthday: the Facebook classic
+  base_rate: 0.5
+  participants: { with: "friend[affinity>20]" }
+  importance: 2
+  output: { post: STATUS, brief: "happy birthday to @with, with an inside joke or a pile of emoji" }
+
+- id: shoutout
+  category: SOCIAL
+  base_rate: 0.01
+  modifiers: { agreeableness: 1.5, quirk.wholesome_cheerleader: 4.0 }
+  participants: { with: "friend[affinity>30]" }
+  importance: 2
+  output: { post: STATUS, brief: "a shout-out to @with for something they did; tagged" }
+
+- id: hangout_photo
+  category: SOCIAL
+  base_rate: 0.02
+  modifiers: { extraversion: 2.0, weekend: 2.0 }
+  participants: { with: "friend[affinity>25,familiarity>30]" }
+  importance: 3
+  tags: [ outing, social_outing ]
+  excludes: { tags: [ homebound, grieving ] }
+  output: { post: PHOTO, brief: "out with @with: a bar, a Cubs game, a beer garden, a backyard",
+            media: "two or three people from behind at a bar counter or bleachers, no faces" }
+
+- id: throwback
+  category: SOCIAL
+  base_rate: 0.01
+  modifiers: { quirk.nostalgic: 6.0 }
+  participants: { with: "friend[familiarity>40]" }
+  importance: 2
+  output: { post: PHOTO, brief: "a throwback with @with from U of I, an old job, or years ago",
+            media: "an old faded photo of a dorm room or a house party, taken from far away" }
+
+- id: halloween_costume
+  category: SOCIAL
+  when: { calendar: [ halloween ] }
+  base_rate: 0.35
+  modifiers: { extraversion: 1.5, quirk.pun_machine: 2.0 }
+  importance: 3
+  output: { post: PHOTO, brief: "a Halloween costume (often a pun) or a decorated porch",
+            media: "a carved pumpkin on a porch step at dusk" }
+
+- id: super_bowl_party
+  category: SOCIAL
+  when: { calendar: [ super_bowl_sunday ] }
+  base_rate: 0.35
+  importance: 2
+  tags: [ alcohol, social_outing ]
+  excludes: { tags: [ no_alcohol, grieving ] }
+  output: { post: STATUS, brief: "Super Bowl party: the food, the commercials, and the Bears not being in it again" }
+
+- id: fourth_of_july
+  category: SOCIAL
+  when: { calendar: [ fourth_of_july ] }
+  base_rate: 0.4
+  importance: 2
+  tags: [ outing ]
+  excludes: { tags: [ homebound ] }
+  output: { post: PHOTO, brief: "fireworks, a cookout, the neighbors' illegal mortars at 2 am",
+            media: "fireworks over a Chicago neighborhood at night" }
+
+- id: st_patricks_parade
+  category: SOCIAL
+  when: { calendar: [ st_patricks_parade ] }
+  base_rate: 0.35
+  modifiers: { extraversion: 1.5 }
+  importance: 2
+  tags: [ alcohol, nightlife, outing ]
+  excludes: { tags: [ no_alcohol, homebound ] }
+  output: { post: PHOTO, brief: "the green river, the parade, or proudly avoiding all of it",
+            media: "the Chicago River dyed bright green, crowds on the bridge from behind" }
+
+- id: softball_game
+  category: SOCIAL
+  when: { seasons: [ summer ] }
+  base_rate: 0.08
+  modifiers: { weekend: 3.0 }
+  participants: { with: "circle:softball[familiarity>20]" }
+  importance: 2
+  tags: [ physical, outing ]
+  excludes: { tags: [ injured, homebound ] }
+  output: { post: STATUS, brief: "Hot Giardiniera 16-inch result: a win, a blowout, or a no-glove injury" }

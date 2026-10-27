@@ -1,0 +1,37 @@
+id: training_goal
+category: HOBBY
+description: "Signs up for a race (a half marathon, a Turkey Trot, a tri) and trains for it, mostly."
+roles:
+  athlete: {}
+start:
+  base_rate_per_year: 0.12
+  requires: { trait_min: { conscientiousness: 35 } }
+exclusive_with: [ training_goal, injury_recovery ]
+max_silence_days: 10
+abandon: quit
+phases:
+  - id: signed_up
+    duration_days: [7, 21]
+    visibility: PUBLIC
+    entry_event: { type: RACE_SIGNUP, importance: 4, post: STATUS }
+    next: training
+  - id: training
+    duration_days: [30, 90]
+    visibility: PUBLIC
+    beats:
+      - { kind: PHOTO, brief: "a watch screenshot or a lakefront path at dawn; long run done" }
+      - { kind: STATUS, brief: "sore, proud, or skipping a run and admitting it" }
+    transitions: [ { to: race_day, p: 0.75 }, { to: injured_out, p: 0.15 }, { to: quit, p: 0.1 } ]
+  - id: race_day
+    visibility: PUBLIC
+    entry_event: { type: RACE_FINISHED, importance: 6, post: PHOTO,
+                   media: "a finisher medal on a table next to a bib", effects: { mood: 0.6 } }
+    terminal: true
+  - id: injured_out
+    visibility: PUBLIC
+    entry_event: { type: TRAINING_INJURY, importance: 5, post: STATUS, effects: { mood: -0.4, start_arc: injury_recovery } }
+    terminal: true
+  - id: quit
+    visibility: PUBLIC
+    entry_event: { type: TRAINING_QUIT, importance: 2, post: NONE }
+    terminal: true

@@ -1,0 +1,20 @@
+# Weights of the engagement utility (SPEC §5.8). Tuned with the feel report in M4.
+#   U = s(a)·k(i)·[w_rel·|affinity|/100 + w_fam·familiarity/100 + w_topic·interest + w_ctrv·argumentativeness·controversy
+#                  + w_drama·nosiness·drama + w_recip·reciprocity + w_mood·moodTerm] − w_fat·fatigue − w_sat·saturation + ε
+w_rel: 0.9
+w_fam: 0.6
+w_topic: 0.7
+w_ctrv: 0.8
+w_drama: 0.6
+w_recip: 0.5
+w_mood: 0.2
+w_fat: 0.8
+w_sat: 0.5
+steepness: 8.0            # k in P = σ(k·(U − θ))
+theta_react: 0.45
+theta_comment: 0.75       # must exceed theta_react
+noise_sd: 0.08            # ε
+sessions_per_day_min: 3   # online sessions sampled from the routine (SPEC §5.8)
+sessions_per_day_max: 10
+session_minutes_min: 5
+session_minutes_max: 20

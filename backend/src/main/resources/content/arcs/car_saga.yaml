@@ -1,0 +1,50 @@
+# The quirk loop (SPEC A.2): starts again after it resolves.
+id: car_saga
+category: LIFE
+description: "Buys a beat-up car on impulse, overpays, neglects it, loses money on it."
+roles:
+  owner: { requires: { quirk: serial_fixer_upper_buyer } }
+start:
+  base_rate_per_year: 0.2
+recurrence: { cooldown_days: [21, 60] }
+max_silence_days: 7
+abandon: sold_at_loss                     # used if car_saga is blacklisted mid-world
+phases:
+  - id: shopping
+    duration_days: [2, 7]
+    visibility: PUBLIC
+    beats: [ { kind: STATUS, brief: "hyping a 'steal' he found online; friends warn him" } ]
+    next: bought
+  - id: bought
+    duration_days: [3, 10]
+    visibility: PUBLIC
+    entry_event:
+      type: CAR_PURCHASED
+      importance: 6
+      post: PHOTO
+      creates_entity: { kind: CAR, from_table: fixer_upper_cars }   # engine picks year/model/color/flaw/overpay
+      media: "amateur smartphone photo of {entity.visual_description}, residential driveway, overcast"
+      effects: { mood: 0.3, add_constraints: [ "budget_tight:30d" ] }
+    next: honeymoon
+  - id: honeymoon
+    duration_days: [5, 15]
+    visibility: PUBLIC
+    beats: [ { kind: PHOTO, brief: "proud of a small upgrade; friends tease him about what he paid" } ]
+    next: neglect
+  - id: neglect
+    duration_days: [10, 30]
+    visibility: PUBLIC
+    beats: [ { kind: STATUS, brief: "complains about a new noise; never fixed the last one" } ]
+    transitions: [ { to: breakdown, p: 0.7 }, { to: sold_at_loss, p: 0.3 } ]
+  - id: breakdown
+    duration_days: [3, 14]
+    visibility: PUBLIC
+    entry_event: { type: CAR_BROKE_DOWN, importance: 5, post: PHOTO,
+                   media: "{entity.visual_description} on a tow truck at dusk",
+                   effects: { mood: -0.3, stress: 0.2 } }
+    next: sold_at_loss
+  - id: sold_at_loss
+    visibility: PUBLIC
+    entry_event: { type: CAR_SOLD, importance: 4, post: STATUS,
+                   effects: { entity_status: SOLD, add_relationship_tags: [ "friends -> owner: teases_about:cars" ] } }
+    terminal: true

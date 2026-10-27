@@ -1,0 +1,30 @@
+# Switchable with radiance.content.sensitive-arcs (on by default).
+id: grief
+category: FAMILY
+sensitive: true
+description: "Losing an off-network relative: the loss, the mourning, remembering."
+roles:
+  mourner: {}
+start:
+  base_rate_per_year: 0.03
+exclusive_with: [ grief ]
+max_silence_days: 14
+abandon: remembering
+phases:
+  - id: loss
+    duration_days: [7, 21]
+    visibility: PUBLIC
+    entry_event: { type: LOSS, importance: 8, post: STATUS, effects: { mood: -0.7, stress: 0.4, tension: 2 } }
+    constraints: [ grieving ]
+    beats: [ { kind: REACTIONS, brief: "condolences pour in; even rivals are kind" } ]
+    next: mourning
+  - id: mourning
+    duration_days: [30, 90]
+    visibility: PUBLIC
+    constraints: [ grieving ]
+    beats: [ { kind: PHOTO, brief: "an old photo of the relative, a recipe, a memory" } ]
+    next: remembering
+  - id: remembering
+    visibility: PUBLIC
+    entry_event: { type: REMEMBERING, importance: 3, post: STATUS, effects: { remove_constraints: [ grieving ] } }
+    terminal: true

@@ -1,0 +1,48 @@
+# How aired interactions move relationships (SPEC §5.3), before the receiver's temperament and mood.
+# target: how the receiver comes to see the actor. actor: how the actor comes to see the receiver.
+# bystanders: how people who saw it come to see the actor.
+familiarity_half_life_days: 30
+friend_familiarity_min: 40           # ACQUAINTANCE -> FRIEND needs familiarity above this...
+friend_affinity_above_baseline: 20   # ...and affinity this far above the resident's temperament baseline
+kind_baselines:                      # where affinity relaxes to, plus the temperament baseline
+  STRANGER: 0
+  ACQUAINTANCE: 5
+  COWORKER: 8
+  FRIEND: 25
+  CLOSE_FRIEND: 45
+  FAMILY: 35
+  PARTNER: 55
+  EX: -15
+  RIVAL: -20
+interactions:
+  like:                 { target: { affinity: 1, familiarity: 1 } }
+  reciprocated_like:    { target: { affinity: 1, familiarity: 1 }, actor: { familiarity: 1 } }
+  love_reaction:        { target: { affinity: 2, familiarity: 1 } }
+  care_reaction:        { target: { affinity: 2, trust: 1, familiarity: 1 } }
+  haha_reaction:        { target: { affinity: 1, familiarity: 1 } }
+  angry_reaction:       { target: { affinity: -2, familiarity: 1 } }
+  supportive_comment:   { target: { affinity: 3, familiarity: 2, trust: 1 }, actor: { familiarity: 1 }, bystanders: { affinity: 0.5 } }
+  congrats_comment:     { target: { affinity: 3, familiarity: 2 }, actor: { familiarity: 1 } }
+  condolence_comment:   { target: { affinity: 4, trust: 2, familiarity: 2 }, actor: { familiarity: 1 } }
+  joke_comment:         { target: { affinity: 2, familiarity: 2 }, actor: { familiarity: 1 }, bystanders: { affinity: 0.5 } }
+  agree_comment:        { target: { affinity: 2, familiarity: 2, respect: 1 }, actor: { familiarity: 1 } }
+  question_comment:     { target: { affinity: 1, familiarity: 2 }, actor: { familiarity: 1 } }
+  advice_comment:       { target: { affinity: 1, familiarity: 2, respect: 1 }, actor: { familiarity: 1 } }
+  hype_comment:         { target: { affinity: 2, familiarity: 1 } }
+  self_pivot_comment:   { target: { affinity: -1, familiarity: 1 }, bystanders: { affinity: -0.5 } }
+  meta_comment:         { target: { affinity: -1, familiarity: 1 }, bystanders: { affinity: 0.5 } }
+  flirt_comment:        { target: { affinity: 2, attraction: 2, familiarity: 2 }, actor: { attraction: 1, familiarity: 1 } }
+  disagree_comment:     { target: { affinity: -1, familiarity: 3 }, actor: { familiarity: 2 } }   # ±1 respect by civility, in code
+  debate_exchange:      { target: { affinity: -1, familiarity: 3 }, actor: { affinity: -1, familiarity: 3 } }
+  troll_comment:        { target: { affinity: -5, respect: -3 }, actor: { familiarity: 1 }, bystanders: { affinity: -1, respect: -1 } }
+  mock_comment:         { target: { affinity: -6, respect: -3, trust: -2 }, actor: { familiarity: 1 }, bystanders: { affinity: -1 } }
+  hostile_comment:      { target: { affinity: -9, respect: -4, trust: -4 }, actor: { affinity: -2 }, bystanders: { affinity: -2, respect: -2 } }
+  dm_warm:              { target: { affinity: 2, trust: 2, familiarity: 3 }, actor: { familiarity: 2 } }
+  dm_curt:              { target: { affinity: -2, familiarity: 1 } }   # a curt brush-off
+  dm_flirt:             { target: { affinity: 2, attraction: 3, familiarity: 3 }, actor: { attraction: 2, familiarity: 2 } }
+  dm_left_on_seen:      { target: { affinity: -3 } }
+  friend_request_sent:     { target: { familiarity: 2 } }
+  friend_request_accepted: { target: { affinity: 3, familiarity: 3 }, actor: { affinity: 2, familiarity: 3 } }
+  friend_request_ignored:  { target: { affinity: -2 } }
+  mention:              { target: { affinity: 1, familiarity: 2 } }
+  birthday_wish:        { target: { affinity: 2, familiarity: 1 } }

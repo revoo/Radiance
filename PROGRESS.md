@@ -1,13 +1,24 @@
 # Progress
 
 ## Resume here
-- M0, M1 and M2 are complete. M2 is on `m2-llm-gateway`; once its CI run is green, `main` is
-  fast-forwarded to it. CI runs are readable at
-  `https://api.github.com/repos/revoo/Radiance/actions/runs` (public repo).
-- M2's live-provider ACs need R's keys: put them in `.env` and run `./gradlew :backend:liveTest`.
-- Next: **M3 — Content library & genesis** on a new branch `m3-content-genesis` from `main`. It ends
-  at ⏸ REVIEW (R reads the cast and the world bible's Chicagoland section).
+- Milestone: **M3 — Content library & genesis**, branch `m3-content-genesis` (from `main` at 0615af7,
+  which holds M0–M2, CI green). Ends at ⏸ REVIEW.
+- Current step: 4 — genesis skeleton generator (steps 1–3 committed: content module, starter library,
+  roster).
 - Half-done: nothing.
+- M2's live-provider ACs need R's keys: put them in `.env` and run `./gradlew :backend:liveTest`.
+- CI runs: `https://api.github.com/repos/revoo/Radiance/actions/runs` (public repo).
+
+## M3 steps
+1. `content` module: def schemas, YAML loader, cross-validation, blacklist, theme linter (ADR 0015) ✔
+2. Starter library: 26 quirks, 58 events, 16 arcs, 16 constraint tags, rules files ✔
+3. `roster.yaml` (30 + you + pinned) with §6.2 validation ✔
+4. Skeleton generator (seeded): traits, politics, biases, quirks, interests, taste, temperament,
+   faithfulness, routines, relationship graph, starting arcs, entities
+5. Flesh-out on the `genesis` route (5 per call) + relationship backstories; theme-linter rejection;
+   `world-seed.json` export/import; `genesis` Gradle task; director endpoints; regenerate one resident
+6. R's onboarding and first impressions
+7. World bible (Chicagoland section for review), PROGRESS, ⏸ REVIEW handoff
 
 ## Done
 - **M2 — LLM gateway, providers & cost meter** (2026-10-27), branch `m2-llm-gateway`:

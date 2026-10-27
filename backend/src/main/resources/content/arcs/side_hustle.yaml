@@ -1,0 +1,32 @@
+id: side_hustle
+category: LIFE
+description: "Candles, a food pop-up, reselling sneakers, a podcast: launched with fanfare."
+roles:
+  hustler: {}
+start:
+  base_rate_per_year: 0.08
+exclusive_with: [ side_hustle ]
+max_silence_days: 10
+abandon: folded
+phases:
+  - id: launch
+    duration_days: [5, 14]
+    visibility: PUBLIC
+    entry_event: { type: HUSTLE_LAUNCH, importance: 5, post: PHOTO,
+                   media: "a small product display on a kitchen table, handwritten price tags" }
+    beats: [ { kind: STATUS, brief: "asks everyone to like and share the new page" } ]
+    next: grind
+  - id: grind
+    duration_days: [21, 90]
+    visibility: PUBLIC
+    constraints: [ busy_weekends ]
+    beats: [ { kind: PHOTO, brief: "a farmers-market booth or a shipping-label pile" } ]
+    transitions: [ { to: thriving, p: 0.35 }, { to: folded, p: 0.65 } ]
+  - id: thriving
+    visibility: PUBLIC
+    entry_event: { type: HUSTLE_MILESTONE, importance: 5, post: STATUS, effects: { mood: 0.4 } }
+    terminal: true
+  - id: folded
+    visibility: PUBLIC
+    entry_event: { type: HUSTLE_FOLDED, importance: 3, post: STATUS }
+    terminal: true

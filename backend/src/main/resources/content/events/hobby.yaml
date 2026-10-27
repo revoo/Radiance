@@ -1,0 +1,43 @@
+# HOBBY (SPEC §5.4): gear, first attempts, progress, races and projects.
+- id: diy_project_post
+  category: HOBBY
+  base_rate: 0.02
+  modifiers: { quirk.diy_overreacher: 5.0, interest.home_improvement: 3.0 }
+  importance: 3
+  tags: [ home_improvement ]
+  output: { post: PHOTO, brief: "a DIY project mid-way: power tools, a ladder, questionable confidence",
+            media: "a half-finished home project with tools on the floor" }
+
+- id: plant_update
+  category: HOBBY
+  base_rate: 0.02
+  modifiers: { quirk.plant_parent: 8.0 }
+  importance: 1
+  output: { post: PHOTO, brief: "a plant update: a new leaf, a propagation jar, or a tragic loss",
+            media: "houseplants on a sunny windowsill" }
+
+- id: cooking_attempt
+  category: HOBBY
+  base_rate: 0.02
+  modifiers: { interest.food: 2.0, quirk.wellness_trend_chaser: 1.5 }
+  importance: 2
+  tags: [ food ]
+  output: { post: PHOTO, brief: "an ambitious recipe that turned out great or hilariously bad",
+            media: "a homemade dish on a stovetop, slightly imperfect" }
+
+- id: gaming_session
+  category: HOBBY
+  base_rate: 0.02
+  modifiers: { interest.gaming: 4.0 }
+  importance: 1
+  output: { post: STATUS, brief: "a gaming win, a rage-quit, or staying up too late on a new release" }
+
+- id: run_log
+  category: HOBBY
+  base_rate: 0.02
+  modifiers: { interest.fitness: 3.0, quirk.gym_rat: 1.5 }
+  excludes: { tags: [ injured, low_energy ] }
+  importance: 2
+  tags: [ physical, fitness ]
+  output: { post: PHOTO, brief: "a run, a ride or a swim logged; distance and how much it hurt",
+            media: "a running watch screen and sneakers on a park path" }

@@ -1,0 +1,52 @@
+id: school
+category: LIFE
+description: "Going back to school: thinking about it, applying, waiting, a decision, the first term."
+roles:
+  student: {}
+start:
+  base_rate_per_year: 0.04
+  requires: { trait_min: { openness: 45 } }
+exclusive_with: [ school ]
+max_silence_days: 14
+abandon: rejected
+phases:
+  - id: thinking
+    duration_days: [10, 30]
+    visibility: PUBLIC
+    beats: [ { kind: STATUS, brief: "wonders aloud about an MBA, nursing school or a certificate" } ]
+    next: applying
+  - id: applying
+    duration_days: [14, 45]
+    visibility: PUBLIC
+    constraints: [ busy_weekends ]
+    beats: [ { kind: STATUS, brief: "essays, transcripts, recommendation letters; stressed" } ]
+    next: waiting
+  - id: waiting
+    duration_days: [21, 60]
+    visibility: PUBLIC
+    beats: [ { kind: STATUS, brief: "refreshing the portal; pretending not to care" } ]
+    transitions: [ { to: accepted, p: 0.6 }, { to: waitlisted, p: 0.2 }, { to: rejected, p: 0.2 } ]
+  - id: accepted
+    duration_days: [14, 60]
+    visibility: PUBLIC
+    entry_event: { type: ACCEPTED, importance: 7, post: LIFE_EVENT, effects: { mood: 0.6 } }
+    next: enrolled
+  - id: waitlisted
+    duration_days: [14, 45]
+    visibility: PUBLIC
+    entry_event: { type: WAITLISTED, importance: 4, post: STATUS }
+    transitions: [ { to: enrolled, p: 0.5 }, { to: rejected, p: 0.5 } ]
+  - id: enrolled
+    duration_days: [30, 60]
+    visibility: PUBLIC
+    constraints: [ busy_weekends, sleep_deprived ]
+    beats: [ { kind: PHOTO, brief: "textbooks, a campus sign, or a laptop at a kitchen table at midnight" } ]
+    next: first_term
+  - id: first_term
+    visibility: PUBLIC
+    entry_event: { type: FIRST_TERM_DONE, importance: 5, post: STATUS, effects: { mood: 0.4 } }
+    terminal: true
+  - id: rejected
+    visibility: PUBLIC
+    entry_event: { type: REJECTED, importance: 4, post: STATUS, effects: { mood: -0.4 } }
+    terminal: true

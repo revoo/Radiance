@@ -1,0 +1,35 @@
+id: job_search
+category: LIFE
+description: "Looking for something better, quietly or not."
+roles:
+  seeker: {}
+start:
+  base_rate_per_year: 0.15
+  requires: { trait_max: { conscientiousness: 90 } }
+exclusive_with: [ job_search ]
+max_silence_days: 14
+abandon: gave_up
+phases:
+  - id: looking
+    duration_days: [14, 60]
+    visibility: PUBLIC
+    beats:
+      - { kind: STATUS, brief: "complains about job boards, cover letters or recruiters who ghost" }
+    next: interviewing
+  - id: interviewing
+    duration_days: [7, 21]
+    visibility: PUBLIC
+    beats: [ { kind: STATUS, brief: "nervous or cocky about an interview; asks for good vibes" } ]
+    transitions: [ { to: offer, p: 0.7 }, { to: gave_up, p: 0.3 } ]
+  - id: offer
+    visibility: PUBLIC
+    entry_event:
+      type: NEW_JOB
+      importance: 7
+      post: LIFE_EVENT
+      effects: { mood: 0.5, remove_constraints: [ unemployed, "budget_tight" ], add_constraints: [ new_job ] }
+    terminal: true
+  - id: gave_up
+    visibility: PUBLIC
+    entry_event: { type: SEARCH_PAUSED, importance: 2, post: STATUS }   # "staying put for now"
+    terminal: true

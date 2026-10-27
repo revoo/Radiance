@@ -1,0 +1,36 @@
+# DRAMA (SPEC §5.4): vaguebooking, callouts, feuds. Clusters near tension peaks.
+- id: vaguebook
+  category: DRAMA
+  base_rate: 0.01
+  modifiers: { quirk.vaguebooker: 6.0, neuroticism: 1.5, stress: 2.0 }
+  importance: 4
+  output: { post: STATUS, brief: "a vague post about 'some people'; everyone knows who it's about, or wants to" }
+  effects: { tension: 2 }
+
+- id: callout_post
+  category: DRAMA
+  base_rate: 0.003
+  modifiers: { argumentativeness: 2.0, agreeableness: 0.5 }
+  participants: { target: "anyone[affinity<-25]" }
+  cooldown_days: 21
+  importance: 6
+  output: { post: STATUS, brief: "calls out @target by name for something they said or did" }
+  effects: { tension: 4, "actor -> target": { affinity: -8 }, "target -> actor": { affinity: -10, respect: -4 } }
+
+- id: gossip
+  category: DRAMA
+  base_rate: 0.02
+  modifiers: { nosiness: 3.0 }
+  participants: { with: "friend[trust>50]" }
+  importance: 3
+  output: { post: NONE }                 # a private exchange: knowledge spreads; it surfaces later
+  effects: { knowledge_spread: 1 }
+
+- id: jealous_vague
+  category: DRAMA
+  base_rate: 0.004
+  modifiers: { neuroticism: 2.0, partner_satisfaction: 0.5 }
+  requires: { relationship_status: [ DATING, MARRIED ] }
+  importance: 4
+  output: { post: STATUS, brief: "a pointed post about loyalty, or people who should know better" }
+  effects: { tension: 2 }

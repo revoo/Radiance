@@ -1,0 +1,28 @@
+id: injury_recovery
+category: LIFE
+description: "A knee, an ankle, a back: laid up, then rehab, then back at it."
+roles:
+  patient: {}
+start:
+  base_rate_per_year: 0.05
+exclusive_with: [ injury_recovery ]
+max_silence_days: 12
+abandon: recovered
+phases:
+  - id: injured
+    duration_days: [7, 21]
+    visibility: PUBLIC
+    entry_event: { type: INJURED, importance: 5, post: STATUS, effects: { mood: -0.4, stress: 0.2, energy: -0.2 } }
+    constraints: [ "injured:{part}", low_energy ]
+    beats: [ { kind: STATUS, brief: "stuck on the couch, bored, binge-watching" } ]
+    next: rehab
+  - id: rehab
+    duration_days: [14, 45]
+    visibility: PUBLIC
+    constraints: [ "injured:{part}" ]
+    beats: [ { kind: STATUS, brief: "PT updates; small wins; impatient" } ]
+    next: recovered
+  - id: recovered
+    visibility: PUBLIC
+    entry_event: { type: RECOVERED, importance: 4, post: STATUS, effects: { mood: 0.4, remove_constraints: [ injured ] } }
+    terminal: true

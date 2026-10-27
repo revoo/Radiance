@@ -1,0 +1,169 @@
+# The starter quirk library (SPEC §5.2). A quirk maps to mechanics — arc and event weight multipliers,
+# stance biases, posting rate — plus a voice hint for the renderer. Residents get 1–3.
+- id: serial_flirt
+  description: "Shows up in the DMs of anyone of the opposite sex who's newly single."
+  mechanics:
+    stance_bias: { FLIRT: 0.6 }
+    event_multipliers: { dm_user_crush_checkin: 3.0 }
+    trait_nudges: { flirtatiousness: 15 }
+  voice_hint: "compliments that are a little too smooth; winks; 'how are you holding up?' in DMs"
+
+- id: troll
+  description: "Needles people for sport; occasionally genuinely funny."
+  mechanics:
+    stance_bias: { TROLL: 0.8, MOCK: 0.3, JOKE: 0.2 }
+    trait_nudges: { argumentativeness: 10 }
+  voice_hint: "deadpan bait, fake sincerity, 'just asking questions', the well-timed 💀"
+
+- id: oversharer
+  description: "Posts everything: medical updates, fights, feelings, lunch."
+  mechanics:
+    event_multipliers: { mood_post: 3.0, kid_milestone: 2.0 }
+    posting_rate: 3.0
+  voice_hint: "long posts, too much detail, 'not to be dramatic but'"
+
+- id: vaguebooker
+  description: "Cryptic posts about 'some people' so everyone asks what happened."
+  mechanics:
+    event_multipliers: { vaguebook: 4.0, jealous_vague: 2.0 }
+    stance_bias: { META: 0.1 }
+  voice_hint: "song lyrics as captions (paraphrased, never quoted), ellipses, 'I'm fine.'"
+
+- id: humblebragger
+  description: "Complains about how hard it is to be this successful."
+  mechanics:
+    event_multipliers: { promotion: 2.0, big_purchase: 1.5 }
+    stance_bias: { SELF_PIVOT: 0.4 }
+  voice_hint: "'so humbled', 'crazy week', 'didn't expect this but'"
+
+- id: wholesome_cheerleader
+  description: "Supports everyone, comments on everything, hearts all around."
+  mechanics:
+    stance_bias: { SUPPORT: 0.6, CONGRATS: 0.4, HYPE: 0.3 }
+    event_multipliers: { shoutout: 3.0, birthday_wish: 2.0 }
+  voice_hint: "exclamation points, 'so proud of you!!', heart emoji in every color"
+
+- id: debate_lover
+  description: "Lives for a comment-section argument and rarely concedes."
+  mechanics:
+    stance_bias: { DISAGREE: 0.5, QUESTION: 0.2 }
+    event_multipliers: { headline_rant: 2.0, headline_take: 1.5 }
+  voice_hint: "numbered points, 'source?', 'that's not what I said'"
+
+- id: devils_advocate
+  description: "Takes whichever side nobody else is taking."
+  mechanics:
+    stance_bias: { DISAGREE: 0.4, QUESTION: 0.3 }
+  voice_hint: "'just to play devil's advocate here', 'to be fair'"
+
+- id: diy_overreacher
+  description: "Starts projects far beyond their skill; finishes some of them eventually."
+  mechanics:
+    arc_multipliers: { home_project: 6.0 }
+    event_multipliers: { diy_project_post: 4.0 }
+  voice_hint: "YouTube-taught confidence, 'how hard can it be', progress pics"
+
+- id: side_hustler
+  description: "Always launching something: candles, a podcast, reselling, a food pop-up."
+  mechanics:
+    arc_multipliers: { side_hustle: 8.0 }
+    stance_bias: { SELF_PIVOT: 0.3 }
+  voice_hint: "links in comments, 'DM me for details', '#smallbusiness'"
+
+- id: lurker
+  description: "Reads everything, posts almost nothing."
+  mechanics:
+    posting_rate: 0.1
+    stance_bias: { REACT_ONLY: 0.8 }
+  voice_hint: "rare, short, a little awkward when they do post"
+
+- id: gym_rat
+  description: "Every workout is documented."
+  mechanics:
+    event_multipliers: { gym_checkin: 6.0, run_log: 2.0 }
+    arc_multipliers: { training_goal: 3.0 }
+  voice_hint: "PRs, macros, 'no excuses', mirror selfies described but never shown"
+
+- id: foodie_photographer
+  description: "The food has to be photographed before anyone eats."
+  mechanics:
+    event_multipliers: { food_photo: 4.0, cooking_attempt: 2.0 }
+  voice_hint: "restaurant names, 'hidden gem', Italian beef and tavern-style opinions"
+
+- id: plant_parent
+  description: "Has forty houseplants, each with a name."
+  mechanics:
+    event_multipliers: { plant_update: 8.0 }
+  voice_hint: "plants by name, 'she's thriving', grief over a fiddle-leaf fig"
+
+- id: sports_diehard
+  params: [ team ]
+  description: "Lives and dies with one Chicago team."
+  mechanics:
+    event_multipliers: { sports_reaction: 5.0, super_bowl_party: 1.5 }
+    stance_bias: { HYPE: 0.2 }
+  voice_hint: "all caps after wins, 'same old <team>' after losses, rivalry trash talk"
+
+- id: pun_machine
+  description: "Cannot resist a pun, ever."
+  mechanics:
+    stance_bias: { JOKE: 0.6 }
+    event_multipliers: { halloween_costume: 2.0 }
+  voice_hint: "puns in every comment; 'I'll see myself out'"
+
+- id: chronic_complainer
+  description: "Something is always wrong: the weather, the traffic, the service."
+  mechanics:
+    event_multipliers: { commute_gripe: 3.0, work_gripe: 3.0, washout_complaint: 2.0, brutal_cold: 1.5 }
+    stance_bias: { SELF_PIVOT: 0.2 }
+  voice_hint: "'of course', 'every single time', 'unbelievable'"
+
+- id: nostalgic
+  description: "Lives half in the past; throwbacks every Thursday."
+  mechanics:
+    event_multipliers: { throwback: 6.0 }
+  voice_hint: "'remember when', 'kids today will never know', old neighborhood spots that closed"
+
+- id: grammar_police
+  description: "Corrects your/you're under strangers' posts."
+  mechanics:
+    stance_bias: { MOCK: 0.2, QUESTION: 0.1 }
+  voice_hint: "an asterisk correction, perfect punctuation, mild superiority"
+
+- id: wellness_trend_chaser
+  description: "Cold plunges, mushroom coffee, whatever's next."
+  mechanics:
+    arc_multipliers: { new_hobby: 2.0 }
+    event_multipliers: { cooking_attempt: 1.5 }
+  voice_hint: "'game changer', 'my nervous system', product names with confidence"
+
+- id: doomscroller
+  description: "Reads every headline at 2 am and shares the worst ones."
+  mechanics:
+    event_multipliers: { headline_take: 2.0, headline_quiet_share: 2.0 }
+  voice_hint: "'we're cooked', 'this is fine', late-night posting"
+
+- id: pet_obsessed
+  description: "The pet is the main character."
+  mechanics:
+    event_multipliers: { pet_moment: 5.0 }
+    arc_multipliers: { new_pet: 3.0 }
+  voice_hint: "posts in the pet's voice sometimes; pet nicknames"
+
+- id: gadget_early_adopter
+  description: "Has the new phone before you've heard of it."
+  mechanics:
+    event_multipliers: { big_purchase: 2.5 }
+  voice_hint: "specs, 'unboxing', mild contempt for last year's model"
+
+- id: coupon_strategist
+  description: "Knows every deal, every Jewel sale, every app discount."
+  mechanics:
+    stance_bias: { ADVICE: 0.4 }
+  voice_hint: "'pro tip', exact prices, triumph over saving four dollars"
+
+- id: hobby_hopper
+  description: "A new passion every month; garage full of abandoned gear."
+  mechanics:
+    arc_multipliers: { new_hobby: 5.0 }
+  voice_hint: "boundless enthusiasm that everyone has learned to discount"

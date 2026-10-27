@@ -35,6 +35,14 @@ radiance:
     network-name: Radiance
     roster: content/cast/roster.yaml
     seed: 42                           # placeholder world row only; genesis picks the real seed
+  content:
+    edge: 1.0                          # mockery, hostility and prejudice: 0 = wholesome, 1 = a real community, 2 = the worst comment section (§5.8)
+    strong-prejudice: 4                # residents with real prejudice (§5.2); applies at genesis
+    softening-check: true              # judge MOCK/HOSTILE/TROLL output for softening (§5.10)
+    sensitive-arcs: true               # heavy real-life arcs, such as grief over an off-network relative
+    arc-blacklist:                     # live-tunable; arcs that never happen, and whose themes stay out of prose (§5.5)
+      - id: pregnancy
+        theme-terms: [pregnant, pregnancy, "expecting a baby", "baby bump", trimester, "baby shower", "gender reveal"]
   llm:                                 # SPEC §9. The offline and test profiles set mode: fake.
     mode: live                         # live: real providers whose keys are present; fake: FakeLlm everywhere
     providers:                         # one entry per endpoint; keys come from env or .env

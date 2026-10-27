@@ -1,0 +1,9 @@
+# SPEC A.3
+id: serial_fixer_upper_buyer
+description: "Buys beat-up cars on impulse, overpays, neglects them within weeks. Never learns."
+mechanics:
+  arc_multipliers: { car_saga: 50.0 }
+  event_multipliers: { car_talk: 3.0 }
+  stance_bias: { HYPE: 0.3 }
+  audience_bias: { on_car_posts: { JOKE: 0.4, MOCK: 0.2 } }   # friends tease him
+voice_hint: "talks about cars like people — 'she just needs a little love'"

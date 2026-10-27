@@ -1,0 +1,50 @@
+# LIFE (SPEC §5.4): updates and milestones. Bigger ones live in arcs (romance, job_search, moving…).
+- id: promotion
+  category: LIFE
+  base_rate: 0.003
+  modifiers: { conscientiousness: 1.5, quirk.humblebragger: 2.0 }
+  excludes: { tags: [ unemployed, new_job ] }
+  cooldown_days: 180
+  importance: 6
+  tags: [ work ]
+  output: { post: LIFE_EVENT, brief: "a promotion announcement, humble or not" }
+  effects: { mood: 0.4 }
+
+- id: big_purchase
+  category: LIFE
+  base_rate: 0.004
+  modifiers: { impulsivity: 1.5, quirk.gadget_early_adopter: 2.0 }
+  excludes: { tags: [ budget_tight, unemployed ] }
+  cooldown_days: 60
+  importance: 5
+  tags: [ big_purchase, expensive ]
+  output: { post: PHOTO, brief: "a new couch, TV, grill, bike or e-bike; proud or sheepish about the price",
+            media: "a new purchase still half in its box in a living room" }
+  effects: { mood: 0.2 }
+
+- id: anniversary_post
+  category: LIFE
+  base_rate: 0.003
+  requires: { relationship_status: [ DATING, MARRIED ] }
+  cooldown_days: 300
+  importance: 4
+  tags: [ couple ]
+  output: { post: PHOTO, brief: "an anniversary post about their partner; sappy or sarcastic per voice",
+            media: "two people from behind at a restaurant or a lookout, warm evening light" }
+
+- id: birthday_self
+  category: LIFE
+  when: { calendar: [ birthday ] }
+  base_rate: 0.6
+  modifiers: { attention_seeking: 1.5 }
+  importance: 3
+  output: { post: STATUS, brief: "their own birthday: thanking everyone, or dreading the number" }
+
+- id: work_anniversary
+  category: LIFE
+  base_rate: 0.002
+  excludes: { tags: [ unemployed ] }
+  cooldown_days: 300
+  importance: 3
+  tags: [ work ]
+  output: { post: LIFE_EVENT, brief: "N years at the company; grateful, wry or quietly looking" }

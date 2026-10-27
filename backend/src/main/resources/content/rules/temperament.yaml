@@ -1,0 +1,8 @@
+# How like-meters behave, per preset (SPEC §5.2, A.8). Genesis adds up to ±jitter to each number.
+presets:
+  GROUCH:     { baseline: -35, good-gain: 0.5, bad-gain: 1.0, floor: -100, ceiling: 20 }   # hates everyone, some less
+  TYPICAL:    { baseline: 10,  good-gain: 1.0, bad-gain: 0.4, floor: -30,  ceiling: 100 }  # hard to make them hate you
+  SWEETHEART: { baseline: 30,  good-gain: 1.2, bad-gain: 0.2, floor: 0,    ceiling: 100 }  # nearly impossible to anger
+mood-effect: 0.5          # in a bad mood, bad interactions land up to 50% harder and good ones up to 50% softer
+taper-zone: 15            # changes shrink linearly over the last 15 points before a bound
+jitter: 0.2               # ±20%

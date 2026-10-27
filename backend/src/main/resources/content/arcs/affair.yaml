@@ -1,0 +1,52 @@
+# An arc gated by a trait, with R as a possible role (SPEC A.9, §5.2 faithfulness).
+id: affair
+category: DRAMA                         # its beats count toward DRAMA in the event mix (§5.4)
+description: "An attached resident low on faithfulness lets a flirtation go too far."
+roles:
+  a: { requires: { relationship_status: [DATING, MARRIED] } }        # the one who strays
+  b: { requires: { attracted_to: a, mutual: true, not: partner_of_a } }   # a resident, or R if he plays along
+start:
+  base_rate_per_year: 0.2               # per eligible pair, before temptation
+  scale_by: temptation                  # the faithfulness ladder × partner_satisfaction × chemistry × romance.temptation
+  requires: { faithfulness_a_max: 49, chemistry_min: 0.3 }   # b's own faithfulness decides whether b goes along
+exclusive_with: [ affair, romance ]
+max_silence_days: 7
+abandon: cooled_off
+phases:
+  - id: flirting
+    duration_days: [3, 14]
+    visibility: PRIVATE
+    knowers: [ a, b ]
+    beats: [ { kind: REACTIONS, brief: "likes and comments that land a little too warmly" } ]
+    transitions: [ { to: secret_affair, p: 0.4 }, { to: cooled_off, p: 0.6 } ]
+  - id: secret_affair
+    duration_days: [14, 90]
+    visibility: SECRET
+    knowers: [ a, b ]
+    constraints: [ "secret:affair" ]
+    beats: [ { kind: DECLINE_PLANS, brief: "working late again; vague about where they were" } ]
+    transitions: [ { to: discovered, p: 0.45 }, { to: ended_quietly, p: 0.55 } ]
+  - id: discovered
+    duration_days: [3, 10]
+    visibility: PUBLIC
+    entry_event:
+      type: AFFAIR_DISCOVERED
+      importance: 9
+      post: STATUS                      # the partner's vague post, or the fallout in someone's comments
+      effects: { "partner -> a": { trust: -60, affinity: -50 }, "partner -> b": { affinity: -70 }, tension: 8 }
+    transitions: [ { to: split, p: 0.55 }, { to: stayed_together, p: 0.45 } ]
+  - id: split
+    visibility: PUBLIC
+    entry_event: { type: SPLIT, importance: 9, post: LIFE_EVENT,
+                   effects: { end_relationship: true, start_arc: breakup_aftermath } }   # DATING → SINGLE, MARRIED → DIVORCED
+    terminal: true
+  - id: stayed_together
+    visibility: PUBLIC
+    entry_event: { type: STAYED_TOGETHER, importance: 5, post: STATUS }   # "we're working on things"
+    terminal: true
+  - id: ended_quietly
+    entry_event: { type: AFFAIR_ENDED, importance: 3, post: NONE }       # memories only; the secret keeps
+    terminal: true
+  - id: cooled_off
+    entry_event: { type: FLIRTATION_COOLED, importance: 1, post: NONE }
+    terminal: true

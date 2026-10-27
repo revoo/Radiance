@@ -1,0 +1,47 @@
+# DM_USER (SPEC §5.11): residents messaging R. Outside the event mix; rate-limited by dm-initiation-rate.
+- id: dm_user_crush_checkin
+  category: DM_USER
+  base_rate: 0.15
+  modifiers: { flirtatiousness: 1.5 }
+  participants: { user: "user[attraction>40]" }
+  importance: 3
+  output: { post: DM, brief: "a casual excuse to start talking: a meme, a question, 'saw this and thought of you'" }
+
+- id: dm_user_advice
+  category: DM_USER
+  base_rate: 0.02
+  participants: { user: "user[trust>40,familiarity>30]" }
+  importance: 2
+  output: { post: DM, brief: "asks R for advice about something going on (work, a person, a tech problem)" }
+
+- id: dm_user_vent
+  category: DM_USER
+  base_rate: 0.02
+  modifiers: { stress: 2.5, quirk.oversharer: 2.0 }
+  participants: { user: "user[affinity>30]" }
+  importance: 2
+  output: { post: DM, brief: "vents to R about another resident or their day" }
+
+- id: dm_user_gossip
+  category: DM_USER
+  base_rate: 0.02
+  modifiers: { nosiness: 3.0 }
+  participants: { user: "user[affinity>20]" }
+  importance: 3
+  output: { post: DM, brief: "'did you see what so-and-so posted??' — gossip about another resident" }
+
+- id: dm_user_complaint
+  category: DM_USER
+  base_rate: 0.01
+  modifiers: { argumentativeness: 2.0 }
+  participants: { user: "user[affinity<-10]" }
+  importance: 3
+  output: { post: DM, brief: "complains to R directly about something R said in a comment" }
+
+- id: dm_user_headline
+  category: DM_USER
+  base_rate: 0.01
+  modifiers: { politics_interest: 2.0 }
+  participants: { user: "user[familiarity>30]" }
+  importance: 1
+  output: { post: DM, brief: "shares a link with R: 'are you seeing this'" }
