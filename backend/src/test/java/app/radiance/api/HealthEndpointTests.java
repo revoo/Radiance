@@ -14,7 +14,7 @@ import org.springframework.test.web.servlet.MockMvc;
 /** M0 AC: the offline profile boots with no environment variables and health is UP. */
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("offline")
+@ActiveProfiles({"offline", "test"})
 class HealthEndpointTests {
 
   @Autowired MockMvc mvc;

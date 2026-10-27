@@ -20,8 +20,15 @@ radiance:
     username: ${RADIANCE_USERNAME:}
     password-bcrypt: ${RADIANCE_PASSWORD_BCRYPT:}
     dev-login: false
+  persistence:
+    db-path: data/radiance.db
+    read-pool-size: 4
+    lease-ttl: 30s                     # a crashed writer blocks others for at most this long
+    lease-renew-interval: 10s
   world:
+    name: Chicagoland
     timezone: America/Chicago
     home-metro: "Chicago, IL"
     network-name: Radiance
     roster: content/cast/roster.yaml
+    seed: 42                           # placeholder world row only; genesis picks the real seed

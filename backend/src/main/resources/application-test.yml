@@ -1,0 +1,4 @@
+# Each test context gets its own throwaway database (SPEC §4.1: tests use separate files).
+radiance:
+  persistence:
+    db-path: ${java.io.tmpdir}/radiance-test/${random.uuid}.db
