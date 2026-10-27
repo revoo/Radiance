@@ -1,23 +1,31 @@
 # Progress
 
 ## Resume here
-- Milestone: **M1 — Persistence & schema**, on branch `m1-persistence` (branched from `m0-scaffold`).
-- Current step: 1 of 7 — kernel (Ulid, WallClock, RandomSource, Json).
+- M0 and M1 are complete on branches `m0-scaffold` and `m1-persistence` (both pushed).
+- **Blocked on R:** confirm CI is green for `m1-persistence` in GitHub Actions (private repo; `gh` not
+  installed). Then fast-forward `main` to `m1-persistence` and push:
+  `git checkout main && git merge --ff-only m1-persistence && git push origin main`.
+- Next: **M3 — Content library & genesis** (SPEC §12; M2 is the LLM gateway and comes first:
+  **start M2** on a new branch `m2-llm-gateway` from `m1-persistence`).
 - Half-done: nothing.
-- M0 is complete locally; `main` is fast-forwarded only after R confirms CI is green on GitHub
-  (the repo is private and `gh` isn't installed, so CI status can't be read from here).
-- Next: `./gradlew check`, then continue the M1 step list below.
-
-## M1 steps
-1. Kernel: deterministic `Ulid`, `WallClock` (+ `ManualClock`), `RandomSource` (in-house xoshiro256**), `Json`
-2. `Sql` port, `Row`/`RowMapper`, `UnitOfWork` (≤100-param chunking, upserts), `JdbcSql`
-3. Migration runner + `0001_init.sql` (with agreed fixes)
-4. Writer lane (off-lane commits fail fast)
-5. Writer lease + fencing, lease keeper, placeholder world row bootstrap
-6. Core repositories + persistence contract suite
-7. ADRs, `./gradlew check`, PROGRESS, merge
 
 ## Done
+- **M1 — Persistence & schema** (2026-10-27), branch `m1-persistence`:
+  - Kernel: deterministic `Ulid` (time + seeded stream), `WallClock`/`ManualClock`, in-house
+    xoshiro256** `RandomSource` (reference vector + golden values pinned), `Json` (Jackson 3).
+  - `Sql` port, `SqlAdmin` (unfenced bootstrap/lease path), `UnitOfWork` (D1 limits, chunked
+    inserts/upserts, arg normalization), `JdbcSql` (WAL, pooled reads, one writer connection).
+  - Migration runner (checksummed, atomic per file) and `0001_init.sql` with the agreed fixes.
+  - Writer lane; fenced writer lease with `LeaseKeeper` (acquire/renew/release); placeholder world row.
+  - Repositories: world, cast, relationships, arcs, canon (entities/facts/knowledge), events,
+    social (posts/comments/reactions), scheduled intents.
+  - Tests (45, all green): contract suite (`SqlContractTests`, reusable for D1), schema rules, migration
+    runner, UnitOfWork properties, repository round trips, Spring wiring, Modulith verify.
+  - AC: contract tests pass ✔; 1,000-row unit commits atomically with every statement ≤ 100 params ✔;
+    migrations idempotent ✔; off-lane write fails fast ✔; a unit from a process that lost the lease
+    aborts ✔. Also verified by hand: offline `bootRun` creates the DB and takes the lease (epoch 1).
+  - ADRs 0010 (wall vs world time), 0011 (IDs and cursors), 0012 (persistence implementation),
+    0013 (schema deviations, index policy, row records).
 - **M0 — Scaffold** (2026-10-27), branch `m0-scaffold`:
   - Gradle 9.8.2 wrapper (checksums verified), Boot 4.1.2, Java 25, module packages per §3.5,
     Modulith `verify()`, open `/actuator/health`, offline dev login (ADR 0009).
@@ -53,7 +61,12 @@ Resolutions of spec issues raised at kickoff. Each gets an ADR when its mileston
 ## Deviations from spec
 - TypeScript pinned to 6.0.x, not latest (7.x), for typescript-eslint compatibility (ADR 0009).
 - Appendix C updated: Boot 4.1.2 is the latest 4.1 patch.
+- Schema: `ux_job_active` covers WAITING; `render_status` CHECKs on comment/dm_message; two extra
+  read-path indexes (ADR 0013).
+- Writes outside the writer lane exist for bootstrap and the lease only, via `SqlAdmin` (ADR 0012).
+- Shared vocabulary enums (`AirStatus`, `RenderStatus`, `Visibility`, `Fidelity`, `ContentOrigin`) live
+  in `kernel`, beyond §3.5's list for it, to keep modules acyclic (ADR 0013).
 
 ## Open questions for R
-- Please confirm the CI run for `m0-scaffold` is green in GitHub Actions (or install `gh` and run
-  `gh auth login` so I can check runs myself).
+- Please confirm the CI runs for `m0-scaffold` and `m1-persistence` are green in GitHub Actions (or
+  install `gh` and run `gh auth login` so I can check runs myself).
