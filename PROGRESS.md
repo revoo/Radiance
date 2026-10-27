@@ -1,21 +1,32 @@
 # Progress
 
 ## Resume here
-- Milestone: **M0 — Scaffold**, on branch `m0-scaffold`.
-- Current step: 1 of 6 — spec, .gitignore, CLAUDE.md, PROGRESS.md, ADR 0001.
+- Milestone: **M1 — Persistence & schema**, on branch `m1-persistence` (branched from `m0-scaffold`).
+- Current step: 1 of 7 — kernel (Ulid, WallClock, RandomSource, Json).
 - Half-done: nothing.
-- Next: generate the Gradle wrapper (Gradle 9.8.2) and the backend skeleton.
+- M0 is complete locally; `main` is fast-forwarded only after R confirms CI is green on GitHub
+  (the repo is private and `gh` isn't installed, so CI status can't be read from here).
+- Next: `./gradlew check`, then continue the M1 step list below.
 
-## M0 steps
-1. Spec, .gitignore, CLAUDE.md, PROGRESS.md, ADR 0001
-2. Gradle wrapper + backend skeleton (Boot 4.1.x, Java 25, Modulith verify, health test, offline profile)
-3. Frontend (Vite React TS, dev proxy, Vitest)
-4. `.env.example`, ADRs 0002–0008
-5. GitHub Actions CI, push
-6. Verify ACs by hand
+## M1 steps
+1. Kernel: deterministic `Ulid`, `WallClock` (+ `ManualClock`), `RandomSource` (in-house xoshiro256**), `Json`
+2. `Sql` port, `Row`/`RowMapper`, `UnitOfWork` (≤100-param chunking, upserts), `JdbcSql`
+3. Migration runner + `0001_init.sql` (with agreed fixes)
+4. Writer lane (off-lane commits fail fast)
+5. Writer lease + fencing, lease keeper, placeholder world row bootstrap
+6. Core repositories + persistence contract suite
+7. ADRs, `./gradlew check`, PROGRESS, merge
 
 ## Done
-- (nothing yet)
+- **M0 — Scaffold** (2026-10-27), branch `m0-scaffold`:
+  - Gradle 9.8.2 wrapper (checksums verified), Boot 4.1.2, Java 25, module packages per §3.5,
+    Modulith `verify()`, open `/actuator/health`, offline dev login (ADR 0009).
+  - Frontend: Vite 8 + React 19 + TS 6.0 + Tailwind 4 + TanStack Query + React Router + Vitest; dev proxy
+    for `/api` and `/actuator`.
+  - `.env.example`, ADRs 0001–0009, GitHub Actions CI (backend + frontend jobs).
+  - Verified by hand: `bootRun` with the offline profile and no env vars → health UP in 1.3 s with the
+    dev-login warning; the frontend at :5173 shows "Backend: UP" through the proxy.
+  - Not verified from here: CI green on GitHub (private repo).
 
 ## Decisions agreed with R (2026-10-27, before M0)
 Resolutions of spec issues raised at kickoff. Each gets an ADR when its milestone implements it.
@@ -40,7 +51,9 @@ Resolutions of spec issues raised at kickoff. Each gets an ADR when its mileston
     as genesis edges despite the "Online" circle's definition.
 
 ## Deviations from spec
-- (none yet)
+- TypeScript pinned to 6.0.x, not latest (7.x), for typescript-eslint compatibility (ADR 0009).
+- Appendix C updated: Boot 4.1.2 is the latest 4.1 patch.
 
 ## Open questions for R
-- (none)
+- Please confirm the CI run for `m0-scaffold` is green in GitHub Actions (or install `gh` and run
+  `gh auth login` so I can check runs myself).
