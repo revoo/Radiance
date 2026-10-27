@@ -193,8 +193,8 @@ public final class DefaultLlmGateway implements LlmGateway {
           parked = new BudgetExhaustedException(target.providerName() + ":closed", clock.nowMs() + wait);
           break;
         }
-        if (resp.outcome().isTransient() && transientRetries < TRANSIENT_RETRIES
-            && !breaker.isOpen(target.providerName())) {
+        if (resp.outcome().isTransient() && !resp.isClientError()
+            && transientRetries < TRANSIENT_RETRIES && !breaker.isOpen(target.providerName())) {
           sleep(BACKOFF_MS << transientRetries++);
           continue;
         }

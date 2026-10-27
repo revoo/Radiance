@@ -24,6 +24,13 @@ public record ProviderResponse(
     public static final TokenCounts ZERO = new TokenCounts(0, 0, 0, 0, 0);
   }
 
+  /** Prefix on errors that are our fault (a 4xx): retrying the same request can't help. */
+  public static final String CLIENT_ERROR = "client error: ";
+
+  public boolean isClientError() {
+    return error != null && error.startsWith(CLIENT_ERROR);
+  }
+
   public static ProviderResponse ok(String text, TokenCounts tokens, String modelId) {
     return new ProviderResponse(Outcome.OK, text, tokens, modelId, 0, null, null);
   }
