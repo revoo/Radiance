@@ -1,0 +1,11 @@
+[versions]
+spring-boot = "4.1.2"
+spring-modulith = "2.1.2"
+jqwik = "1.10.2"
+
+[libraries]
+spring-modulith-bom = { module = "org.springframework.modulith:spring-modulith-bom", version.ref = "spring-modulith" }
+jqwik = { module = "net.jqwik:jqwik", version.ref = "jqwik" }
+
+[plugins]
+spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }

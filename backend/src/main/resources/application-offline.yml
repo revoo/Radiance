@@ -1,0 +1,4 @@
+# Zero keys, zero cost, no network (SPEC §5.17; PROGRESS.md decisions 1 and 11).
+radiance:
+  security:
+    dev-login: true
