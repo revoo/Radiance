@@ -41,6 +41,7 @@ final class ContentValidator {
     v.arcs();
     v.rules();
     v.roster();
+    v.tables();
     return v.problems;
   }
 
@@ -329,6 +330,10 @@ final class ContentValidator {
       }
       for (String c : p.constraints()) constraintRef(pw, c.replaceAll("\\{[a-z_]+}", "x"));
       if (p.entryEvent() != null) {
+        var ce = p.entryEvent().createsEntity();
+        if (ce != null && (ce.fromTable() == null || !lib.tables().containsKey(ce.fromTable()))) {
+          problem(pw, "creates_entity names unknown table '" + (ce == null ? null : ce.fromTable()) + "'");
+        }
         if (p.entryEvent().type() == null) problem(pw, "entry_event needs a type");
         if (p.entryEvent().importance() < 1 || p.entryEvent().importance() > 10) {
           problem(pw, "entry_event importance must be 1..10");
@@ -365,6 +370,12 @@ final class ContentValidator {
   }
 
   // ------------------------------------------------------------------------------------------
+
+  private void tables() {
+    for (String required : java.util.List.of("names", "kid_names", "pet_names")) {
+      if (!lib.tables().containsKey(required)) problem("tables/" + required + ".yaml", "missing");
+    }
+  }
 
   private void rules() {
     var t = lib.temperament();

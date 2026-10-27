@@ -1,0 +1,11 @@
+# Pets for new_pet and genesis (SPEC §5.5). The visual description is reused in every photo.
+- { species: dog, breed: "pit bull mix", look: "a stocky gray pit bull mix with a white chest and a goofy grin" }
+- { species: dog, breed: "beagle", look: "a tricolor beagle with one ear that flips inside out" }
+- { species: dog, breed: "golden retriever", look: "a fluffy golden retriever with a red bandana" }
+- { species: dog, breed: "chihuahua mix", look: "a tiny tan chihuahua mix with bulging eyes and a sweater" }
+- { species: dog, breed: "german shepherd mix", look: "a lanky black-and-tan shepherd mix with huge ears" }
+- { species: dog, breed: "dachshund", look: "a long red dachshund with a gray muzzle" }
+- { species: cat, breed: "orange tabby", look: "a chunky orange tabby cat with a white belly" }
+- { species: cat, breed: "tuxedo", look: "a sleek black-and-white tuxedo cat with a white mustache spot" }
+- { species: cat, breed: "gray shorthair", look: "a slate-gray shorthair cat with green eyes" }
+- { species: cat, breed: "calico", look: "a small calico cat with a crooked tail" }

@@ -24,10 +24,18 @@ public record ContentLibrary(
     EngagementRules engagement,
     PacingRules pacing,
     Roster roster,
+    Map<String, List<Map<String, Object>>> tables,
     List<ContentProperties.BlacklistEntry> blacklist) {
 
   public boolean isBlacklisted(String arcId) {
     return blacklist.stream().anyMatch(b -> b.id().equals(arcId));
+  }
+
+  /** A curated table ({@code tables/<name>.yaml}): rows the engine draws from. */
+  public List<Map<String, Object>> table(String name) {
+    var t = tables.get(name);
+    if (t == null) throw new IllegalArgumentException("no content table '" + name + "'");
+    return t;
   }
 
   public ThemeLinter themeLinter() {

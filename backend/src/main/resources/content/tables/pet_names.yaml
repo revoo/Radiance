@@ -1,0 +1,3 @@
+# Names for pets (SPEC §5.5: new pets get engine-chosen names).
+- { species: dog, names: [Bear, Ditka, Rosie, Murphy, Lucy, Tucker, Penny, Moose, Ollie, Gus, Daisy, Winnie, Cooper, Lou, Sadie] }
+- { species: cat, names: [Pickles, Mochi, Olive, Pierogi, Salem, Biscuit, Clementine, Toast, Smokey, Nala, Beans, Ziggy, Pepper, Mabel, Otis] }

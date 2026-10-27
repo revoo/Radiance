@@ -1,0 +1,13 @@
+# Beat-up cars for car_saga (SPEC A.2). The engine picks one; `paid` is always well over `worth`.
+- { year: 2006, make: Pontiac, model: G6, color: maroon, flaw: "the check engine light that never goes off", worth: 1800, paid: 3900 }
+- { year: 2009, make: Honda, model: Civic, color: silver, flaw: "a dented rear quarter panel and a rattling heat shield", worth: 3500, paid: 6200 }
+- { year: 2004, make: Ford, model: Mustang, color: red, flaw: "a soft top that leaks when it rains", worth: 3000, paid: 5500 }
+- { year: 2011, make: Chevy, model: Impala, color: white, flaw: "an ex-police-auction interior that smells like it", worth: 2500, paid: 4800 }
+- { year: 2008, make: Jeep, model: Wrangler, color: green, flaw: "rust bubbling through the rocker panels", worth: 5000, paid: 9800 }
+- { year: 2007, make: BMW, model: 328i, color: black, flaw: "an oil leak and four dashboard warnings", worth: 3200, paid: 7400 }
+- { year: 2010, make: Dodge, model: Charger, color: dark gray, flaw: "a transmission that slips into third", worth: 4000, paid: 7900 }
+- { year: 2005, make: Toyota, model: Tacoma, color: tan, flaw: "a frame with more rust than anyone admits", worth: 4500, paid: 8800 }
+- { year: 2003, make: Mercedes, model: E320, color: champagne, flaw: "air suspension that sags overnight", worth: 2200, paid: 5300 }
+- { year: 2012, make: Fiat, model: "500", color: yellow, flaw: "a clutch on its last legs", worth: 2000, paid: 4500 }
+- { year: 2006, make: Chrysler, model: 300C, color: navy, flaw: "a mystery electrical drain that kills the battery", worth: 2800, paid: 5600 }
+- { year: 2009, make: Subaru, model: WRX, color: blue, flaw: "a blown turbo seal and an aftermarket exhaust", worth: 5500, paid: 10500 }

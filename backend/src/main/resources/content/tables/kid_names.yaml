@@ -1,0 +1,8 @@
+# First names for residents' off-network children and new babies in the wider family (born 2000–2026).
+# Plain, varied, nothing language models overuse. Kids never appear in images (SPEC P9).
+- { era: "2000s", male: [Tyler, Brandon, Austin, Nathan, Kyle, Justin, Zach, Connor, Marcus, Diego],
+                  female: [Hannah, Madison, Alyssa, Brianna, Megan, Jasmine, Kaitlyn, Gabriela, Paige, Shelby] }
+- { era: "2010s", male: [Mason, Owen, Wyatt, Caleb, Isaac, Mateo, Hudson, Jaxon, Elijah, Adrian],
+                  female: [Avery, Harper, Lily, Mia, Peyton, Camila, Brooklyn, Addison, Natalie, Ruby] }
+- { era: "2020s", male: [Theo, Ezra, Rowan, Beckett, Milo, Santiago, Bennett, Jude, Silas, Arlo],
+                  female: [Nora, Hazel, Ivy, Josie, Maeve, Sloane, Margot, Lucia, Vivian, June] }

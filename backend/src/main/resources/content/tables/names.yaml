@@ -1,0 +1,41 @@
+# First names for new adult people (spouses, parents, siblings, a new partner), by heritage group
+# (SPEC §5.5, §6.2): believable for people born 1950–2000, no famous namesakes, nothing language models
+# overuse. The engine picks; names become major facts. `group` matches a word in the roster's heritage.
+- { group: irish,      male: [Kevin, Brendan, Sean, Patrick, Dennis, Terry, Brian, Michael, Kieran, Colin],
+                       female: [Colleen, Maureen, Erin, Kathleen, Shannon, Bridget, Kelly, Siobhan, Nora, Tara] }
+- { group: polish,     male: [Mark, Greg, Pawel, Tomasz, Rob, Adam, Ted, Stan, Marek, Jeff],
+                       female: [Kasia, Monika, Agnieszka, Dana, Joanna, Beata, Lauren, Ewa, Krystyna, Renata] }
+- { group: italian,    male: [Anthony, Vince, Joe, Sal, Frank, Dominic, Nick, Paul, Carmen, Louie],
+                       female: [Gina, Theresa, Angela, Denise, Rosemary, Lisa, Christina, Toni, Marie, Donna] }
+- { group: german,     male: [Eric, Kurt, Doug, Karl, Steve, Brad, Ken, Todd, Jason, Matt],
+                       female: [Heidi, Karen, Gretchen, Amy, Jill, Laura, Becky, Kristin, Jenny, Megan] }
+- { group: czech,      male: [Tom, Frank, Jim, Rich, Joe, Ed, Dave, Ron, Pete, Ray],
+                       female: [Jana, Linda, Barb, Diane, Carol, Patty, Sue, Kim, Julie, Lenka] }
+- { group: mexican,    male: [Jorge, Luis, Javier, Miguel, Carlos, Eduardo, Ruben, Hector, Victor, Juan],
+                       female: [Veronica, Maribel, Claudia, Leticia, Adriana, Yesenia, Lupe, Rosa, Marisol, Diana] }
+- { group: korean,     male: [James, Paul, Steven, Jae, Sung, David, Eugene, Peter, John, Tony],
+                       female: [Grace, Helen, Esther, Christine, Jenny, Sarah, Min, Susan, Michelle, Joyce] }
+- { group: bosnian,    male: [Emir, Adnan, Haris, Mirza, Senad, Damir, Elvir, Jasmin, Kenan, Nermin],
+                       female: [Lejla, Amina, Selma, Emina, Aida, Merima, Dzenana, Alma, Sabina, Ajla] }
+- { group: serbian,    male: [Dragan, Nikola, Milan, Zoran, Dejan, Vlado, Goran, Stefan, Bojan, Aleksandar],
+                       female: [Jelena, Snezana, Vesna, Milica, Dragana, Biljana, Ana, Mira, Tanja, Sanja] }
+- { group: greek,      male: [George, Nick, Chris, Peter, Gus, Dimitri, Steve, Tony, Kostas, Mike],
+                       female: [Maria, Despina, Helen, Georgia, Toula, Katerina, Sophia, Anna, Voula, Irene] }
+- { group: indian,     male: [Rahul, Vikram, Anand, Sanjay, Arjun, Nikhil, Ravi, Amit, Suresh, Kiran],
+                       female: [Priya, Anjali, Meera, Kavita, Sunita, Neha, Pooja, Rekha, Shruti, Lata] }
+- { group: jewish,     male: [David, Josh, Jeff, Marc, Seth, Howard, Dan, Ari, Larry, Jon],
+                       female: [Rachel, Beth, Lisa, Dana, Jodi, Ellen, Rebecca, Naomi, Sharon, Robin] }
+- { group: black,      male: [Darnell, Marcus, Terrence, Andre, Derrick, Reggie, Calvin, Jerome, Kevin, Tyrone],
+                       female: [Tasha, Monique, Keisha, Danielle, Tamika, Alicia, Renee, Crystal, Latoya, Denise] }
+- { group: swedish,    male: [Erik, Nils, Lars, Carl, Anders, Jon, Peter, Gus, Karl, Mats],
+                       female: [Ingrid, Karin, Linnea, Annika, Kristina, Elsa, Britt, Sara, Lena, Maja] }
+- { group: ukrainian,  male: [Taras, Andriy, Bohdan, Mykola, Yuriy, Ostap, Roman, Ivan, Petro, Volodymyr],
+                       female: [Olena, Iryna, Halyna, Natalia, Lesia, Khrystyna, Mariana, Oksana, Tetiana, Vira] }
+- { group: lithuanian, male: [Tomas, Darius, Vytas, Jonas, Mindaugas, Rimas, Algis, Paul, Andrius, Linas],
+                       female: [Rasa, Ruta, Daiva, Egle, Laura, Asta, Jurga, Vida, Ausra, Birute] }
+- { group: scots-irish, male: [Travis, Dale, Wade, Clint, Randy, Jason, Shane, Cody, Rusty, Dustin],
+                       female: [Crystal, Brandy, Misty, Tonya, Kayla, Amber, Shelly, Jodi, Tammy, Heather] }
+- { group: english,    male: [Scott, Craig, Brett, Glen, Neil, Gary, Rick, Tim, Bruce, Phil],
+                       female: [Wendy, Holly, Heather, Dawn, Tracy, Robin, Leslie, Cheryl, Gail, Lori] }
+- { group: general,    male: [Mike, Chris, Matt, Dave, Jim, Steve, Ryan, Josh, Eric, Jeff],
+                       female: [Jen, Amanda, Stephanie, Lauren, Katie, Nicole, Ashley, Melissa, Rachel, Kristen] }

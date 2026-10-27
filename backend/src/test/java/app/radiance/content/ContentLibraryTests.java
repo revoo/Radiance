@@ -20,7 +20,7 @@ class ContentLibraryTests {
               "gender reveal")));
 
   static Map<String, String> shipped() {
-    return ContentConfig.classpathFiles("content/");
+    return ClasspathContent.files("content/");
   }
 
   static ContentLibrary load(Map<String, String> files) {

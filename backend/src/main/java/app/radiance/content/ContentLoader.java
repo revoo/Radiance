@@ -63,11 +63,12 @@ public final class ContentLoader {
     var engagement = one(sorted, "rules/engagement.yaml", SNAKE, EngagementRules.class, problems);
     var pacing = one(sorted, "rules/pacing.yaml", SNAKE, PacingRules.class, problems);
     var roster = one(sorted, "cast/roster.yaml", KEBAB, Roster.class, problems);
+    var tables = tables(sorted, problems);
 
     if (!problems.isEmpty()) throw new ContentException(problems);
     var library = new ContentLibrary(quirks, events, arcs, constraints, temperament,
         weather == null ? Map.of() : Map.copyOf(weather), relationships, engagement, pacing, roster,
-        List.copyOf(blacklist));
+        tables, List.copyOf(blacklist));
     problems.addAll(ContentValidator.validate(library));
     if (!problems.isEmpty()) throw new ContentException(problems);
     return library;
@@ -105,6 +106,28 @@ public final class ContentLoader {
       }
     });
     return out;
+  }
+
+  /** {@code tables/<name>.yaml}: a list of rows (maps), drawn from by the engine and genesis. */
+  @SuppressWarnings("unchecked")
+  private static Map<String, List<Map<String, Object>>> tables(Map<String, String> files, List<String> problems) {
+    var out = new java.util.TreeMap<String, List<Map<String, Object>>>();
+    files.forEach((path, text) -> {
+      if (!path.startsWith("tables/") || !path.endsWith(".yaml")) return;
+      String name = path.substring("tables/".length(), path.length() - ".yaml".length());
+      try {
+        Object parsed = SNAKE.readValue(text, Object.class);
+        if (!(parsed instanceof List<?> rows) || rows.isEmpty()
+            || !rows.stream().allMatch(r -> r instanceof Map<?, ?>)) {
+          problems.add(path + ": a table is a non-empty list of rows");
+          return;
+        }
+        out.put(name, List.copyOf((List<Map<String, Object>>) parsed));
+      } catch (JacksonException e) {
+        problems.add(path + ": " + e.getOriginalMessage() + location(e));
+      }
+    });
+    return Map.copyOf(out);
   }
 
   private static <T> T one(Map<String, String> files, String path, YAMLMapper mapper, Class<T> type,
