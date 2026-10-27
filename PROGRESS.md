@@ -4,7 +4,7 @@
 - Milestone: **M2 — LLM gateway, providers & cost meter**, branch `m2-llm-gateway` (from `main` at
   6bc40df, which holds M0+M1; CI green; repo is public, so CI runs are readable at
   `https://api.github.com/repos/revoo/Radiance/actions/runs`).
-- Current step: 4 — budget windows (steps 1–3 committed).
+- Current step: 5 — HTTP adapters (steps 1–4 committed).
 - Half-done: nothing.
 - Next command: `./gradlew check`.
 
