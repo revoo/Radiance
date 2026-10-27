@@ -375,6 +375,14 @@ final class ContentValidator {
     for (String required : java.util.List.of("names", "kid_names", "pet_names")) {
       if (!lib.tables().containsKey(required)) problem("tables/" + required + ".yaml", "missing");
     }
+    for (String required : java.util.List.of("world-bible", "genesis", "genesis-ties")) {
+      if (!lib.prompts().containsKey(required)) problem("prompts/" + required + ".md", "missing");
+    }
+    // The bible must name the blacklisted themes so no model brings them up (§5.5).
+    var bible = lib.prompts().get("world-bible");
+    if (bible != null && !lib.blacklist().isEmpty() && !bible.contains("{{blacklisted_themes}}")) {
+      problem("prompts/world-bible.md", "needs a {{blacklisted_themes}} placeholder");
+    }
   }
 
   private void rules() {

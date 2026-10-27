@@ -25,6 +25,7 @@ public record ContentLibrary(
     PacingRules pacing,
     Roster roster,
     Map<String, List<Map<String, Object>>> tables,
+    Map<String, String> prompts,
     List<ContentProperties.BlacklistEntry> blacklist) {
 
   public boolean isBlacklisted(String arcId) {
@@ -36,6 +37,13 @@ public record ContentLibrary(
     var t = tables.get(name);
     if (t == null) throw new IllegalArgumentException("no content table '" + name + "'");
     return t;
+  }
+
+  /** A prompt template ({@code prompts/<name>.md}). */
+  public String prompt(String name) {
+    var p = prompts.get(name);
+    if (p == null) throw new IllegalArgumentException("no prompt template '" + name + "'");
+    return p;
   }
 
   public ThemeLinter themeLinter() {

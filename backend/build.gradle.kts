@@ -53,6 +53,18 @@ tasks.test {
     jvmArgs(nativeAccess)
 }
 
+// Genesis (SPEC §6.4): ./gradlew genesis --args='--seed 7' [-Pprofile=offline]. See GenesisCommand.
+val genesis by tasks.registering(JavaExec::class) {
+    description = "Runs genesis: skeleton, flesh-out and import of data/world-seed.json."
+    group = "application"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass = "app.radiance.RadianceApplication"
+    workingDir = projectDir // same data/ directory as bootRun
+    systemProperty("radiance.mode", "genesis")
+    systemProperty("spring.profiles.active", providers.gradleProperty("profile").getOrElse("local"))
+    jvmArgs(nativeAccess)
+}
+
 // Opt-in contract tests against real providers whose keys are in the environment or .env.
 val liveTest by tasks.registering(Test::class) {
     description = "Runs @Tag(\"live\") contract tests against real LLM providers (costs a few cents)."

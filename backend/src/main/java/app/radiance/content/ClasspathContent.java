@@ -17,17 +17,19 @@ public final class ClasspathContent {
     return ContentLoader.load(files("content/"), blacklist);
   }
 
-  /** Every {@code .yaml} under {@code root}, keyed by its path relative to it. */
+  /** Every {@code .yaml} and {@code .md} under {@code root}, keyed by its path relative to it. */
   public static Map<String, String> files(String root) {
     try {
       var out = new HashMap<String, String>();
       var resolver = new PathMatchingResourcePatternResolver();
       String base = resolver.getResource("classpath:" + root).getURL().toString();
-      for (var r : resolver.getResources("classpath*:" + root + "**/*.yaml")) {
-        String url = r.getURL().toString();
-        String rel = url.startsWith(base) ? url.substring(base.length())
-            : url.substring(url.lastIndexOf(root) + root.length());
-        out.put(rel, r.getContentAsString(StandardCharsets.UTF_8));
+      for (String ext : java.util.List.of("yaml", "md")) {
+        for (var r : resolver.getResources("classpath*:" + root + "**/*." + ext)) {
+          String url = r.getURL().toString();
+          String rel = url.startsWith(base) ? url.substring(base.length())
+              : url.substring(url.lastIndexOf(root) + root.length());
+          out.put(rel, r.getContentAsString(StandardCharsets.UTF_8));
+        }
       }
       return out;
     } catch (IOException e) {

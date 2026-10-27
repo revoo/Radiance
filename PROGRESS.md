@@ -3,8 +3,8 @@
 ## Resume here
 - Milestone: **M3 — Content library & genesis**, branch `m3-content-genesis` (from `main` at 0615af7,
   which holds M0–M2, CI green). Ends at ⏸ REVIEW.
-- Current step: 5 — flesh-out, world-seed export/import (steps 1–4 committed: content module, starter library,
-  roster, skeleton generator).
+- Current step: 6 — onboarding + first impressions (steps 1–5 committed: content module, starter library,
+  roster, skeleton generator, flesh-out + seed import + genesis task).
 - Half-done: nothing.
 - M2's live-provider ACs need R's keys: put them in `.env` and run `./gradlew :backend:liveTest`.
 - CI runs: `https://api.github.com/repos/revoo/Radiance/actions/runs` (public repo).
@@ -15,7 +15,7 @@
 3. `roster.yaml` (30 + you + pinned) with §6.2 validation ✔
 4. Skeleton generator (seeded) ✔: traits, politics, biases, quirks, interests, taste, temperament,
    faithfulness, routines, relationship graph, starting arcs, entities
-5. Flesh-out on the `genesis` route (5 per call) + relationship backstories; theme-linter rejection;
+5. ✔ Flesh-out on the `genesis` route (5 per call) + relationship backstories; theme-linter rejection;
    `world-seed.json` export/import; `genesis` Gradle task; director endpoints; regenerate one resident
 6. R's onboarding and first impressions
 7. World bible (Chicagoland section for review), PROGRESS, ⏸ REVIEW handoff

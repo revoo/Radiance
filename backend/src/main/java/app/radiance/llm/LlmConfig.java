@@ -47,6 +47,11 @@ class LlmConfig {
   }
 
   @Bean
+  FakeResponses fakeResponses() {
+    return new FakeResponses();
+  }
+
+  @Bean
   RouteTable routeTable(LlmProperties props) {
     return RouteTable.build(props);
   }
@@ -56,7 +61,7 @@ class LlmConfig {
 
   /** One adapter per configured provider, plus FakeLlm. */
   @Bean
-  Providers llmProviders(LlmProperties props, RecordingProperties recordings) {
+  Providers llmProviders(LlmProperties props, RecordingProperties recordings, FakeResponses fakes) {
     var out = new HashMap<String, LlmProvider>();
     props.providers().forEach((name, p) -> {
       var http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
@@ -71,7 +76,7 @@ class LlmConfig {
         case REPLAY -> Recordings.replay(Path.of(recordings.dir()));
       });
     });
-    out.put(RouteTable.FAKE_PROVIDER, new FakeLlm());
+    out.put(RouteTable.FAKE_PROVIDER, new FakeLlm(fakes));
     return new Providers(out);
   }
 

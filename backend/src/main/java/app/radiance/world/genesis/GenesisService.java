@@ -1,0 +1,110 @@
+package app.radiance.world.genesis;
+
+import app.radiance.content.ContentLibrary;
+import app.radiance.content.ContentProperties;
+import app.radiance.kernel.WallClock;
+import app.radiance.llm.FakeResponses;
+import app.radiance.llm.LlmGateway;
+import app.radiance.persistence.LeaseHolder;
+import app.radiance.persistence.Sql;
+import app.radiance.persistence.WriterLane;
+import app.radiance.world.WorldProperties;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+/**
+ * Genesis as the app runs it: skeleton → flesh-out → {@code data/world-seed.json} → R reviews and edits
+ * it → import (SPEC §6.4). Used by the {@code genesis} command and the Director's console.
+ */
+@Service
+public class GenesisService {
+
+  public record Summary(String file, long seed, int residents, int fleshedOut, int relationships, int arcs,
+      int entities) {}
+
+  private final ContentLibrary lib;
+  private final ContentProperties content;
+  private final WorldProperties world;
+  private final LlmGateway gateway;
+  private final Sql sql;
+  private final WriterLane lane;
+  private final LeaseHolder lease;
+  private final WallClock clock;
+  private final Path seedFile;
+  private final int grouches;
+  private final int sweethearts;
+
+  public GenesisService(ContentLibrary lib, ContentProperties content, WorldProperties world,
+      LlmGateway gateway, FakeResponses fakes, Sql sql, WriterLane lane, LeaseHolder lease, WallClock clock,
+      @Value("${radiance.genesis.seed-file:data/world-seed.json}") String seedFile,
+      @Value("${radiance.social.temperament.grouches:3}") int grouches,
+      @Value("${radiance.social.temperament.sweethearts:5}") int sweethearts) {
+    this.lib = lib;
+    this.content = content;
+    this.world = world;
+    this.gateway = gateway;
+    this.sql = sql;
+    this.lane = lane;
+    this.lease = lease;
+    this.clock = clock;
+    this.seedFile = Path.of(seedFile);
+    this.grouches = grouches;
+    this.sweethearts = sweethearts;
+    GenesisFakes.register(fakes);
+  }
+
+  public Path seedFile() {
+    return seedFile;
+  }
+
+  /** The deterministic skeleton for {@code seed}, dated today in the world's time zone. */
+  public WorldSeed skeleton(long seed) {
+    var today = LocalDate.ofInstant(Instant.ofEpochMilli(clock.nowMs()), ZoneId.of(world.timezone()));
+    return SkeletonGenerator.generate(lib, new SkeletonGenerator.Settings(seed, grouches, sweethearts,
+        content.strongPrejudice(), today));
+  }
+
+  /** Skeleton plus prose, checkpointed to the seed file after every batch. Resumes a partial file. */
+  public Summary preview(long seed, boolean skeletonOnly) {
+    WorldSeed current;
+    if (Files.exists(seedFile)) {
+      var existing = SeedFiles.read(seedFile);
+      current = existing.seed() == seed ? existing : skeleton(seed);
+    } else {
+      current = skeleton(seed);
+    }
+    SeedFiles.write(seedFile, current);
+    if (!skeletonOnly) {
+      current = new FleshOut(gateway, lib, world.networkName()).run(current, s -> SeedFiles.write(seedFile, s));
+      SeedFiles.write(seedFile, current);
+    }
+    return summary(current);
+  }
+
+  /** Rewrites one resident's prose in the seed file; their identity stays (SPEC §6.4). */
+  public Summary regenerate(String handle) {
+    var updated = new FleshOut(gateway, lib, world.networkName()).regenerate(SeedFiles.read(seedFile), handle);
+    SeedFiles.write(seedFile, updated);
+    return summary(updated);
+  }
+
+  /** Imports the (possibly hand-edited) seed file. Needs the writer lease. */
+  public SeedImporter.Result commit() throws InterruptedException {
+    for (int i = 0; i < 600 && !lease.isHeld(); i++) Thread.sleep(100);
+    if (!lease.isHeld()) {
+      throw new IllegalStateException("couldn't get the writer lease; is another process writing the world?");
+    }
+    return new SeedImporter(sql, lane, lib).importSeed(SeedFiles.read(seedFile), clock.nowMs());
+  }
+
+  public Summary summary(WorldSeed s) {
+    int fleshed = (int) s.residents().stream().filter(r -> r.bio() != null).count();
+    return new Summary(seedFile.toString(), s.seed(), s.residents().size(), fleshed, s.relationships().size(),
+        s.arcs().size(), s.entities().size());
+  }
+}

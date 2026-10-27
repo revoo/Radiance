@@ -3,6 +3,7 @@ package app.radiance.llm.provider;
 import app.radiance.kernel.Json;
 import app.radiance.kernel.RandomSource;
 import app.radiance.llm.Block;
+import app.radiance.llm.FakeResponses;
 import app.radiance.llm.Part;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
@@ -22,6 +23,16 @@ public final class FakeLlm implements LlmProvider {
   public static final String ALIAS = "fake";
 
   private final Map<Class<?>, Function<ProviderRequest, Object>> templates = new ConcurrentHashMap<>();
+  private final FakeResponses registered;
+
+  public FakeLlm() {
+    this(new FakeResponses());
+  }
+
+  /** Uses templates domain modules registered for their output types. */
+  public FakeLlm(FakeResponses registered) {
+    this.registered = registered;
+  }
 
   /** Answers requests for {@code type} with {@code template} instead of schema-filled values. */
   public <T> FakeLlm template(Class<T> type, Function<ProviderRequest, T> template) {
@@ -32,10 +43,18 @@ public final class FakeLlm implements LlmProvider {
   @Override
   public ProviderResponse complete(ProviderRequest request) {
     var template = templates.get(request.outputType());
-    String text =
-        template != null
-            ? Json.write(template.apply(request))
-            : fill(request.schema(), "", RandomSource.seeded(hash(request))).toString();
+    var domain = registered.forType(request.outputType());
+    String text;
+    if (template != null) {
+      text = Json.write(template.apply(request));
+    } else if (domain.isPresent()) {
+      var call = new FakeResponses.FakeCall(request.purpose(),
+          request.prefix().stream().map(Block::text).toList(),
+          request.content().stream().map(p -> p instanceof Part.Text t ? t.text() : "[image]").toList());
+      text = Json.write(domain.get().apply(call));
+    } else {
+      text = fill(request.schema(), "", RandomSource.seeded(hash(request))).toString();
+    }
     return ProviderResponse.ok(text, ProviderResponse.TokenCounts.ZERO, ALIAS);
   }
 

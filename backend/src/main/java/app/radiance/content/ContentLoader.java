@@ -64,11 +64,17 @@ public final class ContentLoader {
     var pacing = one(sorted, "rules/pacing.yaml", SNAKE, PacingRules.class, problems);
     var roster = one(sorted, "cast/roster.yaml", KEBAB, Roster.class, problems);
     var tables = tables(sorted, problems);
+    var prompts = new java.util.TreeMap<String, String>();
+    sorted.forEach((path, text) -> {
+      if (path.startsWith("prompts/") && path.endsWith(".md")) {
+        prompts.put(path.substring("prompts/".length(), path.length() - ".md".length()), text);
+      }
+    });
 
     if (!problems.isEmpty()) throw new ContentException(problems);
     var library = new ContentLibrary(quirks, events, arcs, constraints, temperament,
         weather == null ? Map.of() : Map.copyOf(weather), relationships, engagement, pacing, roster,
-        tables, List.copyOf(blacklist));
+        tables, Map.copyOf(prompts), List.copyOf(blacklist));
     problems.addAll(ContentValidator.validate(library));
     if (!problems.isEmpty()) throw new ContentException(problems);
     return library;

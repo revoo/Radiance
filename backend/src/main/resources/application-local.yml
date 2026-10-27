@@ -1,0 +1,6 @@
+# Real providers for whichever keys are present (SPEC §5.17); routes without a keyed model fall back
+# to FakeLlm with a warning. Keys come from the environment or a git-ignored .env at the repo root.
+# The web app needs RADIANCE_USERNAME and RADIANCE_PASSWORD_BCRYPT; command modes (genesis) don't.
+radiance:
+  llm:
+    mode: live
