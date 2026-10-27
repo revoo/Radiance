@@ -1,14 +1,25 @@
 # Progress
 
 ## Resume here
-- M0 and M1 are complete on branches `m0-scaffold` and `m1-persistence` (both pushed).
-- **Blocked on R:** confirm CI is green for `m1-persistence` in GitHub Actions (private repo; `gh` not
-  installed). Then fast-forward `main` to `m1-persistence` and push:
-  `git checkout main && git merge --ff-only m1-persistence && git push origin main`.
-- Next: **M2 — LLM gateway, providers & cost meter** (SPEC §12), on a new branch `m2-llm-gateway`
-  from `m1-persistence`. Its live contract tests need provider keys in `.env`; everything else runs
-  on fakes.
+- Milestone: **M2 — LLM gateway, providers & cost meter**, branch `m2-llm-gateway` (from `main` at
+  6bc40df, which holds M0+M1; CI green; repo is public, so CI runs are readable at
+  `https://api.github.com/repos/revoo/Radiance/actions/runs`).
+- Current step: 1 — types, config, schema generator, output parser.
 - Half-done: nothing.
+- Next command: `./gradlew check`.
+
+## M2 steps
+1. `llm` types (Purpose, LlmRequest/Result, Usage, Outcome, Block/Part, Priority), `LlmProperties`,
+   record → JSON Schema generator, output parser/validator (fences, extraction, enum casing)
+2. Provider SPI, `FakeLlm`, route table with capability checks and keyless-model skipping
+3. Gateway: retries with backoff, one repair call, fallbacks, truncation retry, circuit breaker,
+   per-provider priority semaphores, cost from alias prices, `llm_call` log, Micrometer, batch warm-up
+4. Budget windows (daily/monthly/batch USD + provider quotas) persisted in `budget_window`; quota
+   errors close a provider until reset; `BudgetExhaustedException(window, resumeAt)` for parking;
+   degradation level from budget pressure
+5. `OpenAiCompatibleLlm`, `AnthropicLlm` (tested with MockRestServiceServer), `ReplayLlm` + recorder
+6. Spring wiring + profiles (`offline`/`test` = fake), `.env` import, `@Tag("live")` contract tests and
+   a `liveTest` Gradle task, prompt store; ADRs; PROGRESS; push; CI; fast-forward main
 
 ## Done
 - **M1 — Persistence & schema** (2026-10-27), branch `m1-persistence`:
