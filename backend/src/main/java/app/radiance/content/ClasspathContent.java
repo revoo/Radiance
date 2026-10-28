@@ -19,11 +19,18 @@ public final class ClasspathContent {
 
   /** Every {@code .yaml} and {@code .md} under {@code root}, keyed by its path relative to it. */
   public static Map<String, String> files(String root) {
+    return files(root, "yaml", "md");
+  }
+
+  /** Every file with one of {@code extensions} under {@code root}; empty if {@code root} doesn't exist. */
+  public static Map<String, String> files(String root, String... extensions) {
     try {
       var out = new HashMap<String, String>();
       var resolver = new PathMatchingResourcePatternResolver();
-      String base = resolver.getResource("classpath:" + root).getURL().toString();
-      for (String ext : java.util.List.of("yaml", "md")) {
+      var rootResource = resolver.getResource("classpath:" + root);
+      if (!rootResource.exists()) return out;
+      String base = rootResource.getURL().toString();
+      for (String ext : extensions) {
         for (var r : resolver.getResources("classpath*:" + root + "**/*." + ext)) {
           String url = r.getURL().toString();
           String rel = url.startsWith(base) ? url.substring(base.length())

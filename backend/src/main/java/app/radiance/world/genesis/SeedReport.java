@@ -21,6 +21,7 @@ public final class SeedReport {
     var sb = new StringBuilder();
     sb.append("# Radiance cast — seed ").append(s.seed()).append(" (").append(s.referenceDate()).append(")\n\n");
     sb.append("Generated from `world-seed.json`. Edit that file, not this one; then import it.\n\n");
+    if (s.provenance() != null) sb.append("Prose: ").append(s.provenance()).append(".\n\n");
 
     sb.append("## Storylines\n\n");
     for (var a : s.arcs()) {
@@ -84,6 +85,10 @@ public final class SeedReport {
         sb.append("\n*Not fleshed out yet.*\n");
       } else {
         sb.append("\n> ").append(r.bio()).append("\n\n").append(r.backstory()).append("\n\n");
+        if (r.appearance() != null) sb.append("*Looks:* ").append(r.appearance()).append("\n\n");
+        sb.append("Values: ").append(String.join("; ", r.values())).append(". Fears: ")
+            .append(String.join("; ", r.fears())).append(". Wants: ").append(String.join("; ", r.desires()))
+            .append(".\n\n");
         var v = r.voice();
         sb.append("Voice: ").append(v.lengthBand().toLowerCase()).append(", emoji ")
             .append(v.emojiLevel().toLowerCase()).append(", ").append(v.casing().toLowerCase())

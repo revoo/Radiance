@@ -118,7 +118,7 @@ public final class SkeletonGenerator {
     var rels = new ArrayList<Relationship>();
     for (var e : edges.values()) rels.add(e.toSeed());
     return new WorldSeed(WorldSeed.VERSION, settings.seed(), settings.referenceDate().toString(),
-        residents, rels, arcsAndEntities.arcs, arcsAndEntities.entities);
+        residents, rels, arcsAndEntities.arcs, arcsAndEntities.entities, null);
   }
 
   private RandomSource rng(String label) {
@@ -846,7 +846,7 @@ public final class SkeletonGenerator {
         archetype(r.name()) != null, archetype(r.name()), new TreeMap<>(t), quirks.get(h),
         interests.get(h), politics.get(h), biases(r, rng), taste(rng), temperaments.get(h),
         routine(r, rng), initialState(r, rng), offNetwork(r, rng),
-        null, null, null, null, null, null);
+        null, null, null, null, null, null, null);
   }
 
   private List<Bias> biases(Roster.Resident r, RandomSource rng) {

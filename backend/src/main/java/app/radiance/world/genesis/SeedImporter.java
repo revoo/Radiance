@@ -94,6 +94,7 @@ public final class SeedImporter {
       identity.put("observance", r.observance().name());
       identity.put("archetype", r.archetype());
       identity.put("partner", r.partner());
+      identity.put("appearance", r.appearance());
       personas.add(new PersonaRow(id, Json.write(r.traits()), Json.write(r.quirks()), Json.write(r.interests()),
           Json.write(r.politics()), Json.write(r.biases()), Json.write(r.taste()), Json.write(r.temperament()),
           Json.write(r.voice() == null ? Map.of() : r.voice()), Json.write(r.routine()),

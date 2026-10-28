@@ -13,7 +13,9 @@ import java.util.Map;
  * Everything genesis decides, as {@code data/world-seed.json} (SPEC §6.4): R reads and edits it, then
  * imports it. People are keyed by handle and things by readable keys — no database ids — so the file
  * is hand-editable. The skeleton fills the structural fields; flesh-out fills the prose fields
- * ({@code bio} … {@code offNetwork}, relationship {@code backstory}, entity descriptions).
+ * ({@code bio} … {@code appearance}, relationship {@code backstory}, entity descriptions).
+ * {@code provenance} says who wrote the prose: a model route, or authored in-session (ADR 0017).
+ * {@code appearance} is the canonical look the avatar prompt is built from (M12).
  */
 public record WorldSeed(
     int version,
@@ -22,7 +24,8 @@ public record WorldSeed(
     List<Resident> residents,
     List<Relationship> relationships,
     List<Arc> arcs,
-    List<Entity> entities) {
+    List<Entity> entities,
+    String provenance) {
 
   public static final int VERSION = 1;
 
@@ -59,7 +62,8 @@ public record WorldSeed(
       VoiceCard voice,
       List<String> values,
       List<String> fears,
-      List<String> desires) {}
+      List<String> desires,
+      String appearance) {}
 
   /** Axes −1…1 (economic: left…right; social: progressive…conservative); interest 0–1. */
   public record Politics(double economic, double social, double interest, Map<String, Double> issues) {}

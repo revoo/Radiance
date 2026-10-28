@@ -69,8 +69,18 @@ public class GenesisService {
         content.strongPrejudice(), today));
   }
 
-  /** Skeleton plus prose, checkpointed to the seed file after every batch. Resumes a partial file. */
+  /** Skeleton plus prose from the {@code genesis} model route (see {@link #preview(long, boolean, boolean)}). */
   public Summary preview(long seed, boolean skeletonOnly) {
+    return preview(seed, skeletonOnly, false);
+  }
+
+  /**
+   * Skeleton plus prose, checkpointed to the seed file after every batch; resumes a partial file. With
+   * {@code authored}, the prose comes from {@code content/genesis/seed-<seed>/} (ADR 0017) instead of
+   * the model route, through the same checks.
+   */
+  public Summary preview(long seed, boolean skeletonOnly, boolean authored) {
+    var source = authored ? authoredSource(seed) : FleshOut.Source.gateway(gateway);
     WorldSeed current;
     if (Files.exists(seedFile)) {
       var existing = SeedFiles.read(seedFile);
@@ -80,10 +90,18 @@ public class GenesisService {
     }
     SeedFiles.write(seedFile, current);
     if (!skeletonOnly) {
-      current = new FleshOut(gateway, lib, world.networkName()).run(current, s -> SeedFiles.write(seedFile, s));
+      current = new FleshOut(source, lib, world.networkName()).run(current, s -> SeedFiles.write(seedFile, s));
       SeedFiles.write(seedFile, current);
     }
     return summary(current);
+  }
+
+  /** The prose authored in-session for {@code seed}, or an error if there is none. */
+  public static FleshOut.Source authoredSource(long seed) {
+    String dir = "content/genesis/seed-" + seed + "/";
+    var files = app.radiance.content.ClasspathContent.files(dir, "json");
+    if (files.isEmpty()) throw new FleshOut.GenesisException("no authored prose in " + dir);
+    return FleshOut.Source.authored(files, "authored in-session by Opus (" + dir + ")");
   }
 
   /** Rewrites one resident's prose in the seed file; their identity stays (SPEC §6.4). */

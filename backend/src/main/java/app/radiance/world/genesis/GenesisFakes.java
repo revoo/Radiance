@@ -70,8 +70,10 @@ public final class GenesisFakes {
     for (JsonNode e : r.path("entities")) {
       entities.add(new FleshOut.EntityLook(e.path("key").asString(), e.path("currentDescription").asString()));
     }
+    String appearance = r.path("age").asInt() + "-year-old " + ("F".equals(r.path("gender").asString()) ? "woman" : "man")
+        + ", average build, casual clothes, usually somewhere around " + place.split(",")[0] + " (placeholder)";
     return new FleshOut.Person(handle, bio, backstory, voice, List.of("family", "showing up for friends"),
-        List.of("ending up stuck"), List.of("a long weekend somewhere warm"), entities);
+        List.of("ending up stuck"), List.of("a long weekend somewhere warm"), entities, appearance);
   }
 
   private static String article(String job) {

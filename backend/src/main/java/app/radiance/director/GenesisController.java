@@ -22,8 +22,9 @@ class GenesisController {
   /** Writes (or resumes) the seed file: skeleton, then flesh-out unless {@code skeletonOnly}. */
   @PostMapping("/genesis/preview")
   GenesisService.Summary preview(@RequestParam long seed,
-      @RequestParam(defaultValue = "false") boolean skeletonOnly) {
-    return genesis.preview(seed, skeletonOnly);
+      @RequestParam(defaultValue = "false") boolean skeletonOnly,
+      @RequestParam(defaultValue = "false") boolean authored) {
+    return genesis.preview(seed, skeletonOnly, authored);
   }
 
   /** Imports the seed file, edited or not. */

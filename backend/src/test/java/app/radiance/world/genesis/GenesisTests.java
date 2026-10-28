@@ -87,7 +87,7 @@ class GenesisTests {
       if (attempts.getAndIncrement() > 0) return batch;
       var first = batch.residents().getFirst();
       var poisoned = new FleshOut.Person(first.handle(), "Mom of two, expecting a baby in May!", first.backstory(),
-          first.voice(), first.values(), first.fears(), first.desires(), first.entities());
+          first.voice(), first.values(), first.fears(), first.desires(), first.entities(), first.appearance());
       var people = new ArrayList<>(batch.residents());
       people.set(0, poisoned);
       return new FleshOut.Batch(people);
@@ -96,6 +96,50 @@ class GenesisTests {
     var s = new FleshOut(gateway(), LIB, "Radiance").run(skeleton(), x -> { });
     assertThat(s.residents()).allSatisfy(r -> assertThat(LIB.themeLinter().hits(r.bio())).isEmpty());
     assertThat(attempts.get()).as("the poisoned resident was asked for again").isEqualTo(7);
+  }
+
+  /** A person as authored JSON, with a chosen bio and entity looks. */
+  static String personJson(String handle, String bio, String entityKey) {
+    return """
+        {"handle":"%s","bio":"%s","backstory":"Lives here.","appearance":"30s, medium build.",
+         "voice":{"lengthBand":"SHORT","emojiLevel":"LOW","casing":"STANDARD","punctuation":"plain",
+                  "typoRate":0.02,"slang":[],"catchphrases":[],"signatureTopics":[],"neverDoes":[],
+                  "samplePosts":["a","b","c"],"sampleComments":["d","e"]},
+         "values":["v"],"fears":["f"],"desires":["d"],
+         "entities":[%s]}""".formatted(handle, bio,
+        entityKey == null ? "" : "{\"key\":\"" + entityKey + "\",\"visualDescription\":\"a thing\"}");
+  }
+
+  @Test
+  void authoredProseGetsTheSameChecksAsAModelsReply() {
+    var s = skeleton();
+    // schema errors name the file
+    assertThatThrownBy(() -> FleshOut.Source.authored(Map.of("residents-1.json",
+            "{\"residents\":[{\"handle\":\"x\"}]}"), "test"))
+        .hasMessageContaining("residents-1.json: $.residents[0].bio: missing");
+    // the same person twice is an authoring mistake
+    String one = "{\"residents\":[" + personJson("jake.zielinski", "Kinzie.", null) + "]}";
+    assertThatThrownBy(() -> FleshOut.Source.authored(Map.of("residents-1.json", one, "residents-2.json", one), "test"))
+        .hasMessageContaining("@jake.zielinski appears twice");
+
+    // blacklisted themes and someone else's entity are rejected, and there's no model to ask again
+    var poisoned = FleshOut.Source.authored(Map.of("residents-1.json", "{\"residents\":["
+        + personJson("jake.zielinski", "Expecting a baby in May", null) + "]}"), "test");
+    assertThatThrownBy(() -> new FleshOut(poisoned, LIB, "Radiance").regenerate(s, "jake.zielinski"))
+        .hasMessageContaining("unusable for [jake.zielinski]");
+    var stolen = FleshOut.Source.authored(Map.of("residents-1.json", "{\"residents\":["
+        + personJson("jake.zielinski", "Kinzie.", "home:samantha.dvorak") + "]}"), "test");
+    assertThatThrownBy(() -> new FleshOut(stolen, LIB, "Radiance").regenerate(s, "jake.zielinski"))
+        .hasMessageContaining("unusable for [jake.zielinski]");
+
+    // a clean authored resident merges, with appearance and provenance
+    var clean = FleshOut.Source.authored(Map.of("residents-1.json", one,
+        "ties-1.json", "{\"pairs\":[{\"a\":\"jake.zielinski\",\"b\":\"kendra.gaines\",\"story\":\"Exes.\"}]}"),
+        "authored in a test");
+    var after = new FleshOut(clean, LIB, "Radiance").regenerate(s, "jake.zielinski");
+    var jake = after.residents().stream().filter(r -> r.handle().equals("jake.zielinski")).findFirst().orElseThrow();
+    assertThat(jake.bio()).isEqualTo("Kinzie.");
+    assertThat(jake.appearance()).isEqualTo("30s, medium build.");
   }
 
   @Test
@@ -158,8 +202,9 @@ class GenesisTests {
         jake.occupation(), jake.employer(), jake.status(), jake.partner(), jake.circles(), jake.pinned(),
         jake.archetype(), jake.traits(), jake.quirks(), jake.interests(), jake.politics(), jake.biases(),
         jake.taste(), jake.temperament(), jake.routine(), jake.state(), jake.offNetwork(), jake.bio(),
-        jake.backstory(), jake.voice(), jake.values(), jake.fears(), jake.desires()));
-    var bad = new WorldSeed(s.version(), s.seed(), s.referenceDate(), renamed, s.relationships(), s.arcs(), s.entities());
+        jake.backstory(), jake.voice(), jake.values(), jake.fears(), jake.desires(), jake.appearance()));
+    var bad = new WorldSeed(s.version(), s.seed(), s.referenceDate(), renamed, s.relationships(), s.arcs(), s.entities(),
+        s.provenance());
 
     try (var db = TestDatabase.leased(dir)) {
       var importer = new SeedImporter(db.sql, db.lane, LIB);

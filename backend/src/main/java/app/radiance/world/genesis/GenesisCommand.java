@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
  * <ul>
  *   <li>{@code --seed N} — skeleton plus flesh-out into {@code data/world-seed.json} (resumes a partial file)
  *   <li>{@code --skeleton-only} — stop after the skeleton
+ *   <li>{@code --authored} — take the prose from {@code content/genesis/seed-N/} (ADR 0017), not the model route
  *   <li>{@code --regenerate <handle>} — rewrite one resident's prose
  *   <li>{@code --import} — import the seed file (after any of the above, or alone)
  * </ul>
@@ -60,7 +61,8 @@ public class GenesisCommand implements ApplicationRunner {
     String seed = value(args, "--seed");
     String regenerate = value(args, "--regenerate");
     if (seed != null) {
-      var summary = genesis.preview(Long.parseLong(seed), args.contains("--skeleton-only"));
+      var summary = genesis.preview(Long.parseLong(seed), args.contains("--skeleton-only"),
+          args.contains("--authored"));
       log.info("Genesis wrote {}: {} residents ({} fleshed out), {} relationships, {} arcs, {} entities",
           summary.file(), summary.residents(), summary.fleshedOut(), summary.relationships(), summary.arcs(),
           summary.entities());
@@ -75,7 +77,7 @@ public class GenesisCommand implements ApplicationRunner {
           result.residents(), result.relationships(), result.arcs(), result.entities(), result.facts());
     }
     if (seed == null && regenerate == null && !args.contains("--import")) {
-      log.info("Usage: genesis --seed N [--skeleton-only] [--import] | --regenerate <handle> | --import");
+      log.info("Usage: genesis --seed N [--skeleton-only|--authored] [--import] | --regenerate <handle> | --import");
     }
   }
 

@@ -24,6 +24,8 @@ Rules:
   sample comments written exactly in that voice.
 - For each entity listed under a resident, write a one-sentence visual description for photos: what
   it looks like, specific and plain, no people's faces.
+- Appearance: one canonical sentence used for their avatar and future photos — apparent age, build,
+  hair, usual style of dress and a typical setting. Plain and specific; no celebrity comparisons.
 - Return one entry per resident, using the handle given.
 
 <residents>

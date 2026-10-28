@@ -8,6 +8,8 @@ import app.radiance.llm.LlmRequest;
 import app.radiance.llm.Part;
 import app.radiance.llm.Priority;
 import app.radiance.llm.Purpose;
+import app.radiance.llm.output.InvalidOutputException;
+import app.radiance.llm.output.OutputParser;
 import app.radiance.world.genesis.WorldSeed.Resident;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -18,16 +20,19 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Genesis steps 2–3 (SPEC §6.4): the {@code genesis} route writes bios, backstories, voice cards,
- * values, fears and desires (5 residents per call, grouped by circle), entity descriptions, then 1–2
- * sentences per relationship (batched per circle). Names and facts come from the skeleton and are
- * never generated. Output mentioning a blacklisted theme is regenerated once, then fails.
+ * Genesis steps 2–3 (SPEC §6.4): bios, backstories, voice cards, values, fears and desires, entity
+ * descriptions and a canonical appearance per resident (5 at a time, grouped by circle), then 1–2
+ * sentences per relationship (batched per circle). The prose comes from a {@link Source}: the
+ * {@code genesis} model route, or prose authored in-session (ADR 0017). Either way it gets the same
+ * checks — the output schema, handle matching and the theme linter (blacklisted themes are asked for
+ * again once, then fail). Names and facts come from the skeleton and are never generated.
  * Idempotent and resumable: only empty fields are filled, and {@code checkpoint} sees every batch.
  */
 public final class FleshOut {
@@ -45,9 +50,10 @@ public final class FleshOut {
 
   public record Batch(List<Person> residents) {}
 
+  /** @param appearance the canonical look: apparent age, build, hair, style, typical setting (M12 avatars) */
   public record Person(
       String handle, String bio, String backstory, Voice voice, List<String> values,
-      List<String> fears, List<String> desires, List<EntityLook> entities) {}
+      List<String> fears, List<String> desires, List<EntityLook> entities, String appearance) {}
 
   public record Voice(
       LengthBand lengthBand, EmojiLevel emojiLevel, Casing casing, String punctuation,
@@ -67,20 +73,114 @@ public final class FleshOut {
     }
   }
 
-  private final LlmGateway gateway;
+  /** Where the prose comes from. Answers may be partial; FleshOut validates whatever comes back. */
+  public interface Source {
+
+    Batch residents(List<Block> prefix, String prompt, List<String> handles);
+
+    Ties ties(List<Block> prefix, String prompt, List<String[]> pairs);
+
+    /** Recorded in the seed: who wrote the prose. */
+    String provenance();
+
+    /** The {@code genesis} model route. */
+    static Source gateway(LlmGateway gateway) {
+      return new Source() {
+        @Override
+        public Batch residents(List<Block> prefix, String prompt, List<String> handles) {
+          var result = gateway.call(new LlmRequest<>(Purpose.GENESIS, prefix, List.of(Part.text(prompt)),
+              Batch.class, 1500 * handles.size(), Duration.ofMinutes(4), Priority.BACKGROUND));
+          if (!result.ok()) throw new GenesisException("genesis call failed (" + result.outcome() + ") for " + handles);
+          return result.value();
+        }
+
+        @Override
+        public Ties ties(List<Block> prefix, String prompt, List<String[]> pairs) {
+          var result = gateway.call(new LlmRequest<>(Purpose.GENESIS, prefix, List.of(Part.text(prompt)),
+              Ties.class, 90 * pairs.size() + 200, Duration.ofMinutes(3), Priority.BACKGROUND));
+          if (!result.ok()) throw new GenesisException("genesis ties call failed (" + result.outcome() + ")");
+          return result.value();
+        }
+
+        @Override
+        public String provenance() {
+          return "written by the genesis model route";
+        }
+      };
+    }
+
+    /**
+     * Prose authored in-session (ADR 0017): {@code residents-*.json} files shaped like {@link Batch} and
+     * {@code ties-*.json} files shaped like {@link Ties}, keyed by file name. Each file is parsed and
+     * schema-checked exactly like a model's reply.
+     */
+    static Source authored(Map<String, String> files, String provenance) {
+      var people = new LinkedHashMap<String, Person>();
+      var stories = new LinkedHashMap<String, Tie>();
+      var problems = new ArrayList<String>();
+      for (var f : new TreeMap<>(files).entrySet()) {
+        String name = f.getKey().substring(f.getKey().lastIndexOf('/') + 1);
+        try {
+          if (name.startsWith("residents")) {
+            for (var p : OutputParser.parse(f.getValue(), Batch.class).residents()) {
+              if (people.put(p.handle(), p) != null) problems.add(name + ": @" + p.handle() + " appears twice");
+            }
+          } else if (name.startsWith("ties")) {
+            for (var t : OutputParser.parse(f.getValue(), Ties.class).pairs()) {
+              if (stories.put(pairKey(t.a(), t.b()), t) != null) {
+                problems.add(name + ": the pair " + t.a() + " / " + t.b() + " appears twice");
+              }
+            }
+          }
+        } catch (InvalidOutputException e) {
+          problems.add(name + ": " + e.getMessage());
+        }
+      }
+      if (!problems.isEmpty()) {
+        throw new GenesisException("authored genesis prose is invalid:\n  - " + String.join("\n  - ", problems));
+      }
+      return new Source() {
+        @Override
+        public Batch residents(List<Block> prefix, String prompt, List<String> handles) {
+          return new Batch(handles.stream().filter(people::containsKey).map(people::get).toList());
+        }
+
+        @Override
+        public Ties ties(List<Block> prefix, String prompt, List<String[]> pairs) {
+          return new Ties(pairs.stream().map(p -> stories.get(pairKey(p[0], p[1])))
+              .filter(java.util.Objects::nonNull).toList());
+        }
+
+        @Override
+        public String provenance() {
+          return provenance;
+        }
+      };
+    }
+  }
+
+  private final Source source;
   private final ContentLibrary lib;
   private final String networkName;
 
-  public FleshOut(LlmGateway gateway, ContentLibrary lib, String networkName) {
-    this.gateway = gateway;
+  public FleshOut(Source source, ContentLibrary lib, String networkName) {
+    this.source = source;
     this.lib = lib;
     this.networkName = networkName;
+  }
+
+  public FleshOut(LlmGateway gateway, ContentLibrary lib, String networkName) {
+    this(Source.gateway(gateway), lib, networkName);
+  }
+
+  static String pairKey(String a, String b) {
+    return a.compareTo(b) < 0 ? a + "|" + b : b + "|" + a;
   }
 
   // ------------------------------------------------------------------------- residents
 
   public WorldSeed run(WorldSeed seed, Consumer<WorldSeed> checkpoint) {
-    var current = seed;
+    var current = withProvenance(seed, source.provenance());
     var todo = current.residents().stream().filter(r -> r.bio() == null)
         .sorted(Comparator.comparing((Resident r) -> r.circles().isEmpty() ? "~" : r.circles().getFirst())
             .thenComparing(Resident::handle))
@@ -108,20 +208,21 @@ public final class FleshOut {
   private WorldSeed residents(WorldSeed seed, List<String> handles, boolean retry) {
     var byHandle = seed.residents().stream().collect(Collectors.toMap(Resident::handle, r -> r));
     var batch = handles.stream().map(byHandle::get).toList();
-    var result = gateway.call(new LlmRequest<>(Purpose.GENESIS, prefix(seed),
-        List.of(Part.text(lib.prompt("genesis").replace("{{network_name}}", networkName)
-            .replace("{{residents}}", residentsJson(seed, batch)))),
-        Batch.class, 1400 * batch.size(), Duration.ofMinutes(4), Priority.BACKGROUND));
-    if (!result.ok()) {
-      throw new GenesisException("genesis call failed (" + result.outcome() + ") for " + handles);
-    }
+    String prompt = lib.prompt("genesis").replace("{{network_name}}", networkName)
+        .replace("{{residents}}", residentsJson(seed, batch));
+    var answer = source.residents(prefix(seed), prompt, handles);
     var linter = lib.themeLinter();
     var accepted = new HashMap<String, Person>();
-    for (var p : result.value().residents()) {
+    for (var p : answer.residents()) {
       if (!handles.contains(p.handle()) || accepted.containsKey(p.handle())) continue;
       var hits = linter.hits(text(p));
       if (!hits.isEmpty()) {
-        log.warn("Genesis: {} mentioned a blacklisted theme ({}); regenerating", p.handle(), hits);
+        log.warn("Genesis: {} mentioned a blacklisted theme ({}); asking again", p.handle(), hits);
+        continue;
+      }
+      var entityProblem = entityProblem(seed, p);
+      if (entityProblem != null) {
+        log.warn("Genesis: {}: {}; asking again", p.handle(), entityProblem);
         continue;
       }
       accepted.put(p.handle(), p);
@@ -135,9 +236,19 @@ public final class FleshOut {
     return residents(updated, missing, false);
   }
 
+  /** An entity look must name one of the resident's own entities. */
+  private static String entityProblem(WorldSeed seed, Person p) {
+    if (p.entities() == null) return null;
+    for (var e : p.entities()) {
+      boolean theirs = seed.entities().stream().anyMatch(x -> x.key().equals(e.key()) && x.owner().equals(p.handle()));
+      if (!theirs) return "described entity '" + e.key() + "' isn't theirs";
+    }
+    return null;
+  }
+
   private static String text(Person p) {
     var sb = new StringBuilder();
-    sb.append(p.bio()).append('\n').append(p.backstory()).append('\n');
+    sb.append(p.bio()).append('\n').append(p.backstory()).append('\n').append(p.appearance()).append('\n');
     if (p.values() != null) p.values().forEach(v -> sb.append(v).append('\n'));
     if (p.fears() != null) p.fears().forEach(v -> sb.append(v).append('\n'));
     if (p.desires() != null) p.desires().forEach(v -> sb.append(v).append('\n'));
@@ -159,7 +270,8 @@ public final class FleshOut {
         r.faithTradition(), r.observance(), r.livesIn(), r.occupation(), r.employer(), r.status(),
         r.partner(), r.circles(), r.pinned(), r.archetype(), r.traits(), r.quirks(), r.interests(),
         r.politics(), r.biases(), r.taste(), r.temperament(), r.routine(), r.state(), r.offNetwork(),
-        p.bio(), p.backstory(), card, cap(p.values(), 3), cap(p.fears(), 3), cap(p.desires(), 3));
+        p.bio(), p.backstory(), card, cap(p.values(), 3), cap(p.fears(), 3), cap(p.desires(), 3),
+        p.appearance());
   }
 
   static Resident clearProse(Resident r) {
@@ -167,7 +279,7 @@ public final class FleshOut {
         r.faithTradition(), r.observance(), r.livesIn(), r.occupation(), r.employer(), r.status(),
         r.partner(), r.circles(), r.pinned(), r.archetype(), r.traits(), r.quirks(), r.interests(),
         r.politics(), r.biases(), r.taste(), r.temperament(), r.routine(), r.state(), r.offNetwork(),
-        null, null, null, null, null, null);
+        null, null, null, null, null, null, null);
   }
 
   private static List<String> cap(List<String> l, int max) {
@@ -191,12 +303,17 @@ public final class FleshOut {
             e.attributes(), e.status())
         : e).toList();
     return new WorldSeed(seed.version(), seed.seed(), seed.referenceDate(), seed.residents(),
-        seed.relationships(), seed.arcs(), entities);
+        seed.relationships(), seed.arcs(), entities, seed.provenance());
   }
 
   private static WorldSeed replace(WorldSeed s, List<Resident> residents) {
     return new WorldSeed(s.version(), s.seed(), s.referenceDate(), residents, s.relationships(), s.arcs(),
-        s.entities());
+        s.entities(), s.provenance());
+  }
+
+  private static WorldSeed withProvenance(WorldSeed s, String provenance) {
+    return new WorldSeed(s.version(), s.seed(), s.referenceDate(), s.residents(), s.relationships(), s.arcs(),
+        s.entities(), provenance);
   }
 
   // ------------------------------------------------------------------------- ties
@@ -207,8 +324,7 @@ public final class FleshOut {
     for (var arc : seed.arcs()) {
       if (arc.visibility() != app.radiance.kernel.Visibility.PUBLIC) {
         var people = new ArrayList<>(arc.roles().values());
-        java.util.Collections.sort(people);
-        if (people.size() == 2) secretPairs.add(people.get(0) + "|" + people.get(1));
+        if (people.size() == 2) secretPairs.add(pairKey(people.get(0), people.get(1)));
       }
     }
     // One story per pair, grouped by the circle the two share.
@@ -219,10 +335,8 @@ public final class FleshOut {
       String a = e.from().compareTo(e.to()) < 0 ? e.from() : e.to();
       String b = a.equals(e.from()) ? e.to() : e.from();
       if (!seen.add(a + "|" + b)) continue;
-      var shared = new ArrayList<>(byHandle.get(a).circles());
-      shared.retainAll(byHandle.get(b).circles());
-      String circle = e.kind().equals("FAMILY") ? "family" : shared.isEmpty() ? "across circles" : shared.getFirst();
-      pairs.computeIfAbsent(circle, k -> new ArrayList<>()).add(new String[] {a, b});
+      pairs.computeIfAbsent(circleOf(e, byHandle.get(a), byHandle.get(b)), k -> new ArrayList<>())
+          .add(new String[] {a, b});
     }
     var current = seed;
     for (var entry : pairs.entrySet()) {
@@ -236,6 +350,13 @@ public final class FleshOut {
     return current;
   }
 
+  /** The circle two people share (family first), or "across circles". */
+  static String circleOf(WorldSeed.Relationship e, Resident a, Resident b) {
+    var shared = new ArrayList<>(a.circles());
+    shared.retainAll(b.circles());
+    return e.kind().equals("FAMILY") ? "family" : shared.isEmpty() ? "across circles" : shared.getFirst();
+  }
+
   private WorldSeed tieChunk(WorldSeed seed, String circle, List<String[]> chunk, java.util.Set<String> secret,
       Map<String, Resident> byHandle) {
     var arr = Json.MAPPER.createArrayNode();
@@ -245,34 +366,27 @@ public final class FleshOut {
       var node = arr.addObject().put("a", pair[0]).put("b", pair[1])
           .put("aName", byHandle.get(pair[0]).name()).put("bName", byHandle.get(pair[1]).name())
           .put("kind", ab.kind()).put("aToB_affinity", ab.affinity()).put("bToA_affinity", ba.affinity())
-          .put("familiarity", ab.familiarity()).put("secret", secret.contains(pair[0] + "|" + pair[1]));
+          .put("familiarity", ab.familiarity()).put("secret", secret.contains(pairKey(pair[0], pair[1])));
       var tags = node.putArray("tags");
       ab.tags().forEach(t -> tags.add(pair[0] + "->" + pair[1] + ": " + t));
       ba.tags().forEach(t -> tags.add(pair[1] + "->" + pair[0] + ": " + t));
     }
-    var result = gateway.call(new LlmRequest<>(Purpose.GENESIS, prefix(seed),
-        List.of(Part.text(lib.prompt("genesis-ties").replace("{{circle}}", circle)
-            .replace("{{pairs}}", arr.toPrettyString()))),
-        Ties.class, 90 * chunk.size() + 200, Duration.ofMinutes(3), Priority.BACKGROUND));
-    if (!result.ok()) throw new GenesisException("genesis ties call failed (" + result.outcome() + ")");
+    String prompt = lib.prompt("genesis-ties").replace("{{circle}}", circle).replace("{{pairs}}", arr.toPrettyString());
+    var answer = source.ties(prefix(seed), prompt, chunk);
     var linter = lib.themeLinter();
     var stories = new HashMap<String, String>();
-    for (var t : result.value().pairs()) {
+    for (var t : answer.pairs()) {
       if (t.story() == null || t.story().isBlank() || !linter.hits(t.story()).isEmpty()) continue;
-      String a = t.a().compareTo(t.b()) < 0 ? t.a() : t.b();
-      String b = a.equals(t.a()) ? t.b() : t.a();
-      stories.put(a + "|" + b, t.story().strip());
+      stories.put(pairKey(t.a(), t.b()), t.story().strip());
     }
     var rels = seed.relationships().stream().map(e -> {
-      String a = e.from().compareTo(e.to()) < 0 ? e.from() : e.to();
-      String b = a.equals(e.from()) ? e.to() : e.from();
-      String story = stories.get(a + "|" + b);
+      String story = stories.get(pairKey(e.from(), e.to()));
       return story == null || e.backstory() != null ? e
           : new WorldSeed.Relationship(e.from(), e.to(), e.kind(), e.affinity(), e.trust(), e.attraction(),
               e.familiarity(), e.respect(), e.chemistry(), e.tags(), e.connected(), story);
     }).toList();
     return new WorldSeed(seed.version(), seed.seed(), seed.referenceDate(), seed.residents(), rels,
-        seed.arcs(), seed.entities());
+        seed.arcs(), seed.entities(), seed.provenance());
   }
 
   private static WorldSeed.Relationship edgeOf(WorldSeed s, String from, String to) {
