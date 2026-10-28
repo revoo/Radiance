@@ -65,6 +65,11 @@ public final class EventRepository {
     return TABLE.where(sql, "air_status = 'SCRIPTED' ORDER BY world_time, id");
   }
 
+  /** Scripted events due by {@code t}, in air-time order. */
+  public List<EventRow> scriptedUntil(long t) {
+    return TABLE.where(sql, "air_status = 'SCRIPTED' AND world_time <= ? ORDER BY world_time, id", t);
+  }
+
   public List<EventRow> airedBetween(long fromInclusive, long toExclusive) {
     return TABLE.where(
         sql,

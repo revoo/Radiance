@@ -57,6 +57,10 @@ public final class DmRepository {
     return MESSAGES.where(sql, "air_status = 'SCRIPTED' ORDER BY created_at, id");
   }
 
+  public List<DmRow.Message> scriptedUntil(long t) {
+    return MESSAGES.where(sql, "air_status = 'SCRIPTED' AND created_at <= ? ORDER BY created_at, id", t);
+  }
+
   public List<DmRow.Message> messages(String threadId) {
     return MESSAGES.where(sql, "thread_id = ? ORDER BY created_at, id", threadId);
   }

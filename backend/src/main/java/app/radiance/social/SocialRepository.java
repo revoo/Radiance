@@ -130,6 +130,23 @@ public final class SocialRepository {
     return POSTS.where(sql, "air_status = 'SCRIPTED' ORDER BY created_at, id");
   }
 
+  public Optional<CommentRow> comment(String id) {
+    return COMMENTS.one(sql, "id = ?", id);
+  }
+
+  /** Scripted posts, comments and reactions due by {@code t}, in air-time order (the script indexes). */
+  public List<PostRow> scriptedPostsUntil(long t) {
+    return POSTS.where(sql, "air_status = 'SCRIPTED' AND created_at <= ? ORDER BY created_at, id", t);
+  }
+
+  public List<CommentRow> scriptedCommentsUntil(long t) {
+    return COMMENTS.where(sql, "air_status = 'SCRIPTED' AND created_at <= ? ORDER BY created_at, id", t);
+  }
+
+  public List<ReactionRow> scriptedReactionsUntil(long t) {
+    return REACTIONS.where(sql, "air_status = 'SCRIPTED' AND created_at <= ? ORDER BY created_at", t);
+  }
+
   public List<CommentRow> commentsOn(String postId) {
     return COMMENTS.where(sql, "post_id = ? ORDER BY created_at, id", postId);
   }

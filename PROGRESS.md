@@ -10,7 +10,7 @@
   2. ✔ The in-memory world model (`sim.model`: `SimWorld`, `Person`, `Edge`, `Arc`, `Thing`, `Item`,
      `Intent`, `Tag`), `ModelStore` load / dirty-row write, OU drift (`Drift`, exact), temperament
      meter math and lazy relaxation (`Meters`), `Brief` (the structure in `brief_json`).
-  3. Airing: `WorldEngine.advanceTo`, validation, drop cascades, effects (deltas through temperament,
+  3. ✔ Airing: `WorldEngine.advanceTo`, validation, drop cascades, effects (deltas through temperament,
      memories, knowledge, notifications, arc transitions, constraints, entities).
   4. Planning: slices, presence/sessions, storyteller (tension, profiles, mix calibration), event
      sampling and selectors, news takes, the arc engine (starts, analytic advance, beats, blacklist),
@@ -19,7 +19,7 @@
   5. Harness: `simulate` task, scripted R personas and his responders, impressions with hysteresis,
      feel report, plain-text script dump; property tests and feel bands in CI.
   6. Tune to the bands; PROGRESS; push; CI; ⏸ REVIEW (feel report + one day's script).
-- **Paused after step 2 at R's request (2026-10-27, end of day); resume with step 3.**
+- Resumed 2026-10-28. Next: step 4.
 - Design notes for steps 3–5 (decided, not yet built):
   - Planning applies each slice's items to the copy through the same effects code airing uses (one
     effects path); airing adds validation and drop cascades on top.
