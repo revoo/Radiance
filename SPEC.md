@@ -83,7 +83,7 @@ A single-player social network called **Radiance**. Thirty simulated residents o
 | Redux or another global store | TanStack Query + SSE cache patching | — |
 | Kubernetes | One process; a scale-to-zero container in M9 | — |
 
-**P9 — Real people, a few hard lines.** This is the real world, not a sanitized one. Residents swear, mock, gossip, hold grudges and fight; some are biased or outright bigoted, and it shows the way it does on real Facebook — loaded jokes, "just saying", open contempt, the occasional ugly pile-on — while others push back, laugh along or scroll past. Balance is the default: it's a community, not a war, and knobs set how often things turn ugly (§5.8). Prose is never softened, disclaimed or moralized; the narrator never takes sides, and no side is a strawman. Politics spans the spectrum with real arguments and real contempt, and faith is fair game too. The hard lines are few: all residents are adults (22–70), nothing sexualizes minors, and sex stays non-explicit; no real private individuals; public figures appear only as subjects of real headlines, and residents can mock and insult them freely but never invent quotes or claims about them or threaten them; no images of real people or of children.
+**P9 — Real people, a few hard lines.** This is the real world, not a sanitized one. Residents swear, mock, gossip, hold grudges and fight; some are biased or outright bigoted, and it shows the way it does on real Facebook — loaded jokes, "just saying", open contempt, the occasional ugly pile-on — while others push back, laugh along or scroll past. Balance is the default: it's a community, not a war, and knobs set how often things turn ugly (§5.8). Prose is never softened, disclaimed or moralized; the narrator never takes sides, and no side is a strawman. Politics spans the spectrum with real arguments and real contempt, and faith is fair game too. The hard lines are few: all residents are adults (18–70; R raised the floor from 22 on 2026-10-27), nothing sexualizes minors, and sex stays non-explicit; no real private individuals; public figures appear only as subjects of real headlines, and residents can mock and insult them freely but never invent quotes or claims about them or threaten them; no images of real people or of children.
 
 **P10 — Providers are plug-ins.** The domain asks the `LlmGateway` for a *purpose* (render a thread, appraise a post) in its own terms: prompt blocks in, a typed record out. Which provider and model serve each purpose is configuration, chosen by the bake-off and the cost meter, and it can change per purpose without code changes. No provider SDK, type or parameter name appears outside its adapter, and the guardrails — output validation, the linter, the blacklist, budgets — live in our code, so they hold whichever model is behind them.
 
@@ -1047,7 +1047,7 @@ V1's cast is a fixed list of 30 people, seeded at instantiation from `content/ca
 
 **Rules**
 - **Straight and cisgender.** Every resident is heterosexual and cisgender, and that never changes: no arc, drift or prose contradicts it, and every romance, crush and flirtation is between a man and a woman (§5.5, invariant 11).
-- **Adults across the metro.** Ages 22–70, mostly 25–50; 15 women and 15 men, spread across the city and suburbs.
+- **Adults across the metro.** Ages 18–70, most of them 18–40 and a few over 40 (R, 2026-10-27; validated: at least two thirds 18–40); 15 women and 15 men, spread across the city and suburbs.
 - **Backgrounds.** Majority white, mostly from the metro's big European-heritage communities, with a few residents of other backgrounds.
 - **Faith.** Part of life for many and devout for a minority (four of the 30). Observance shapes routines, interests and the calendar — Sunday Mass, Ramadan, Orthodox Easter — never personality.
 - **Names.** Believable first and last names that fit each person's heritage and birth year: no famous namesakes, no joke or alliterative names, and none of the names language models overuse. Display names can use a nickname (Gaby, Rick, Sam). Handles are lowercase ASCII from the name (`sarah.brennan`, `amra.hodzic`) unless an entry sets one.
@@ -1073,33 +1073,33 @@ V1's cast is a fixed list of 30 people, seeded at instantiation from `content/ca
 | ★ Sarah Brennan | F | 33 | Irish | Catholic (nominal) | Lakeview | Marketing manager, Lakeshore Mutual | Dating Ryan Kessler | U of I, Lakeshore |
 | ★ Tim Kaczmarek | M | 34 | Polish | None (lapsed Catholic) | Portage Park | Economics teacher at a CPS high school | Married, one toddler | U of I, Softball, Family (Nick's cousin) |
 | ★ Jesse Hensley | M | 29 | Scots-Irish, from downstate | None | Des Plaines | Warehouse lead, Kinzie Freight | Single | Kinzie, Family (Amanda's brother), Online |
-| ★ Mike Rinaldi | M | 42 | Italian | Catholic (nominal) | Schaumburg | Mortgage loan officer | Divorced, two kids every other weekend | Softball, Online |
-| ★ Jake Zielinski | M | 27 | Polish | None | Mount Prospect | Inventory analyst, Kinzie Freight | Single | Kinzie, Online |
+| ★ Mike Rinaldi | M | 39 | Italian | Catholic (nominal) | Schaumburg | Mortgage loan officer | Divorced, two kids every other weekend | Softball, Online |
+| ★ Jake Zielinski | M | 24 | Polish | None | Mount Prospect | Inventory analyst, Kinzie Freight | Single | Kinzie, Online |
 | ★ Jessica Vogel | F | 32 | German | Lutheran (nominal) | West Loop | Management consultant | Single (secretly seeing someone) | U of I, Online |
-| ★ Samantha "Sam" Dvorak | F | 41 | Czech | Catholic (nominal) | Berwyn | Respiratory therapist, Prairie Path | Married | Prairie Path, Block |
+| ★ Samantha "Sam" Dvorak | F | 38 | Czech | Catholic (nominal) | Berwyn | Respiratory therapist, Prairie Path | Married | Prairie Path, Block |
 | Ryan Kessler | M | 36 | German | None | Lincoln Square | Sales engineer at a software company | Dating Sarah Brennan | Softball, Online |
 | Megan Quinlan | F | 32 | Irish | Catholic (nominal) | Wicker Park | ICU nurse, Prairie Path | Single | U of I, Prairie Path |
 | Daniel Shin | M | 35 | Korean | None (raised Presbyterian) | Roscoe Village | Producer at a sports-talk radio station | Single | U of I, Online |
 | Lisa Marchetti | F | 56 | Italian | Catholic (nominal) | Elmhurst | HR director, Lakeshore Mutual | Married, two grown kids | Lakeshore |
-| Brian Whitlock | M | 44 | English/German | Evangelical (devout) | Wheaton | IT project manager, Lakeshore Mutual | Married, four kids | Lakeshore, Online |
-| Amra Hodžić | F | 34 | Bosnian | Muslim (devout) | Skokie | Staff accountant, Lakeshore Mutual | Married, one son | Lakeshore, Online |
-| Gabriela "Gaby" Barajas | F | 29 | Mexican | Catholic (nominal) | Pilsen | Claims adjuster, Lakeshore Mutual | Single | Lakeshore, Family (Rick's cousin) |
-| Kendra Gaines | F | 34 | Black | Baptist (practicing) | Oak Park | Nurse practitioner, Prairie Path | Single | Prairie Path, Online |
+| Brian Whitlock | M | 38 | English/German | Evangelical (devout) | Wheaton | IT project manager, Lakeshore Mutual | Married, four kids | Lakeshore, Online |
+| Amra Hodžić | F | 31 | Bosnian | Muslim (devout) | Skokie | Staff accountant, Lakeshore Mutual | Married, one son | Lakeshore, Online |
+| Gabriela "Gaby" Barajas | F | 27 | Mexican | Catholic (nominal) | Pilsen | Claims adjuster, Lakeshore Mutual | Single | Lakeshore, Family (Rick's cousin) |
+| Kendra Gaines | F | 33 | Black | Baptist (practicing) | Oak Park | Nurse practitioner, Prairie Path | Single | Prairie Path, Online |
 | Marko Jovanović | M | 47 | Serbian | Serbian Orthodox (nominal) | Norridge | Operations manager, Kinzie Freight | Married, two teens | Kinzie |
-| Amanda Sheehan (née Hensley) | F | 38 | Scots-Irish, from downstate | Methodist (nominal) | Plainfield | Preschool teacher | Married, two kids | Family (Jesse's sister), Online |
+| Amanda Sheehan (née Hensley) | F | 37 | Scots-Irish, from downstate | Methodist (nominal) | Plainfield | Preschool teacher | Married, two kids | Family (Jesse's sister), Online |
 | Nick Grabowski | M | 30 | Polish | Catholic (devout; Latin Mass) | Jefferson Park | Chicago firefighter-EMT | Single | Softball, Family (Tim's cousin) |
-| Ricardo "Rick" Ocampo | M | 37 | Mexican | Catholic (nominal) | Berwyn | Union electrician | Married, two kids | Block, Softball, Family (Gaby's cousin) |
+| Ricardo "Rick" Ocampo | M | 35 | Mexican | Catholic (nominal) | Berwyn | Union electrician | Married, two kids | Block, Softball, Family (Gaby's cousin) |
 | Donna Novotny | F | 67 | Czech | Catholic (practicing) | Berwyn | Retired grade-school teacher | Widowed | Block, Online |
 | Gary Moran | M | 69 | Irish | Catholic (nominal) | Berwyn | Retired union pipefitter | Married | Block |
-| Hannah Lindqvist | F | 24 | Swedish | None | Andersonville | Junior graphic designer at an ad agency | Single | Softball, Online |
+| Hannah Lindqvist | F | 21 | Swedish | None | Andersonville | Junior graphic designer at an ad agency | Single | Softball, Online |
 | Oksana Melnyk | F | 28 | Ukrainian | Ukrainian Catholic (nominal) | Ukrainian Village | Public-health PhD student at UIC; bartends weekends | Single | Softball, Online |
-| Lukas Petrauskas | M | 26 | Lithuanian | None | Bridgeport | Brewer at a small brewery | Single | Softball, Online |
-| Cody Garrett | M | 25 | Scots-Irish, from Effingham | None (raised Baptist) | Logan Square | Line cook; open-mic comic | Single | Softball, Online |
-| Andre Whitfield | M | 45 | Black | None | Bronzeville | Architect at a Loop firm | Divorced | Softball, Online |
+| Lukas Petrauskas | M | 23 | Lithuanian | None | Bridgeport | Brewer at a small brewery | Single | Softball, Online |
+| Cody Garrett | M | 22 | Scots-Irish, from Effingham | None (raised Baptist) | Logan Square | Line cook; open-mic comic | Single | Softball, Online |
+| Andre Whitfield | M | 39 | Black | None | Bronzeville | Architect at a Loop firm | Divorced | Softball, Online |
 | Eleni Galanis | F | 52 | Greek | Greek Orthodox (devout) | Park Ridge | Realtor (sold Sam her bungalow) | Married, two kids in college | Online |
-| Kristen Wagner | F | 44 | German | Methodist (practicing) | Naperville | Stay-at-home mom of three; PTA president | Married | Online (Deepa's neighbor) |
-| Deepa Kulkarni | F | 40 | Indian | Hindu (practicing) | Naperville | Veterinarian | Married, one daughter | Online (Kristen's neighbor) |
-| Adam Rosen | M | 43 | Jewish | Jewish (cultural) | Evanston | Litigation attorney at a Loop firm | Married, twins | Online |
+| Kristen Wagner | F | 39 | German | Methodist (practicing) | Naperville | Stay-at-home mom of three; PTA president | Married | Online (Deepa's neighbor) |
+| Deepa Kulkarni | F | 36 | Indian | Hindu (practicing) | Naperville | Veterinarian | Married, one daughter | Online (Kristen's neighbor) |
+| Adam Rosen | M | 37 | Jewish | Jewish (cultural) | Evanston | Litigation attorney at a Loop firm | Married, twins | Online |
 
 Spouses, kids and parents who aren't residents are off-network people that genesis writes, as text only.
 
@@ -1134,7 +1134,7 @@ pinned:                                            # storyline seeds (§6.3)
   # …
 ```
 
-Startup validation: exactly 30 residents and a `you` entry; ages 22–70; unique names and handles; known circle ids; partners and family links that agree in both directions; every pinned name in the roster.
+Startup validation: exactly 30 residents and a `you` entry; ages 18–70, at least two thirds 18–40; unique names and handles; known circle ids; partners and family links that agree in both directions; every pinned name in the roster.
 
 ### 6.3 Pinned storylines
 

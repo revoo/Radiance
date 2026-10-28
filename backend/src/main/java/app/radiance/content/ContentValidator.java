@@ -463,7 +463,7 @@ final class ContentValidator {
       if (!res.resolvedHandle().matches("[a-z]+(\\.[a-z]+)+")) {
         problem(rw, "handle must be lowercase ASCII words joined by dots: '" + res.resolvedHandle() + "'");
       }
-      if (res.age() < 22 || res.age() > 70) problem(rw, "age must be 22..70, is " + res.age());
+      if (res.age() < 18 || res.age() > 70) problem(rw, "age must be 18..70, is " + res.age());
       if (res.gender() == Gender.F) women++;
       res.circles().forEach(c -> {
         if (!Vocab.CIRCLES.contains(c)) problem(rw, "unknown circle '" + c + "'");
@@ -473,6 +473,11 @@ final class ContentValidator {
       }
     }
     if (women != 15) problem(w, "needs 15 women and 15 men; has " + women + " women");
+    // R: most residents are 18–40, with a few over 40 (PROGRESS decision 16).
+    long young = r.residents().stream().filter(x -> x.age() >= 18 && x.age() <= 40).count();
+    if (young * 3 < r.residents().size() * 2) {
+      problem(w, "at least two thirds of residents should be 18–40; " + young + " are");
+    }
     for (var res : r.residents()) {
       if (res.name() == null || res.status() == null) continue;
       String rw = w + " " + res.name();
@@ -502,7 +507,7 @@ final class ContentValidator {
       }
     }
     if (r.you() != null) {
-      if (r.you().age() < 22 || r.you().age() > 70) problem(w + " you", "age must be 22..70");
+      if (r.you().age() < 18 || r.you().age() > 70) problem(w + " you", "age must be 18..70");
       if (r.you().gender() == null) problem(w + " you", "needs a gender");
     }
     for (var p : r.pinned()) {

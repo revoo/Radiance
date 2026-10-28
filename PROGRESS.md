@@ -145,6 +145,10 @@ Resolutions of spec issues raised at kickoff. Each gets an ADR when its mileston
       across posts stays V2).
 15. **Budget:** R works in 5-hour usage windows. Finish M3 and stop at its REVIEW; don't start M4.
     Authoring the 30 residents is its own resumable step (batches of 5, one commit each).
+16. **Ages (R, 2026-10-27):** most residents 18–40, a few over 40. The age floor drops from 22 to 18
+    (P9 and §6.2 updated); validation requires at least two thirds aged 18–40. Re-aged roster: 25 of 30
+    are 21–40; over 40 are Donna 67, Gary 69, Lisa 56, Eleni 52 and Marko 47. The youngest is 21 because
+    bars, drinking and the brewer/open-mic roles need 21+ in Illinois.
 
 ## Deviations from spec
 - TypeScript pinned to 6.0.x, not latest (7.x), for typescript-eslint compatibility (ADR 0009).

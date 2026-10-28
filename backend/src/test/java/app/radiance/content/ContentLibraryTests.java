@@ -196,9 +196,17 @@ class ContentLibraryTests {
     assertThatThrownBy(() -> load(files2))
         .hasMessageContaining("cast/roster.yaml Jessica Vogel: every couple pairs a man and a woman (invariant 11)");
 
-    var tooYoung = edit("cast/roster.yaml", "age: 24", "age: 19");
+    var tooYoung = edit("cast/roster.yaml", "age: 21", "age: 17");
     assertThatThrownBy(() -> load(tooYoung))
-        .hasMessageContaining("cast/roster.yaml Hannah Lindqvist: age must be 22..70, is 19");
+        .hasMessageContaining("cast/roster.yaml Hannah Lindqvist: age must be 18..70, is 17");
+
+    var tooOld = new HashMap<>(shipped());
+    String roster = tooOld.get("cast/roster.yaml");
+    for (String a : List.of("age: 33", "age: 34", "age: 29", "age: 32", "age: 36", "age: 30", "age: 39", "age: 38")) {
+      roster = roster.replace(a, "age: 55");
+    }
+    tooOld.put("cast/roster.yaml", roster);
+    assertThatThrownBy(() -> load(tooOld)).hasMessageContaining("at least two thirds of residents should be 18–40");
   }
 
   @Test

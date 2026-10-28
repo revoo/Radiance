@@ -1,5 +1,5 @@
 # content/cast/roster.yaml — the fixed V1 cast (SPEC §6.2, §6.3). Edit freely before genesis; it's
-# validated at startup: exactly 30 residents (15 women, 15 men), ages 22–70, unique names and handles,
+# validated at startup: exactly 30 residents (15 women, 15 men), ages 18–70 with most 18–40, unique names and handles,
 # known circles, partners and family links that agree in both directions, pinned names in the roster.
 # A `with` partner must be another resident who lists them back; MARRIED or DATING without `with` means
 # the partner is off-network. `knows` records real-world ties outside the shared circles.
@@ -39,7 +39,7 @@ residents:
 
   - name: Mike Rinaldi
     gender: M
-    age: 42
+    age: 39
     heritage: Italian-American
     faith: { tradition: Catholic, observance: NOMINAL }
     lives-in: "Schaumburg"
@@ -50,7 +50,7 @@ residents:
 
   - name: Jake Zielinski
     gender: M
-    age: 27
+    age: 24
     heritage: Polish-American
     faith: { observance: NONE }
     lives-in: "Mount Prospect"
@@ -71,7 +71,7 @@ residents:
   - name: Samantha Dvorak
     display-name: Sam Dvorak
     gender: F
-    age: 41
+    age: 38
     heritage: Czech-American
     faith: { tradition: Catholic, observance: NOMINAL }
     lives-in: "Berwyn"
@@ -122,7 +122,7 @@ residents:
 
   - name: Brian Whitlock
     gender: M
-    age: 44
+    age: 38
     heritage: English and German
     faith: { tradition: Evangelical, observance: DEVOUT }
     lives-in: "Wheaton"
@@ -133,7 +133,7 @@ residents:
 
   - name: Amra Hodžić
     gender: F
-    age: 34
+    age: 31
     heritage: Bosnian-American
     faith: { tradition: Muslim, observance: DEVOUT }
     lives-in: "Skokie"
@@ -145,7 +145,7 @@ residents:
   - name: Gabriela Barajas
     display-name: Gaby Barajas
     gender: F
-    age: 29
+    age: 27
     heritage: Mexican-American
     faith: { tradition: Catholic, observance: NOMINAL }
     lives-in: "Pilsen, Chicago"
@@ -156,7 +156,7 @@ residents:
 
   - name: Kendra Gaines
     gender: F
-    age: 34
+    age: 33
     heritage: Black American
     faith: { tradition: Baptist, observance: PRACTICING }
     lives-in: "Oak Park"
@@ -177,7 +177,7 @@ residents:
 
   - name: Amanda Sheehan
     gender: F
-    age: 38
+    age: 37
     heritage: Scots-Irish, from downstate Illinois (née Hensley)
     faith: { tradition: Methodist, observance: NOMINAL }
     lives-in: "Plainfield"
@@ -201,7 +201,7 @@ residents:
   - name: Ricardo Ocampo
     display-name: Rick Ocampo
     gender: M
-    age: 37
+    age: 35
     heritage: Mexican-American
     faith: { tradition: Catholic, observance: NOMINAL }
     lives-in: "Berwyn"
@@ -233,7 +233,7 @@ residents:
 
   - name: Hannah Lindqvist
     gender: F
-    age: 24
+    age: 21
     heritage: Swedish-American
     faith: { observance: NONE }
     lives-in: "Andersonville, Chicago"
@@ -253,7 +253,7 @@ residents:
 
   - name: Lukas Petrauskas
     gender: M
-    age: 26
+    age: 23
     heritage: Lithuanian-American
     faith: { observance: NONE }
     lives-in: "Bridgeport, Chicago"
@@ -263,7 +263,7 @@ residents:
 
   - name: Cody Garrett
     gender: M
-    age: 25
+    age: 22
     heritage: Scots-Irish, from Effingham
     faith: { tradition: Baptist (raised), observance: NONE }
     lives-in: "Logan Square, Chicago"
@@ -273,7 +273,7 @@ residents:
 
   - name: Andre Whitfield
     gender: M
-    age: 45
+    age: 39
     heritage: Black American
     faith: { observance: NONE }
     lives-in: "Bronzeville, Chicago"
@@ -295,7 +295,7 @@ residents:
 
   - name: Kristen Wagner
     gender: F
-    age: 44
+    age: 39
     heritage: German-American
     faith: { tradition: Methodist, observance: PRACTICING }
     lives-in: "Naperville"
@@ -307,7 +307,7 @@ residents:
 
   - name: Deepa Kulkarni
     gender: F
-    age: 40
+    age: 36
     heritage: Indian-American
     faith: { tradition: Hindu, observance: PRACTICING }
     lives-in: "Naperville"
@@ -319,7 +319,7 @@ residents:
 
   - name: Adam Rosen
     gender: M
-    age: 43
+    age: 37
     heritage: Jewish-American
     faith: { tradition: Jewish, observance: NOMINAL }   # cultural
     lives-in: "Evanston"
