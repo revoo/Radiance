@@ -1,13 +1,23 @@
 # Progress
 
 ## Resume here
-- **M3 approved by R (2026-10-27) and merged**: `main` fast-forwarded to `m3-content-genesis`.
-- Next: **M4** (SPEC §12), on a new branch from `main`. Start only when R says go. Its AC is amended
-  by decision 17: no timing gates; property tests, feel bands and plan-hash determinism stay.
-- The seed-7 prose is authored in-session (ADR 0017): `backend/src/main/resources/content/genesis/seed-7/`
-  holds `residents-1.json` … `residents-6.json` (30 residents) and `ties-1.json` … `ties-3.json` (all 102
-  pairs). To rebuild the world bible: delete `backend/data/world-seed.*`, then
-  `./gradlew :backend:genesis -Pprofile=offline --args="--seed 7 --authored"`.
+- Milestone: **M4 — Simulation engine & the script (offline)**, branch `m4-simulation-engine` (from `main`
+  at d417fcc). R said go on 2026-10-27. AC amended by decision 17 (no timing gates).
+- Plan (each step ends green and committed; ✔ = done):
+  1. ✔ Foundations: migration `0002_sim.sql` (actor constraints, impression hysteresis, interactions
+     day); repositories for memory, notification, DM, weather and headlines; `FakeWeather` + named
+     conditions; fixture headlines + selection; the calendar (holidays, observances, birthdays).
+  2. The in-memory world model: load from / write to the DB (dirty rows only), OU drift (exact),
+     temperament meter math (gains, mood, taper, bounds), relationship relaxation and decay.
+  3. Airing: `WorldEngine.advanceTo`, validation, drop cascades, effects (deltas through temperament,
+     memories, knowledge, notifications, arc transitions, constraints, entities).
+  4. Planning: slices, presence/sessions, storyteller (tension, profiles, mix calibration), event
+     sampling and selectors, news takes, the arc engine (starts, analytic advance, beats, blacklist),
+     engagement, stances, reactions, threads, intents, fidelity, backfill, `ScriptWriter`, plan hash,
+     `ContinuityAuditor`.
+  5. Harness: `simulate` task, scripted R personas and his responders, impressions with hysteresis,
+     feel report, plain-text script dump; property tests and feel bands in CI.
+  6. Tune to the bands; PROGRESS; push; CI; ⏸ REVIEW (feel report + one day's script).
 - Half-done: nothing.
 
 ## M3 steps (all ✔)

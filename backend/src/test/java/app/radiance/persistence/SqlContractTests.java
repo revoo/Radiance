@@ -54,7 +54,7 @@ abstract class SqlContractTests {
     var db = leased();
     var runner = MigrationRunner.fromClasspath(db.sql, db.admin, db.clock);
     assertThat(runner.migrate()).isEmpty();
-    assertThat(db.count("schema_migrations")).isEqualTo(1);
+    assertThat(db.count("schema_migrations")).isEqualTo(2);
   }
 
   @Test

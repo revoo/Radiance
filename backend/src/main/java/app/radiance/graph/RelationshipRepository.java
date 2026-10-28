@@ -29,7 +29,8 @@ public final class RelationshipRepository {
                   r.str("summary"),
                   r.bool("connected"),
                   r.lngOrNull("last_interaction_at"),
-                  r.lng("updated_at")),
+                  r.lng("updated_at"),
+                  r.str("pending_tags_json")),
           col("from_id", RelationshipRow::fromId),
           col("to_id", RelationshipRow::toId),
           col("kind", RelationshipRow::kind),
@@ -43,7 +44,8 @@ public final class RelationshipRepository {
           col("summary", RelationshipRow::summary),
           col("connected", RelationshipRow::connected),
           col("last_interaction_at", RelationshipRow::lastInteractionAt),
-          col("updated_at", RelationshipRow::updatedAt));
+          col("updated_at", RelationshipRow::updatedAt),
+          col("pending_tags_json", RelationshipRow::pendingTagsJson));
 
   private final Sql sql;
 

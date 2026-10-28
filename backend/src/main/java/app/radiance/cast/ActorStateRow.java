@@ -11,4 +11,13 @@ public record ActorStateRow(
     String location,
     long interactionsToday,
     Long lastFeedCheckAt,
-    long updatedAt) {}
+    long updatedAt,
+    String interactionsDay) {
+
+  public ActorStateRow(
+      String actorId, double mood, double energy, double stress, Double partnerSatisfaction,
+      String traitOffsetsJson, String location, long interactionsToday, Long lastFeedCheckAt, long updatedAt) {
+    this(actorId, mood, energy, stress, partnerSatisfaction, traitOffsetsJson, location, interactionsToday,
+        lastFeedCheckAt, updatedAt, null);
+  }
+}

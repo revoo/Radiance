@@ -1,0 +1,61 @@
+# Fixture headlines for offline runs, tests and the harness (SPEC §5.12, M4). Generic and fictional:
+# no real people, no real outlets. Each world-day draws a seeded subset, already "classified".
+# axis: which side is likelier to cheer, -1..1 (economic: left..right, social: progressive..conservative).
+- { title: "Senate passes stopgap bill hours before shutdown deadline", region: NATIONAL, topics: [politics, economy], controversy: 0.6, salience: 0.8, axis: { economic: 0.1, social: 0.0 } }
+- { title: "Fed holds rates steady, signals cuts could come next year", region: NATIONAL, topics: [economy, personal_finance], controversy: 0.3, salience: 0.7, axis: { economic: 0.2, social: 0.0 } }
+- { title: "Minimum wage hike approved in three more states", region: NATIONAL, topics: [economy, politics], controversy: 0.7, salience: 0.6, axis: { economic: -0.8, social: -0.1 } }
+- { title: "Supreme Court agrees to hear major case on campus speech", region: NATIONAL, topics: [politics], controversy: 0.8, salience: 0.7, axis: { economic: 0.0, social: 0.4 } }
+- { title: "Gas prices fall for the fifth straight week", region: NATIONAL, topics: [economy, cars, personal_finance], controversy: 0.1, salience: 0.5, axis: { economic: 0.1, social: 0.0 } }
+- { title: "New report says rents rose faster than wages again", region: NATIONAL, topics: [economy, personal_finance], controversy: 0.5, salience: 0.6, axis: { economic: -0.5, social: 0.0 } }
+- { title: "Border bill stalls as both parties trade blame", region: NATIONAL, topics: [politics], controversy: 0.9, salience: 0.8, axis: { economic: 0.0, social: 0.7 } }
+- { title: "Union workers ratify contract after six-week strike", region: NATIONAL, topics: [economy, politics], controversy: 0.5, salience: 0.5, axis: { economic: -0.7, social: 0.0 } }
+- { title: "Tech giant unveils AI assistant that books your appointments", region: NATIONAL, topics: [tech], controversy: 0.3, salience: 0.6, axis: { economic: 0.2, social: 0.0 } }
+- { title: "Phone makers agree to a standard charger, finally", region: NATIONAL, topics: [tech], controversy: 0.1, salience: 0.4, axis: { economic: 0.0, social: 0.0 } }
+- { title: "Study links ultra-processed food to shorter lifespans", region: NATIONAL, topics: [health, food], controversy: 0.3, salience: 0.5, axis: { economic: -0.1, social: 0.0 } }
+- { title: "Measles cases climb in states with falling vaccination rates", region: NATIONAL, topics: [health, politics], controversy: 0.7, salience: 0.6, axis: { economic: 0.0, social: -0.5 } }
+- { title: "Governors clash over new federal school standards", region: NATIONAL, topics: [politics, parenting], controversy: 0.8, salience: 0.6, axis: { economic: 0.0, social: 0.6 } }
+- { title: "Student loan forgiveness program blocked by appeals court", region: NATIONAL, topics: [politics, personal_finance], controversy: 0.8, salience: 0.7, axis: { economic: 0.6, social: 0.2 } }
+- { title: "Record number of Americans fly over the holiday weekend", region: NATIONAL, topics: [travel], controversy: 0.0, salience: 0.4, axis: { economic: 0.0, social: 0.0 } }
+- { title: "Streaming prices go up again across the board", region: NATIONAL, topics: [movies_tv, personal_finance], controversy: 0.2, salience: 0.4, axis: { economic: 0.0, social: 0.0 } }
+- { title: "Blockbuster sequel shatters opening weekend record", region: NATIONAL, topics: [movies_tv, celebrity], controversy: 0.1, salience: 0.5, axis: { economic: 0.0, social: 0.0 } }
+- { title: "Pop star's surprise album drops at midnight", region: NATIONAL, topics: [music, celebrity], controversy: 0.1, salience: 0.5, axis: { economic: 0.0, social: 0.0 } }
+- { title: "Police reform bill splits city councils nationwide", region: NATIONAL, topics: [politics, true_crime], controversy: 0.9, salience: 0.6, axis: { economic: 0.0, social: -0.7 } }
+- { title: "Jury convicts man in years-old cold case murder", region: NATIONAL, topics: [true_crime], controversy: 0.1, salience: 0.5, axis: { economic: 0.0, social: 0.1 } }
+- { title: "New EV tax credit rules leave many buyers out", region: NATIONAL, topics: [cars, economy, politics], controversy: 0.6, salience: 0.5, axis: { economic: 0.4, social: 0.0 } }
+- { title: "Home prices hit another record high", region: NATIONAL, topics: [economy, home_improvement, personal_finance], controversy: 0.3, salience: 0.6, axis: { economic: -0.2, social: 0.0 } }
+- { title: "Church attendance ticks up among young adults, survey finds", region: NATIONAL, topics: [faith], controversy: 0.4, salience: 0.4, axis: { economic: 0.0, social: 0.6 } }
+- { title: "Lawmakers propose ban on phones in public schools", region: NATIONAL, topics: [parenting, tech, politics], controversy: 0.5, salience: 0.5, axis: { economic: 0.0, social: 0.3 } }
+- { title: "Wildfire forces thousands to evacuate out West", region: NATIONAL, topics: [science, outdoors], controversy: 0.3, salience: 0.7, sensitivity: SENSITIVE, axis: { economic: -0.2, social: -0.2 } }
+- { title: "Tornado outbreak kills at least a dozen across the South", region: NATIONAL, topics: [science], controversy: 0.1, salience: 0.8, sensitivity: TRAGIC, axis: { economic: 0.0, social: 0.0 } }
+- { title: "Shooting at a mall leaves several dead; suspect in custody", region: NATIONAL, topics: [true_crime, politics], controversy: 0.8, salience: 0.9, sensitivity: TRAGIC, axis: { economic: 0.0, social: -0.4 } }
+- { title: "Meal kit company files for bankruptcy", region: NATIONAL, topics: [food, economy], controversy: 0.1, salience: 0.3, axis: { economic: 0.0, social: 0.0 } }
+- { title: "Gym chain bans grunting, internet divided", region: NATIONAL, topics: [fitness], controversy: 0.3, salience: 0.3, axis: { economic: 0.0, social: 0.0 } }
+- { title: "Vet groups warn about a new dog flu strain", region: NATIONAL, topics: [pets, health], controversy: 0.1, salience: 0.4, axis: { economic: 0.0, social: 0.0 } }
+- { title: "Video game delayed again, fans furious", region: NATIONAL, topics: [gaming], controversy: 0.2, salience: 0.3, axis: { economic: 0.0, social: 0.0 } }
+- { title: "Four-day work week pilot says productivity held steady", region: NATIONAL, topics: [economy, tech], controversy: 0.5, salience: 0.5, axis: { economic: -0.4, social: -0.1 } }
+- { title: "Tax plan would cut rates for small businesses", region: NATIONAL, topics: [economy, politics], controversy: 0.7, salience: 0.6, axis: { economic: 0.7, social: 0.0 } }
+- { title: "Lab-grown meat ban advances in several states", region: NATIONAL, topics: [food, politics, science], controversy: 0.6, salience: 0.4, axis: { economic: 0.2, social: 0.5 } }
+- { title: "Ceasefire talks collapse as fighting resumes", region: WORLD, topics: [politics], controversy: 0.7, salience: 0.8, sensitivity: SENSITIVE, axis: { economic: 0.0, social: 0.1 } }
+- { title: "Earthquake devastates coastal towns; death toll rising", region: WORLD, topics: [science], controversy: 0.1, salience: 0.9, sensitivity: TRAGIC, axis: { economic: 0.0, social: 0.0 } }
+- { title: "European leaders agree on new climate targets", region: WORLD, topics: [politics, science], controversy: 0.6, salience: 0.6, axis: { economic: -0.5, social: -0.4 } }
+- { title: "Global summit ends without a trade deal", region: WORLD, topics: [economy, politics], controversy: 0.4, salience: 0.6, axis: { economic: 0.1, social: 0.0 } }
+- { title: "Royal wedding draws millions of viewers", region: WORLD, topics: [celebrity], controversy: 0.1, salience: 0.5, axis: { economic: 0.0, social: 0.2 } }
+- { title: "Protests swell over fuel price hikes abroad", region: WORLD, topics: [economy, politics], controversy: 0.5, salience: 0.6, axis: { economic: -0.3, social: 0.0 } }
+- { title: "Migrant boat capsizes in the Mediterranean", region: WORLD, topics: [politics], controversy: 0.7, salience: 0.7, sensitivity: TRAGIC, axis: { economic: 0.0, social: -0.3 } }
+- { title: "Space agency lands a rover on an asteroid", region: WORLD, topics: [science, tech], controversy: 0.0, salience: 0.6, axis: { economic: 0.0, social: 0.0 } }
+- { title: "World Cup qualifier ends in stunning upset", region: WORLD, topics: [sports], controversy: 0.1, salience: 0.5, axis: { economic: 0.0, social: 0.0 } }
+- { title: "Election abroad brings a hard-right party to power", region: WORLD, topics: [politics], controversy: 0.8, salience: 0.7, axis: { economic: 0.2, social: 0.7 } }
+- { title: "Ukraine says grain shipments resume after deal", region: WORLD, topics: [politics, economy], controversy: 0.4, salience: 0.6, axis: { economic: 0.0, social: 0.0 } }
+- { title: "City Council approves budget with a property tax increase", region: LOCAL, topics: [local, politics, personal_finance], controversy: 0.8, salience: 0.7, axis: { economic: -0.4, social: 0.0 } }
+- { title: "CTA adds trains on the Blue Line after rider complaints", region: LOCAL, topics: [local], controversy: 0.2, salience: 0.5, axis: { economic: -0.2, social: 0.0 } }
+- { title: "Weekend shootings in Chicago leave several injured", region: LOCAL, topics: [local, true_crime], controversy: 0.7, salience: 0.6, sensitivity: SENSITIVE, axis: { economic: 0.0, social: 0.5 } }
+- { title: "Bears fire offensive coordinator after another loss", region: LOCAL, topics: [local, sports:bears], controversy: 0.3, salience: 0.6, axis: { economic: 0.0, social: 0.0 } }
+- { title: "Cubs and White Sox fans argue over new stadium plan", region: LOCAL, topics: [local, sports:cubs, sports:white_sox], controversy: 0.5, salience: 0.5, axis: { economic: 0.3, social: 0.0 } }
+- { title: "Illinois raises the gas tax again on July 1", region: LOCAL, topics: [local, politics, cars], controversy: 0.7, salience: 0.5, axis: { economic: 0.6, social: 0.0 } }
+- { title: "Lake Shore Drive closed for repairs this weekend", region: LOCAL, topics: [local, cars], controversy: 0.1, salience: 0.4, axis: { economic: 0.0, social: 0.0 } }
+- { title: "New migrant shelter opens on the Southwest Side", region: LOCAL, topics: [local, politics], controversy: 0.9, salience: 0.6, axis: { economic: 0.0, social: 0.7 } }
+- { title: "Suburban school board votes to pull books after parent complaints", region: LOCAL, topics: [local, parenting, politics], controversy: 0.9, salience: 0.5, axis: { economic: 0.0, social: 0.7 } }
+- { title: "Beloved Pilsen taqueria closes after forty years", region: LOCAL, topics: [local, food], controversy: 0.2, salience: 0.4, axis: { economic: 0.0, social: 0.0 } }
+- { title: "Bulls win in overtime on a buzzer-beater", region: LOCAL, topics: [local, sports:bulls], controversy: 0.0, salience: 0.5, axis: { economic: 0.0, social: 0.0 } }
+- { title: "Red Stars clinch a playoff spot", region: LOCAL, topics: [local, sports:red_stars], controversy: 0.0, salience: 0.4, axis: { economic: 0.0, social: 0.0 } }
+- { title: "Illinois lawmakers pass a pension fix nobody likes", region: LOCAL, topics: [local, politics, economy], controversy: 0.6, salience: 0.5, axis: { economic: -0.3, social: 0.0 } }

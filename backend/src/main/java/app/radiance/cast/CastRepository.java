@@ -108,7 +108,8 @@ public final class CastRepository {
                   r.str("location"),
                   r.lng("interactions_today"),
                   r.lngOrNull("last_feed_check_at"),
-                  r.lng("updated_at")),
+                  r.lng("updated_at"),
+                  r.str("interactions_day")),
           col("actor_id", ActorStateRow::actorId),
           col("mood", ActorStateRow::mood),
           col("energy", ActorStateRow::energy),
@@ -118,7 +119,8 @@ public final class CastRepository {
           col("location", ActorStateRow::location),
           col("interactions_today", ActorStateRow::interactionsToday),
           col("last_feed_check_at", ActorStateRow::lastFeedCheckAt),
-          col("updated_at", ActorStateRow::updatedAt));
+          col("updated_at", ActorStateRow::updatedAt),
+          col("interactions_day", ActorStateRow::interactionsDay));
 
   private final Sql sql;
 
