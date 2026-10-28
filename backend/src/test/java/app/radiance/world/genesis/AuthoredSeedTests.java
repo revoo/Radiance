@@ -57,4 +57,44 @@ class AuthoredSeedTests {
       assertThat(r.voice().sampleComments()).hasSize(2);
     }
   }
+
+  @Test
+  void theAuthoredFilesCoverTheWholeSeed() {
+    var seed = skeleton();
+    var fleshed = new FleshOut(FleshOut.Source.authored(files(), "authored in-session by Opus"), LIB, "Radiance")
+        .run(seed, s -> {});
+    assertThat(authoredHandles()).hasSameSizeAs(seed.residents()).doesNotHaveDuplicates();
+    for (var r : fleshed.residents()) {
+      assertThat(r.bio()).as("@" + r.handle() + " bio").isNotBlank();
+      assertThat(r.appearance()).as("@" + r.handle() + " appearance").isNotBlank();
+    }
+    for (var e : fleshed.relationships()) {
+      assertThat(e.backstory()).as(e.from() + " -> " + e.to() + " story").isNotBlank();
+      assertThat(LIB.themeLinter().hits(e.backstory())).as(e.from() + " -> " + e.to() + " themes").isEmpty();
+    }
+    assertThat(fleshed.provenance()).isEqualTo("authored in-session by Opus");
+  }
+
+  @Test
+  void aSecretCoupleIsDescribedAsTheWorldSeesThem() {
+    var seed = skeleton();
+    var fleshed = new FleshOut(FleshOut.Source.authored(files(), "authored in-session by Opus"), LIB, "Radiance")
+        .run(seed, s -> {});
+    var secret = seed.arcs().stream().filter(a -> a.visibility() != app.radiance.kernel.Visibility.PUBLIC)
+        .filter(a -> a.roles().size() == 2).toList();
+    assertThat(secret).isNotEmpty();
+    for (var arc : secret) {
+      var people = List.copyOf(arc.roles().values());
+      for (var e : fleshed.relationships()) {
+        if (!people.contains(e.from()) || !people.contains(e.to())) continue;
+        assertThat(e.backstory().toLowerCase())
+            .as(e.from() + " -> " + e.to() + " keeps the secret")
+            .doesNotContain("dating", "secret", "romance", "together", "seeing each other", "in love", "kiss");
+      }
+      for (var r : fleshed.residents()) {
+        String world = (r.bio() + " " + r.voice().samplePosts() + " " + r.voice().sampleComments()).toLowerCase();
+        assertThat(world).as("@" + r.handle() + " public text keeps the secret").doesNotContain("secret dating");
+      }
+    }
+  }
 }

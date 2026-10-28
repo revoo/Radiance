@@ -1,0 +1,164 @@
+{
+  "pairs": [
+    {
+      "a": "amra.hodzic",
+      "b": "brian.whitlock",
+      "story": "Amra and Brian work at Lakeshore Mutual, where she catches the errors in his project budgets and he thanks her warmly every time. His patience with her sharpness gets under her skin more than rudeness would."
+    },
+    {
+      "a": "amra.hodzic",
+      "b": "gabriela.barajas",
+      "story": "Amra and Gaby trade claims-file questions at Lakeshore Mutual and respect each other's precision without being close. Gaby enjoys taking the other side of Amra's lunchroom arguments a little too much."
+    },
+    {
+      "a": "amra.hodzic",
+      "b": "lisa.marchetti",
+      "story": "Lisa has run HR at Lakeshore for Amra's whole career there and knows more about her than Amra would like. Amra finds her nosy and disorganized; Lisa is sure Amra just needs someone in her corner."
+    },
+    {
+      "a": "amra.hodzic",
+      "b": "sarah.brennan",
+      "story": "Amra and Sarah work on different floors at Lakeshore Mutual and have fought about immigration online since Sarah's first 'just asking questions' post. They share a Red Stars obsession, so match days are polite and tense."
+    },
+    {
+      "a": "brian.whitlock",
+      "b": "gabriela.barajas",
+      "story": "Brian and Gaby have worked the same claims-system projects at Lakeshore Mutual for years. He thinks she's brilliant and says so; she argues with every plan he brings, which usually makes it better."
+    },
+    {
+      "a": "brian.whitlock",
+      "b": "lisa.marchetti",
+      "story": "Brian and Lisa have sat on Lakeshore's benefits committee together for years. She laughs at his dad puns out of kindness, and he has quietly fixed her calendar more times than she knows."
+    },
+    {
+      "a": "brian.whitlock",
+      "b": "sarah.brennan",
+      "story": "Brian runs the IT side of Sarah's campaigns at Lakeshore Mutual and is cheerful with her no matter what. She finds his earnestness exhausting and his deadlines reliable."
+    },
+    {
+      "a": "gabriela.barajas",
+      "b": "lisa.marchetti",
+      "story": "Lisa hired Gaby at Lakeshore straight out of UIC and still takes credit for her. They get lunch some Fridays and argue happily about everything."
+    },
+    {
+      "a": "gabriela.barajas",
+      "b": "sarah.brennan",
+      "story": "Gaby and Sarah are friendly from Lakeshore happy hours. Gaby bristles when Sarah talks about which neighborhoods are 'getting rough,' because Sarah usually means places like Pilsen."
+    },
+    {
+      "a": "lisa.marchetti",
+      "b": "sarah.brennan",
+      "story": "Lisa onboarded Sarah at Lakeshore Mutual and has been her unofficial work aunt since. She knows exactly how good Sarah is at the job and tells the bosses so."
+    },
+    {
+      "a": "daniel.shin",
+      "b": "jessica.vogel",
+      "story": "Daniel and Jessica came out of the same U of I dorm floor and have shared a trivia team ever since. He's the one she texts to fact-check something before she posts it."
+    },
+    {
+      "a": "daniel.shin",
+      "b": "megan.quinlan",
+      "story": "Daniel and Megan go back to the same U of I dorm floor. They're easy, low-maintenance friends who mostly see each other at group birthdays."
+    },
+    {
+      "a": "daniel.shin",
+      "b": "sarah.brennan",
+      "story": "Daniel and Sarah have been friends since their U of I dorm floor. He fact-checks her takes in the group chat, politely and with sources, and she likes it more than she lets on."
+    },
+    {
+      "a": "daniel.shin",
+      "b": "tim.kaczmarek",
+      "story": "Daniel and Tim have been friends since U of I, where Daniel won the trivia nights and Tim argued about the answers. Tim treats him as the group's referee and doesn't notice how much Daniel likes him."
+    },
+    {
+      "a": "jessica.vogel",
+      "b": "megan.quinlan",
+      "story": "Jessica and Megan have been best friends since their first week at U of I, through every move and promotion. Lately Jessica keeps canceling their plans, and Megan has started to notice."
+    },
+    {
+      "a": "jessica.vogel",
+      "b": "sarah.brennan",
+      "story": "Jessica and Sarah have been friends since the U of I dorm floor, closer in the group chat than one-on-one. Jessica is the one who can make Sarah laugh in the middle of an argument."
+    },
+    {
+      "a": "jessica.vogel",
+      "b": "tim.kaczmarek",
+      "story": "Jessica and Tim met at U of I and still see each other at every group birthday. She hasn't missed his Fourth of July cookout in years."
+    },
+    {
+      "a": "megan.quinlan",
+      "b": "sarah.brennan",
+      "story": "Megan and Sarah met on the U of I dorm floor. They love each other in a group and get on each other's nerves alone, especially when Sarah starts on how the city has changed."
+    },
+    {
+      "a": "megan.quinlan",
+      "b": "tim.kaczmarek",
+      "story": "Megan and Tim go back to U of I and are friendly without being close. She teases him about his cryptic late-night posts."
+    },
+    {
+      "a": "sarah.brennan",
+      "b": "tim.kaczmarek",
+      "story": "Sarah and Tim met in an intro econ section at U of I and have argued about money ever since. She calls him a tankie, he calls her a corporate shill, and neither would give it up."
+    },
+    {
+      "a": "kendra.gaines",
+      "b": "megan.quinlan",
+      "story": "Kendra and Megan both work at Prairie Path Medical Center and see each other at shift change. Megan finds Kendra frosty; Kendra thinks Megan posts too much about work."
+    },
+    {
+      "a": "kendra.gaines",
+      "b": "samantha.dvorak",
+      "story": "Kendra and Sam cross paths on the floors at Prairie Path Medical Center. Sam respects her work, and Kendra finds Sam's jokes about church people tiresome."
+    },
+    {
+      "a": "megan.quinlan",
+      "b": "samantha.dvorak",
+      "story": "Megan and Sam know each other from night calls at Prairie Path, where Sam's respiratory therapy pages often land in Megan's ICU. They nod in the hallway and like each other fine."
+    },
+    {
+      "a": "jake.zielinski",
+      "b": "jesse.hensley",
+      "story": "Jake and Jesse work at Kinzie Freight, where Jake has turned Jesse's car purchases into a recurring series. Jesse mostly laughs along and likes Jake better than Jake likes him."
+    },
+    {
+      "a": "jake.zielinski",
+      "b": "marko.jovanovic",
+      "story": "Marko supervises Jake at Kinzie Freight and takes the opposite side of whatever Jake says just to rile him. Jake does not find it as funny as Marko does."
+    },
+    {
+      "a": "jesse.hensley",
+      "b": "marko.jovanovic",
+      "story": "Marko supervises Jesse at Kinzie Freight. He's happy with Jesse's crew numbers, despairs of his car decisions, and checks the breakroom tally every time."
+    },
+    {
+      "a": "amanda.sheehan",
+      "b": "jesse.hensley",
+      "story": "Amanda is Jesse's big sister from Mattoon. She has been bailing him out and telling him so for twenty years, and he still calls her first when something breaks."
+    },
+    {
+      "a": "gabriela.barajas",
+      "b": "ricardo.ocampo",
+      "story": "Rick is Gaby's older cousin, who taught her to ride a bike and later to parallel park. He still treats her like his little sister, and she mostly lets him."
+    },
+    {
+      "a": "nick.grabowski",
+      "b": "tim.kaczmarek",
+      "story": "Nick and Tim are cousins who grew up at each other's family parties. Nick is the one who calls Tim out, and lately Tim is tired of hearing it."
+    },
+    {
+      "a": "cody.garrett",
+      "b": "megan.quinlan",
+      "story": "Cody and Megan had a short, intense fling last year. After he turned the breakup into an open-mic bit, she started walking out of any room he walks into."
+    },
+    {
+      "a": "gabriela.barajas",
+      "b": "mike.rinaldi",
+      "story": "Gaby dated Mike two years ago until she found out she was one of several women, and ended it in one text. She avoids him, and he still doesn't understand why."
+    },
+    {
+      "a": "ryan.kessler",
+      "b": "sarah.brennan",
+      "story": "Ryan and Sarah met when Tim dragged her to a Hot Giardiniera game, and they've been dating for most of a year. He's all in; lately she picks fights to see whether he'll ever push back."
+    }
+  ]
+}

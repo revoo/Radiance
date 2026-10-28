@@ -1,0 +1,164 @@
+{
+  "pairs": [
+    {
+      "a": "andre.whitfield",
+      "b": "mike.rinaldi",
+      "story": "Andre and Mike play for Hot Giardiniera, Andre in left and Mike at first. Mike admires how easily Andre talks to people; Andre likes him fine and keeps an eye on him around women."
+    },
+    {
+      "a": "andre.whitfield",
+      "b": "nick.grabowski",
+      "story": "Andre and Nick know each other from Hot Giardiniera games. It's friendly nods in the dugout and not much more."
+    },
+    {
+      "a": "andre.whitfield",
+      "b": "oksana.melnyk",
+      "story": "Andre and Oksana are close from Hot Giardiniera. He's a regular at her bar after games, and she sends him every demolition notice she sees."
+    },
+    {
+      "a": "andre.whitfield",
+      "b": "ricardo.ocampo",
+      "story": "Andre and Rick are each other's closest friend on Hot Giardiniera. Rick has been on half of Andre's walking tours and brings the cooler to every game."
+    },
+    {
+      "a": "andre.whitfield",
+      "b": "tim.kaczmarek",
+      "story": "Andre and Tim know each other only from Hot Giardiniera. They once argued about housing policy in the dugout and left it there."
+    },
+    {
+      "a": "cody.garrett",
+      "b": "hannah.lindqvist",
+      "story": "Cody and Hannah are Hot Giardiniera teammates. Cody has drifted to Oksana's side of the logo feud, which keeps things cool between him and Hannah."
+    },
+    {
+      "a": "cody.garrett",
+      "b": "lukas.petrauskas",
+      "story": "Cody and Lukas are friends from Hot Giardiniera. Lukas comes to Cody's open mics, and Cody plugs Lukas's hot sauce from the stage as a bit."
+    },
+    {
+      "a": "cody.garrett",
+      "b": "mike.rinaldi",
+      "story": "Cody and Mike play for Hot Giardiniera, and Mike buys Cody beers after games. Cody is fond of him and has a bit about him he has never performed."
+    },
+    {
+      "a": "cody.garrett",
+      "b": "nick.grabowski",
+      "story": "Cody and Nick know each other in passing from Hot Giardiniera games."
+    },
+    {
+      "a": "cody.garrett",
+      "b": "oksana.melnyk",
+      "story": "Cody and Oksana are close from Hot Giardiniera. He hangs out at her bar after his shifts and tests his material on her."
+    },
+    {
+      "a": "cody.garrett",
+      "b": "ricardo.ocampo",
+      "story": "Cody and Rick know each other from Hot Giardiniera. Rick laughs at Cody's puns harder than anyone else on the team."
+    },
+    {
+      "a": "cody.garrett",
+      "b": "ryan.kessler",
+      "story": "Cody and Ryan are friends from Hot Giardiniera. Ryan comes to Cody's open mics and cheers like it's a playoff game."
+    },
+    {
+      "a": "hannah.lindqvist",
+      "b": "lukas.petrauskas",
+      "story": "Hannah and Lukas are friendly teammates on Hot Giardiniera who trade jokes in the dugout. He has been working up the nerve to ask her out, and she has no idea."
+    },
+    {
+      "a": "hannah.lindqvist",
+      "b": "mike.rinaldi",
+      "story": "Mike has been kind to Hannah since she joined Hot Giardiniera and took her side in the logo feud. She appreciates it and stays a little wary of it."
+    },
+    {
+      "a": "hannah.lindqvist",
+      "b": "nick.grabowski",
+      "story": "Hannah and Nick are friends from Hot Giardiniera. He tells her he likes her design work, and she likes that he never brings up the logo."
+    },
+    {
+      "a": "hannah.lindqvist",
+      "b": "oksana.melnyk",
+      "story": "Hannah and Oksana play for Hot Giardiniera. Since Oksana called Hannah's new logo 'a pickle with a disease' and Hannah posted a callout, they haven't spoken, and the team is picking sides."
+    },
+    {
+      "a": "hannah.lindqvist",
+      "b": "ricardo.ocampo",
+      "story": "Hannah and Rick are Hot Giardiniera teammates. Rick said he liked the old logo better, and Hannah hasn't forgotten it."
+    },
+    {
+      "a": "hannah.lindqvist",
+      "b": "tim.kaczmarek",
+      "story": "Hannah and Tim are friends from Hot Giardiniera. She argues the opposite of his economics for sport, and he treats her like one of his sharper students."
+    },
+    {
+      "a": "lukas.petrauskas",
+      "b": "mike.rinaldi",
+      "story": "Lukas and Mike are friends from Hot Giardiniera. Mike gives Lukas dating advice that Lukas really should not take."
+    },
+    {
+      "a": "lukas.petrauskas",
+      "b": "nick.grabowski",
+      "story": "Lukas and Nick are friends from Hot Giardiniera. Nick buys his hot sauce and argues with his libertarian takes."
+    },
+    {
+      "a": "lukas.petrauskas",
+      "b": "oksana.melnyk",
+      "story": "Lukas and Oksana play for Hot Giardiniera but barely talk. He has a hopeless crush on her, and she hasn't noticed him staring."
+    },
+    {
+      "a": "mike.rinaldi",
+      "b": "nick.grabowski",
+      "story": "Mike and Nick are friendly from Hot Giardiniera. Nick appreciates that Mike is never late and knows little about the rest of his life."
+    },
+    {
+      "a": "mike.rinaldi",
+      "b": "ricardo.ocampo",
+      "story": "Mike and Rick play the corners for Hot Giardiniera, first and third. Rick is polite to Mike for the team's sake and no more, because of how Mike treated his cousin Gaby."
+    },
+    {
+      "a": "mike.rinaldi",
+      "b": "tim.kaczmarek",
+      "story": "Mike admires Tim's brain and seeks him out after Hot Giardiniera games. Tim enjoys the attention more than the company."
+    },
+    {
+      "a": "nick.grabowski",
+      "b": "ryan.kessler",
+      "story": "Nick and Ryan know each other from Hot Giardiniera games. They're polite and have very little to talk about."
+    },
+    {
+      "a": "oksana.melnyk",
+      "b": "tim.kaczmarek",
+      "story": "Oksana and Tim are friends from Hot Giardiniera. She likes arguing labor policy with him across her bar after games."
+    },
+    {
+      "a": "donna.novotny",
+      "b": "gary.moran",
+      "story": "Donna and Gary have been neighbors on the same Berwyn block for decades. She brings him kolaches, he clears her walk after every snow, and she tells him off for his jokes."
+    },
+    {
+      "a": "donna.novotny",
+      "b": "ricardo.ocampo",
+      "story": "Donna and Rick are neighbors on the Berwyn bungalow block. Rick fixes anything in her house that sparks, and she pays him in kolaches and keeps an eye on Brooklyn and Mason."
+    },
+    {
+      "a": "donna.novotny",
+      "b": "samantha.dvorak",
+      "story": "Donna lives down the block from Sam and keeps the kitchen renovation's morale up with kolaches. Sam pretends to be annoyed by the visits."
+    },
+    {
+      "a": "gary.moran",
+      "b": "ricardo.ocampo",
+      "story": "Gary and Rick are neighbors and union men on the same Berwyn block. They talk trades over the fence for hours, and Rick lets Gary's jokes slide less than he used to."
+    },
+    {
+      "a": "gary.moran",
+      "b": "samantha.dvorak",
+      "story": "Gary lives on Sam's Berwyn block and narrates every dumpster in front of her bungalow. On good days she finds it funny."
+    },
+    {
+      "a": "ricardo.ocampo",
+      "b": "samantha.dvorak",
+      "story": "Rick has been doing the electrical on Sam's kitchen renovation as a favor. He has opinions about her timeline that he is keeping to himself."
+    }
+  ]
+}
