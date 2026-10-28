@@ -393,6 +393,15 @@ public final class SkeletonGenerator {
     return edges.containsKey(a + "->" + b);
   }
 
+  /** Romantic history and crushes stay between people within 15 years of each other. */
+  private boolean plausibleAges(String a, String b) {
+    return Math.abs(age(a) - age(b)) <= 15;
+  }
+
+  private int age(String h) {
+    return roster.stream().filter(r -> r.resolvedHandle().equals(h)).findFirst().orElseThrow().age();
+  }
+
   private Gender gender(String h) {
     return roster.stream().filter(r -> r.resolvedHandle().equals(h)).findFirst().orElseThrow().gender();
   }
@@ -576,7 +585,7 @@ public final class SkeletonGenerator {
     for (int tries = 0; tries < 200 && exes < 2; tries++) {
       String m = rng.pick(men);
       String w = rng.pick(women);
-      if (used.contains(m) || used.contains(w) || isFamily(m, w)) continue;
+      if (used.contains(m) || used.contains(w) || isFamily(m, w) || !plausibleAges(m, w)) continue;
       tie(m, w, "EX", true);
       if (rng.chance(0.5)) edge(w, m).tags.add("avoiding");
       used.add(m);
@@ -633,6 +642,7 @@ public final class SkeletonGenerator {
       String b = rng.pick(all);
       if (a.equals(b) || gender(a) == gender(b) || isFamily(a, b) || a.equals(jessicaPartner) || a.equals(jessica)) continue;
       if (hasTie(a, b) && (edge(a, b).kind.equals("PARTNER") || edge(a, b).kind.equals("EX"))) continue;
+      if (!plausibleAges(a, b)) continue;
       boolean free = singles.contains(a) || traits.get(a).get("faithfulness") < 50;
       if (!free || (hasTie(a, b) && edge(a, b).tags.contains("crush"))) continue;
       if (!hasTie(a, b)) tie(a, b, "ACQUAINTANCE", true);

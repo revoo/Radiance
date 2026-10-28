@@ -90,6 +90,10 @@ class SkeletonGeneratorTests {
     assertThat(s.relationships().stream().filter(e -> e.tags().contains("crush")).count()).isBetween(2L, 3L);
     assertThat(s.relationships().stream().filter(e -> e.tags().contains("crush")))
         .allSatisfy(e -> assertThat(e.attraction()).as("a crush means attraction").isGreaterThanOrEqualTo(65));
+    var ages = LIB.roster().residents().stream()
+        .collect(Collectors.toMap(app.radiance.content.Roster.Resident::resolvedHandle, app.radiance.content.Roster.Resident::age));
+    assertThat(s.relationships().stream().filter(e -> e.tags().contains("crush") || e.kind().equals("EX")))
+        .allSatisfy(e -> assertThat(Math.abs(ages.get(e.from()) - ages.get(e.to()))).as("age gap").isLessThanOrEqualTo(15));
     var offNetworkFirstNames = s.residents().stream().flatMap(r -> r.offNetwork().stream())
         .map(p -> p.name().split(" ")[0]).toList();
     assertThat(offNetworkFirstNames).as("no two people in the world share a first name").doesNotHaveDuplicates();
