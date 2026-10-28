@@ -2,32 +2,17 @@
 
 ## Resume here
 - Milestone: **M3 — Content library & genesis**, branch `m3-content-genesis` (from `main` at 0615af7).
-  Steps 1–7 done and pushed (last code commit cd81df4, which fixed the CI failure in the genesis graph
-  property). **Paused for R's 5-hour budget window** before the in-session authoring step R asked for
-  (decisions 13–15 below, ADR 0017). Don't start M4.
-- Next, in order (each ends green and committed):
-  1. **Appearance + provenance + authored source** (code). Add `String appearance` last in
-     `FleshOut.Person` and `WorldSeed.Resident`, and `String provenance` last in `WorldSeed`; update every
-     constructor call (SkeletonGenerator.resident/run, FleshOut.merge/clearProse/withEntityLooks/replace/
-     tieChunk, GenesisTests' renamed-Jake and poisoned-person cases), GenesisFakes (placeholder
-     appearance), SeedImporter (`identity.appearance`), SeedReport ("Looks:" line, "Prose:" line), and the
-     `genesis.md` prompt (an appearance rule). In FleshOut, include `appearance` in the theme-linter text.
-     Then extract a `FleshOut.Source` (gateway vs authored): the authored one reads
-     `content/genesis/seed-7/residents-*.json` (`{"residents":[Person…]}`) and `ties-*.json`
-     (`{"pairs":[Tie…]}`), parses each file with `OutputParser.parse(text, Batch.class|Ties.class)`, and
-     answers only the requested handles/pairs. Add `--authored` to GenesisCommand, GenesisService.preview
-     and the director endpoint; set provenance "authored in-session by Opus (content/genesis/seed-7)".
-  2. **Regenerate the seed-7 skeleton first** (`./gradlew :backend:genesis -Pprofile=offline
-     --args='--seed 7 --skeleton-only'`; delete `backend/data/world-seed.*` beforehand) — commit cd81df4
-     changed the graph, so author against the new `world-seed.md`.
-  3. **Author residents in 6 batches of 5**, one commit each (`residents-1.json` … `residents-6.json`):
-     bio, ~150-word backstory, voice card with 3 posts + 2 comments, values/fears/desires, entity looks,
-     appearance. Consistent with every skeleton fact; no new named people; nothing blacklisted.
-  4. **Author relationship backstories** (`ties-*.json`) for every pair in the seed.
-  5. Add a test that the shipped authored files cover seed 7 (30 handles, all pairs, schema, linter),
-     run `--seed 7 --authored`, then hand off ⏸ REVIEW with `backend/data/world-seed.md`.
-- Check that CI is green for cd81df4 at `https://api.github.com/repos/revoo/Radiance/actions/runs`.
-- Half-done: nothing (an attempted edit for step 1 was reverted; the tree matches cd81df4 plus docs).
+  **All steps done; stopped at ⏸ REVIEW** waiting for R. Don't start M4, and don't merge M3 into `main`
+  until R signs off.
+- The seed-7 prose is authored in-session (ADR 0017): `backend/src/main/resources/content/genesis/seed-7/`
+  holds `residents-1.json` … `residents-6.json` (30 residents) and `ties-1.json` … `ties-3.json` (all 102
+  pairs). `AuthoredSeedTests` checks schema, entity ownership, the theme linter, word counts, full
+  coverage and that the secret couple reads as friends.
+- To rebuild the world bible: delete `backend/data/world-seed.*`, then
+  `./gradlew :backend:genesis -Pprofile=offline --args="--seed 7 --authored"` → `backend/data/world-seed.md`.
+- After review: apply R's notes (edit the authored files, re-run the line above and `AuthoredSeedTests`),
+  then fast-forward `main` once CI is green.
+- Half-done: nothing.
 
 ## M3 steps (all ✔)
 1. `content` module: def schemas, YAML loader, cross-validation, blacklist, theme linter (ADR 0015)
@@ -48,7 +33,9 @@
     output never mentions a blacklisted theme ✔ (regenerated once, then rejected; import re-checks).
   - Verified end to end offline: `./gradlew genesis --args='--seed 7 --import'` → 30 residents, 206–208
     ties, 8 arcs, 8 entities, 40 family facts.
-  - Tests: 120 in `check`.
+  - Prose for seed 7 authored in-session (decisions 13–15, ADR 0017): 30 residents with appearance
+    lines and 102 relationship stories; `--authored` builds the seed from them with provenance recorded.
+  - Tests: 124 in `check`.
 - **M2 — LLM gateway, providers & cost meter** (2026-10-27), branch `m2-llm-gateway`:
   - `LlmGateway` by purpose; `RouteTable` from `radiance.llm` (§9) with startup checks; FAKE mode for
     `offline`/`test`; keyless models skipped in LIVE mode, empty routes served by FakeLlm with a warning.
