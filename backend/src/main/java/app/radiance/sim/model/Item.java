@@ -38,6 +38,11 @@ public final class Item {
   public final String eventId;
   public final String headlineId;
   public final boolean publicAudience;
+  /** −1 bad news … +1 good news, from the brief: drives CONGRATS, CONDOLENCE and reaction kinds. */
+  public double valence;
+  /** For news takes: −1…1, how far the author's stance leans right/conservative. */
+  public double lean;
+  public boolean tragic;
   public int commentCount;
   public final TreeSet<String> reactors = new TreeSet<>();
   public final List<String> commenters = new ArrayList<>();
@@ -72,6 +77,9 @@ public final class Item {
   public Item copy() {
     var i = new Item(id, type, authorId, postId, parentId, toward, time, status, kind, category, defId, stance, topics,
         controversy, drama, importance, arcId, eventId, headlineId, publicAudience);
+    i.valence = valence;
+    i.lean = lean;
+    i.tragic = tragic;
     i.commentCount = commentCount;
     i.reactors.addAll(reactors);
     i.commenters.addAll(commenters);

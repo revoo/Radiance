@@ -493,7 +493,10 @@ public final class Airing {
     var item = new Item(p.id(), Item.Type.POST, p.authorId(), null, null, null, p.createdAt(), AirStatus.AIRED,
         p.kind().name(), b.category(), b.defId(), b.stance(), b.topics(), b.controversy(), b.drama(), p.importance(),
         p.arcId(), p.eventId(), p.headlineId(), p.audience() == app.radiance.social.PostRow.Audience.PUBLIC);
+    Briefs.decorate(item, b);
     w.items.put(item.id, item);
+    if (p.headlineId() != null) w.fired.computeIfAbsent(p.authorId() + "|news:" + p.headlineId(), k -> new java.util.TreeSet<>())
+        .add(p.createdAt());
     if (p.arcId() != null) {
       var arc = w.arcs.get(p.arcId());
       if (arc != null && arc.active()) {

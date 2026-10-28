@@ -51,6 +51,11 @@ public final class Person {
   public final boolean hasKids;
   public final boolean pinned;
 
+  // identity the stance model reads for biases (SPEC §5.2)
+  public String heritage;
+  public String livesIn;
+  public String occupation;
+
   // actor row: changes only through arc events
   public StatusKind status;
   public String partnerId;
@@ -100,6 +105,9 @@ public final class Person {
   public Person copy() {
     var p = new Person(id, handle, name, user, gender, birthDate, circles, traits, quirks, interests, politics, biases,
         taste, temper, routine, faith, observance, hasKids, pinned);
+    p.heritage = heritage;
+    p.livesIn = livesIn;
+    p.occupation = occupation;
     p.status = status;
     p.partnerId = partnerId;
     p.mood = mood;
@@ -135,6 +143,12 @@ public final class Person {
       for (var e : interests.entrySet()) if (e.getKey().startsWith("sports:")) best = Math.max(best, e.getValue());
     }
     return best;
+  }
+
+  /** Whole years on {@code day} (YYYY-MM-DD); 31 when unknown. */
+  public int age(String day) {
+    if (birthDate == null) return 31;
+    return java.time.Period.between(java.time.LocalDate.parse(birthDate), java.time.LocalDate.parse(day)).getYears();
   }
 
   public boolean attached() {

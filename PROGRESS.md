@@ -12,14 +12,14 @@
      meter math and lazy relaxation (`Meters`), `Brief` (the structure in `brief_json`).
   3. ✔ Airing: `WorldEngine.advanceTo`, validation, drop cascades, effects (deltas through temperament,
      memories, knowledge, notifications, arc transitions, constraints, entities).
-  4. Planning: slices, presence/sessions, storyteller (tension, profiles, mix calibration), event
+  4. ✔ Planning: slices, presence/sessions, storyteller (tension, profiles, mix calibration), event
      sampling and selectors, news takes, the arc engine (starts, analytic advance, beats, blacklist),
      engagement, stances, reactions, threads, intents, fidelity, backfill, `ScriptWriter`, plan hash,
      `ContinuityAuditor`.
   5. Harness: `simulate` task, scripted R personas and his responders, impressions with hysteresis,
      feel report, plain-text script dump; property tests and feel bands in CI.
   6. Tune to the bands; PROGRESS; push; CI; ⏸ REVIEW (feel report + one day's script).
-- Resumed 2026-10-28. Next: step 4.
+- Resumed 2026-10-28. Next: step 5 (harness).
 - Design notes for steps 3–5 (decided, not yet built):
   - Planning applies each slice's items to the copy through the same effects code airing uses (one
     effects path); airing adds validation and drop cascades on top.

@@ -167,6 +167,7 @@ public final class SimWorld {
       r = r.replace("{partner}", partner);
     }
     for (var e : a.roles.entrySet()) r = r.replace("{" + e.getKey() + "}", e.getValue());
+    for (var e : a.data.entrySet()) r = r.replace("{" + e.getKey() + "}", String.valueOf(e.getValue()));
     return r;
   }
 

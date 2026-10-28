@@ -161,7 +161,10 @@ public final class ModelStore {
           p.kind().name(), b.category(), b.defId(), b.stance(), b.topics(), b.controversy(), b.drama(), p.importance(),
           p.arcId(), p.eventId(), p.headlineId(), p.audience() == app.radiance.social.PostRow.Audience.PUBLIC);
       item.commentCount = p.commentCount();
+      Briefs.decorate(item, b);
       world.items.put(p.id(), item);
+      if (p.headlineId() != null) world.fired.computeIfAbsent(p.authorId() + "|news:" + p.headlineId(), k -> new TreeSet<>())
+          .add(p.createdAt());
     }
     for (var c : social.airedCommentsSince(w.committedUntil() - ITEM_WINDOW)) {
       var b = Brief.parse(c.briefJson());
@@ -217,6 +220,9 @@ public final class ModelStore {
         interests, politics, biases, taste, temper, routine, id.path("faith").asString(null),
         Observance.valueOf(id.path("observance").asString("NONE")), kids, p.pinned());
     person.status = StatusKind.valueOf(a.relationshipStatus());
+    person.heritage = id.path("heritage").asString(null);
+    person.livesIn = a.currentCity();
+    person.occupation = a.occupation();
     String partner = id.path("partner").asString(null);
     person.partnerId = partner == null ? null : idByHandle.get(partner);
     return person;
