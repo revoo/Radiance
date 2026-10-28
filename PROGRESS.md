@@ -2,7 +2,8 @@
 
 ## Resume here
 - **M3 approved by R (2026-10-27) and merged**: `main` fast-forwarded to `m3-content-genesis`.
-- Next: **M4** (SPEC §12), on a new branch from `main`. Start only when R says go.
+- Next: **M4** (SPEC §12), on a new branch from `main`. Start only when R says go. Its AC is amended
+  by decision 17: no timing gates; property tests, feel bands and plan-hash determinism stay.
 - The seed-7 prose is authored in-session (ADR 0017): `backend/src/main/resources/content/genesis/seed-7/`
   holds `residents-1.json` … `residents-6.json` (30 residents) and `ties-1.json` … `ties-3.json` (all 102
   pairs). To rebuild the world bible: delete `backend/data/world-seed.*`, then
@@ -131,6 +132,14 @@ Resolutions of spec issues raised at kickoff. Each gets an ADR when its mileston
     (P9 and §6.2 updated); validation requires at least two thirds aged 18–40. Re-aged roster: 25 of 30
     are 21–40; over 40 are Donna 67, Gary 69, Lisa 56, Eleni 52 and Marko 47. The youngest is 21 because
     bars, drinking and the brewer/open-mic roles need 21+ in Illinois.
+17. **No performance gates in V1 (R, 2026-10-27, before M4; relayed by the planning session).** "Most of
+    what we are doing is just fancy CRUD and the simulations happen in the batch." **M4's acceptance
+    criteria are amended:** the timing targets (a FULL day plans in < 5 s, a 30-day backfill in < 10 s,
+    the 30-day `simulate` harness in < 60 s) are dropped as gates, with no optimization work for them;
+    if something is noticeably slow, fix it then. Kept: the property tests (no spoilers, blacklist),
+    the feel-report bands, and determinism (same seed ⇒ same plan hash), since those make re-running
+    and resuming the batch safe. The M7/M8 latency targets (first reaction ~6 s, first comment ~25 s,
+    DM typing within 3 s) stay, because they're about how the app feels.
 
 ## Deviations from spec
 - TypeScript pinned to 6.0.x, not latest (7.x), for typescript-eslint compatibility (ADR 0009).
