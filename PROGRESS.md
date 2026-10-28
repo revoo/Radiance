@@ -2,38 +2,27 @@
 
 ## Resume here
 - Milestone: **M4 — Simulation engine & the script (offline)**, branch `m4-simulation-engine` (from `main`
-  at d417fcc). R said go on 2026-10-27. AC amended by decision 17 (no timing gates).
-- Plan (each step ends green and committed; ✔ = done):
-  1. ✔ Foundations: migration `0002_sim.sql` (actor constraints, impression hysteresis, interactions
-     day); repositories for memory, notification, DM, weather and headlines; `FakeWeather` + named
-     conditions; fixture headlines + selection; the calendar (holidays, observances, birthdays).
-  2. ✔ The in-memory world model (`sim.model`: `SimWorld`, `Person`, `Edge`, `Arc`, `Thing`, `Item`,
-     `Intent`, `Tag`), `ModelStore` load / dirty-row write, OU drift (`Drift`, exact), temperament
-     meter math and lazy relaxation (`Meters`), `Brief` (the structure in `brief_json`).
-  3. ✔ Airing: `WorldEngine.advanceTo`, validation, drop cascades, effects (deltas through temperament,
-     memories, knowledge, notifications, arc transitions, constraints, entities).
-  4. ✔ Planning: slices, presence/sessions, storyteller (tension, profiles, mix calibration), event
-     sampling and selectors, news takes, the arc engine (starts, analytic advance, beats, blacklist),
-     engagement, stances, reactions, threads, intents, fidelity, backfill, `ScriptWriter`, plan hash,
-     `ContinuityAuditor`.
-  5. ✔ Harness: `simulate` task, scripted R personas and his responders, impressions with hysteresis,
-     feel report, plain-text script dump; property tests and feel bands in CI.
-  6. Tune to the bands; PROGRESS; push; CI; ⏸ REVIEW (feel report + one day's script).
-- Resumed 2026-10-28. Next: step 6 (docs, review artifacts on seed 7, push, ⏸ REVIEW).
-- Design notes for steps 3–5 (decided, not yet built):
-  - Planning applies each slice's items to the copy through the same effects code airing uses (one
-    effects path); airing adds validation and drop cascades on top.
-  - Every storyteller incident is an `event` row (with `def_id`) plus its post; cooldowns, the
-    major-event cap and DRAMA-per-day are rebuilt from the event log at load (`ModelStore`).
-  - Planner code lives in `sim` next to the model, not in `story`, to avoid a sim↔story cycle;
-    `story` keeps canon persistence. Record as a deviation when step 4 lands.
-  - Event modifier semantics (SPEC is silent): trait `m` → ×m^((trait−50)/50); state `m` → ×m^value;
-    `quirk.*`, `weekend`, `has_kids`, `observance.*`, `season.*`, `temperament.*` → ×m when true;
-    `interest.*` → ×(1 + (m−1)·weight). Record in PROGRESS deviations.
-  - Feel bands that need the Pacer (first reaction ≤ 6 s, first comment ≤ 25 s, per-minute caps,
-    quiet gap) belong to M7; M4 asserts the rest. Seed 7 has only ~3 residents under 1 post/week
-    (Sam 0.10, Deepa 0.06, Daniel 0.14): check the "≥ 4 lurkers" band once the harness runs.
-- Half-done: nothing (tree clean at the step 2 commit).
+  at d417fcc). **All steps done; stopped at ⏸ REVIEW** waiting for R. Don't merge into `main` until R
+  signs off, and **don't start M5** (R asked to pause there, 2026-10-28).
+- Review artifacts (seed 7, warm R, 30 days): `docs/review/m4/feel-report-seed7-warm.txt` and one day's
+  script (briefs only) `docs/review/m4/script-2026-10-30.txt`. Regenerate with
+  `./gradlew :backend:simulate --args='--days=30 --seed=7 --user=scripted:warm --dump-day=3 --out=data/sim-seed7'`.
+- After review: apply R's knob changes (`content/rules/*.yaml`, `Knobs`), re-run the harness and
+  `./gradlew check`, then fast-forward `main` once CI is green.
+- Half-done: nothing.
+
+## M4 steps (all ✔)
+1. Foundations: migration `0002_sim.sql`; repositories for memory, notification, DM, weather, headlines,
+   actor constraints; `FakeWeather` + named conditions; fixture headlines + selection; the calendar
+2. The world model (`sim.model`), `ModelStore` (load / dirty-row write), exact OU drift, temperament
+   meter math and lazy relaxation, `Brief`
+3. Airing: `WorldEngine.advanceTo`, validation (def conditions, weather, arc phase, parents, attention),
+   drop cascades, effects (one path, shared with planning)
+4. Planning: presence, rates + IPF event-mix calibration, storyteller, selectors, the arc engine, news
+   takes, engagement, stances, reactions, threads/intents, fidelity + backfill, `ScriptWriter` + plan
+   hash, `ContinuityAuditor`
+5. Harness: `Simulation`, `Persona`, `LiveResponder`, `Impressions` (hysteresis), `FeelReport`,
+   `ScriptDump`, `./gradlew simulate`; `FeelBandsTests`, `SimulationPropertyTests`
 
 ## M3 steps (all ✔)
 1. `content` module: def schemas, YAML loader, cross-validation, blacklist, theme linter (ADR 0015)
@@ -46,6 +35,15 @@
 7. World bible with the Chicagoland section
 
 ## Done
+- **M4 — Simulation engine & the script (offline)** (2026-10-28), branch `m4-simulation-engine` — at ⏸ REVIEW:
+  - AC (amended by decision 17): property tests green ✔ (random seeds × 30 days, auditor throwing,
+    no spoilers checked after every advance, blacklist, attention, caps, invariant 11); feel-report
+    bands met at default knobs on seed 42 in CI ✔ (seed 7: all but one borderline, see open questions);
+    same seed ⇒ same plan hashes ✔. Timing targets dropped as gates (decision 17); a 30-day run takes
+    ~15 s.
+  - Bands that need the Pacer (first reaction ≤ 6 s, first comment ≤ 25 s, per-minute caps, the quiet
+    gap) are M7's and aren't measured yet.
+  - Tests: 157 in `check`.
 - **M3 — Content library & genesis** (2026-10-27), branch `m3-content-genesis` — approved by R and merged:
   - AC: `genesis --seed 7` is deterministic at the skeleton level ✔ (byte-identical JSON; 15 random seeds
     property-tested); import yields exactly the roster's 30 residents with identities unchanged, 206
@@ -179,8 +177,36 @@ Resolutions of spec issues raised at kickoff. Each gets an ADR when its mileston
   in `kernel`, beyond §3.5's list for it, to keep modules acyclic (ADR 0013).
 
 - `LlmRequest` has an extra `priority` component; `Usage.input` means uncached input (ADR 0014).
+- M4: the planner (storyteller, arc engine, engagement, auditor) lives in `sim` beside the world model,
+  not in `story`, to keep modules acyclic; `story` keeps canon persistence.
+- M4: migration `0002_sim.sql` adds `actor_constraint` (event-made constraint tags; arc-phase tags are
+  derived), `relationship.pending_tags_json` (impression hysteresis and R-perception averages),
+  `actor_state.interactions_day`, and indexes for the engine's reload paths.
+- M4: event modifier semantics (SPEC names the keys, not the math): trait `m` → ×m^((trait−50)/50);
+  state `m` → ×m^value; interest `m` → ×(1 + (m−1)·weight); `quirk.*`, `weekend`, `has_kids`,
+  `has_partner`, `observance.*`, `season.*`, `temperament.*` → ×m when true (`Rates`).
+- M4: guard rails beyond the spec: at most 6 posts per resident per world-day (the storyteller stops at
+  5, leaving room for an arc); an ordinary thread stops drawing new commenters at ~37% of the cast
+  (drama threads can pile on); a quiet resident's arc beats surface as a friend's mention; the
+  storyteller forces one public storyline beat each evening if nothing visible moved that day.
+- M4: event-mix calibration counts arc and calendar posts as fixed, caps each def by its cooldown, and
+  divides LIFE/DRAMA by the tension factor's expected weekly mean, so the week lands on the mix.
+- M4: genesis changes (seed-7 pairs and authored prose unchanged; `AuthoredSeedTests` green): grouches
+  start at their full temperament baseline (was half); the 4 quietest residents outside seeded
+  storylines post at most 0.1/day, so lurkers exist. Seed-7 effect: Jake's, Amra's and Kendra's starting
+  meters are lower; Ricardo, Daniel, Sam, Deepa (and Eleni) are the lurkers.
+- M4: content added: four repeatable LIFE defs (`career_win`, `trip_booked`, `home_milestone`,
+  `year_reflection`); `kid_milestone` base rate lowered so non-parents rarely post one;
+  `engagement.yaml` weights and thresholds tuned to the bands.
+- M4: the harness R answers some top-level comments on his posts; the Pacer, R's DMs and friend
+  requests come in M7/M8. Render jobs are M5 (scripted rows stay `PLANNED`).
 
 ## Open questions for R
+- M4 REVIEW: read `docs/review/m4/feel-report-seed7-warm.txt` and `docs/review/m4/script-2026-10-30.txt`;
+  tune knobs before any tokens are spent. Points to weigh: Kendra (grouch) sits at a median meter of
+  exactly 0.0 on seed 7 (band wants < 0); resident-to-resident threads are thin (median 0 comments per
+  resident post) while R's posts are in band; flirting is rare (a handful a month); LIFE runs ~11% vs
+  15% on seed 7 because most LIFE is arc-driven and the def library is small.
 - Provider keys: which providers will you use? Put their keys in `.env` and run
   `./gradlew :backend:liveTest` (well under a cent at default models) to close M2's live ACs, including
   two unverified Anthropic details (Appendix C note).

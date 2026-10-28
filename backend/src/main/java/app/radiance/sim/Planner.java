@@ -89,7 +89,11 @@ final class Planner {
       var curve = Presence.curve(a, date, p.in.primeHours(), k.primeTimeBoost());
       double share = Presence.share(curve, dayStart, t0, p.slice.end());
       if (share <= 0) continue;
-      for (var def : defs.values()) {
+      // a fresh order per resident and slice, so the daily post cap doesn't favor defs early in the alphabet
+      var order = new ArrayList<>(defs.values());
+      var shuffle = p.rng.derive("def-order:" + a.id);
+      for (int i = order.size() - 1; i > 0; i--) java.util.Collections.swap(order, i, shuffle.nextInt(i + 1));
+      for (var def : order) {
         if (def.trigger() != null && def.trigger().headline() != null) continue;
         if (def.category() == Category.DM_USER && w.userId == null) continue;
         if (!fidelityAllows(p, def)) continue;
@@ -208,9 +212,13 @@ final class Planner {
         .findFirst().orElse(null);
     var learned = new ArrayList<List<String>>();
     if (def.effects().containsKey("knowledge_spread") && other != null) gossip(p, a, other, learned);
+    String said = def.description() != null ? def.description()
+        : def.output() != null && def.output().brief() != null ? def.output().brief() : def.id();
+    for (var e : participants.entrySet()) {
+      if (!e.getKey().equals("actor")) said = said.replace("@" + e.getKey(), "@" + w.person(e.getValue()).handle);
+    }
     var payload = new EventPayload(def.category().name(), participants, def.effects(), null, null, learned,
-        def.when() == null ? null : def.when().weather(), def.description() != null ? def.description()
-        : def.output() == null ? def.id() : def.output().brief());
+        def.when() == null ? null : def.when().weather(), said);
     var vis = out == PostOutput.NONE || out == PostOutput.DM ? Visibility.PRIVATE : Visibility.PUBLIC;
     var source = def.when() != null && !def.when().calendar().isEmpty() ? EventRow.Source.CALENDAR : EventRow.Source.STORYTELLER;
     var ev = p.event("incident:" + def.id() + ":" + a.id + ":" + t, t, def.id().toUpperCase(), def.id(), a.id, other, null,
@@ -637,6 +645,8 @@ final class Planner {
             }
             x *= interesting.size() / 24.0 * hit;
           }
+          // a cooldown caps what any scale can buy: one per cooldown, at most
+          if (def.cooldownDays() != null && def.cooldownDays() > 0) x = Math.min(x, 1.0 / def.cooldownDays());
           row.merge(def.category(), x, Double::sum);
         }
       }

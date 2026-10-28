@@ -2,7 +2,7 @@
 # births, never as pregnancies: the pregnancy theme is blacklisted, §5.5).
 - id: kid_milestone
   category: FAMILY
-  base_rate: 0.05
+  base_rate: 0.008                         # ×6 for parents; everyone else only rarely (a niece, a nephew)
   modifiers: { has_kids: 6.0, quirk.oversharer: 2.0 }
   importance: 3
   tags: [ parenting ]

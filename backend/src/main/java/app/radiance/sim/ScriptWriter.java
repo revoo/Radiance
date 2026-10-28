@@ -69,7 +69,12 @@ public final class ScriptWriter {
     var raw = Planner.rawRates(copy, lib, copy.date(slices.getFirst().start()), 7, headlines);
     var rates = new TreeMap<String, Double>();
     copy.residents().forEach(r -> rates.put(r.id, r.routine.postsPerDay()));
-    var scales = Rates.calibrate(raw, rates, k.eventMix(), fixedPerDay(slices.getFirst().start(), committed.userId));
+    var scales = new TreeMap<>(Rates.calibrate(raw, rates, k.eventMix(), fixedPerDay(slices.getFirst().start(),
+        committed.userId)));
+    // LIFE and DRAMA also ride the tension factor; divide by its expected weekly mean so the week still
+    // lands on the mix while drama clusters near the peaks (SPEC §5.4)
+    double mean = Storyteller.meanFactor(k.profile(), copy.seed, slices.getFirst().start(), copy.tension, k.dramaIntensity());
+    for (String c : java.util.List.of("LIFE", "DRAMA")) scales.computeIfPresent(c, (x, v) -> v / mean);
     var inputs = new Plan.Inputs(headlines, weather, primeHours, scales, origin);
 
     var planner = new Planner(lib, k);

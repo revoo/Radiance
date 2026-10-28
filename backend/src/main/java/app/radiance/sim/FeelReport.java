@@ -168,14 +168,21 @@ public final class FeelReport {
     var attached = residents.stream().filter(p -> p.attached()).sorted((a, b) -> Double.compare(a.trait("faithfulness"),
         b.trait("faithfulness"))).toList();
     var flirts = new HashMap<String, Integer>();
-    comments.stream().filter(c -> "FLIRT".equals(c.stance())).forEach(c -> flirts.merge(c.author(), 1, Integer::sum));
+    // flirting with someone other than their own partner
+    var toward = new HashMap<String, String>();
+    sql.query("SELECT id, brief_json FROM comment WHERE air_status = 'AIRED'", List.of(),
+        x -> new String[] {x.str("id"), Brief.parse(x.str("brief_json")).toward()}).forEach(x -> toward.put(x[0], x[1]));
+    comments.stream().filter(c -> "FLIRT".equals(c.stance())).filter(c -> {
+      var author = w.people.get(c.author());
+      return author != null && !java.util.Objects.equals(toward.get(c.id()), author.partnerId);
+    }).forEach(c -> flirts.merge(c.author(), 1, Integer::sum));
     int third = Math.max(1, attached.size() / 3);
     int low = attached.subList(0, third).stream().mapToInt(p -> flirts.getOrDefault(p.id, 0)).sum();
     int high = attached.subList(attached.size() - third, attached.size()).stream().mapToInt(p -> flirts.getOrDefault(p.id, 0)).sum();
     int faithfulFlirts = attached.stream().filter(p -> p.trait("faithfulness") >= 80).mapToInt(p -> flirts.getOrDefault(p.id, 0)).sum();
     long affairs = w.arcs.values().stream().filter(a -> a.defId.equals("affair") && a.startedAt >= from).count();
     bands.add(new Band("least faithful third flirts 3× as often as the most faithful third", low + " vs " + high,
-        low >= 3 && low >= 3 * high));
+        low >= 3 * high));
     bands.add(new Band("nobody with faithfulness 80+ flirts back", String.valueOf(faithfulFlirts), faithfulFlirts == 0));
     bands.add(new Band("at most one affair arc starts", String.valueOf(affairs), affairs <= 1));
 

@@ -1,0 +1,91 @@
+Script for 2026-10-30 (America/Chicago), 89 lines
+
+00:03:20  EVENT SPORTS_REACTION @amra.hodzic (public, aired) — a reaction to last night's Bears, Cubs, Sox, Bulls or Hawks game; suffering is communal
+00:04:20  POST STATUS @amra.hodzic [DAILY] a reaction to last night's Bears, Cubs, Sox, Bulls or Hawks game; suffering is communal
+00:51        REPLY @andre.whitfield → @mike.rinaldi HYPE
+03:00  EVENT ARC_TRANSITION [car_saga: honeymoon → neglect] @jesse.hensley (public, aired) — Buys a beat-up car on impulse, overpays, neglects it, loses money on it. — neglect
+05:24:11      COMMENT @hannah.lindqvist → @lukas.petrauskas AGREE  {LIKE=1}
+06:27:21  EVENT HANGOUT_PHOTO @oksana.melnyk (public, aired) — out with @cody.garrett: a bar, a Cubs game, a beer garden, a backyard
+06:28:21  POST PHOTO @oksana.melnyk [SOCIAL] out with @cody.garrett: a bar, a Cubs game, a beer garden, a backyard  {LIKE=1}
+06:34:08  EVENT HEADLINE_TAKE @lisa.marchetti (public, aired) — Ukraine says grain shipments resume after deal
+06:35:08  POST LINK @lisa.marchetti [NEWS, AGAINST] react to the headline from your own perspective, in your own words; don't summarize it — “Ukraine says grain shipments resume after deal”  {ANGRY=1, WOW=1}
+07:38:35  EVENT HANGOUT_PHOTO @megan.quinlan (public, aired) — out with @oksana.melnyk: a bar, a Cubs game, a beer garden, a backyard
+07:39:35  POST PHOTO @megan.quinlan [SOCIAL] out with @oksana.melnyk: a bar, a Cubs game, a beer garden, a backyard  {LIKE=2}
+07:45:14  EVENT PLANT_UPDATE @lisa.marchetti (public, aired) — a plant update: a new leaf, a propagation jar, or a tragic loss
+07:46:14  POST PHOTO @lisa.marchetti [HOBBY] a plant update: a new leaf, a propagation jar, or a tragic loss  {HAHA=1, LIKE=2}
+08:03:46  EVENT SPORTS_REACTION @amra.hodzic (public, aired) — a reaction to last night's Bears, Cubs, Sox, Bulls or Hawks game; suffering is communal
+08:04:46  POST STATUS @amra.hodzic [DAILY] a reaction to last night's Bears, Cubs, Sox, Bulls or Hawks game; suffering is communal  {LIKE=1}
+08:04:47  EVENT COMMUTE_GRIPE @donna.novotny (public, aired) — the Kennedy, the Ike, the Blue Line or Metra did something unforgivable today
+08:05:47  POST STATUS @donna.novotny [DAILY] the Kennedy, the Ike, the Blue Line or Metra did something unforgivable today  {CARE=1}
+08:15:26  EVENT COOKING_ATTEMPT @gary.moran (public, aired) — an ambitious recipe that turned out great or hilariously bad
+08:16:26  POST PHOTO @gary.moran [HOBBY] an ambitious recipe that turned out great or hilariously bad  {HAHA=1, LIKE=1, LOVE=1}
+08:27:05  EVENT MOOD_POST @andre.whitfield (public, aired) — a post that is pure mood: tired, grateful, annoyed, or quoting a song title only
+08:27:56  EVENT HEADLINE_TAKE @gary.moran (public, aired) — City Council approves budget with a property tax increase
+08:27:59      COMMENT @rob.marlow → @megan.quinlan CONGRATS  {LOVE=1}
+08:28:05  POST STATUS @andre.whitfield [DAILY] a post that is pure mood: tired, grateful, annoyed, or quoting a song title only  {HAHA=1}
+08:28:56  POST LINK @gary.moran [NEWS, FOR] react to the headline from your own perspective, in your own words; don't summarize it — “City Council approves budget with a property tax increase”
+08:29:59      COMMENT @rob.marlow → @oksana.melnyk JOKE
+08:32:57  EVENT ARC_BEAT [new_hobby: beginner → beginner] @adam.rosen (public, aired) — a lopsided first attempt, proudly posted
+08:33:27  POST PHOTO @adam.rosen [HOBBY] a lopsided first attempt, proudly posted  {LOVE=1}
+09:21:58      COMMENT @samantha.dvorak → @gary.moran TROLL
+10:00:11      COMMENT @gary.moran → @amanda.sheehan HOSTILE
+10:01        REPLY @gary.moran → @samantha.dvorak DISAGREE
+10:05:05      COMMENT @lisa.marchetti → @amra.hodzic SUPPORT
+10:13:28  EVENT MOOD_POST @lisa.marchetti (public, aired) — a post that is pure mood: tired, grateful, annoyed, or quoting a song title only
+10:14:28  POST STATUS @lisa.marchetti [DAILY] a post that is pure mood: tired, grateful, annoyed, or quoting a song title only
+10:18:28      COMMENT @lisa.marchetti → @amra.hodzic DISAGREE
+10:38:36  EVENT KID_MILESTONE @lisa.marchetti (public, aired) — a kid milestone or a kid quote; no photos of children
+10:39:36  POST STATUS @lisa.marchetti [FAMILY] a kid milestone or a kid quote; no photos of children
+11:06        REPLY @amra.hodzic → @lisa.marchetti HOSTILE
+11:07        REPLY @amra.hodzic → @lisa.marchetti DISAGREE
+11:11:38  EVENT TRIP_BOOKED @amra.hodzic (public, aired) — booked a trip: a weekend in Michigan, a wedding out of state, or a bucket-list flight
+11:12:10      COMMENT @brian.whitlock → @rob.marlow SUPPORT
+11:12:38  POST STATUS @amra.hodzic [LIFE] booked a trip: a weekend in Michigan, a wedding out of state, or a bucket-list flight
+12:15        REPLY @samantha.dvorak → @gary.moran DISAGREE
+12:33:11  EVENT ARC_BEAT [feud: cold_war → cold_war] @hannah.lindqvist (public, aired) — a pointed jab in someone else's thread
+12:33:41  POST STATUS @mike.rinaldi [DRAMA] a pointed jab in someone else's thread
+12:40        REPLY @lisa.marchetti → @amra.hodzic JOKE
+12:41        REPLY @lisa.marchetti → @amra.hodzic JOKE
+12:53:49  EVENT CAREER_WIN @lisa.marchetti (public, aired) — a small career win: a certification, a big client, a shout-out from the boss, a project shipped
+12:54  POST PHOTO @rob.marlow [user] R's own post  {HAHA=1, LIKE=5, LOVE=1}
+12:54:49  POST STATUS @lisa.marchetti [LIFE] a small career win: a certification, a big client, a shout-out from the boss, a project shipped  {LIKE=1}
+12:56      COMMENT @rob.marlow → @lukas.petrauskas CONGRATS
+12:58      COMMENT @rob.marlow → @amanda.sheehan SUPPORT
+12:58:06      COMMENT @ryan.kessler → @rob.marlow SUPPORT
+12:59:49      COMMENT @kristen.wagner → @rob.marlow AGREE
+13:15  EVENT BIG_PURCHASE @andre.whitfield (public, aired) — a new couch, TV, grill, bike or e-bike; proud or sheepish about the price
+13:16  POST PHOTO @andre.whitfield [LIFE] a new couch, TV, grill, bike or e-bike; proud or sheepish about the price  {LOVE=2}
+13:16:09      COMMENT @lukas.petrauskas → @mike.rinaldi HYPE
+13:41  EVENT FOOD_PHOTO @jessica.vogel (public, aired) — a plate, a takeout bag or a homemade attempt; a one-line caption
+13:42  POST PHOTO @jessica.vogel [DAILY] a plate, a takeout bag or a homemade attempt; a one-line caption  {LIKE=2}
+13:58:37  EVENT COOKING_ATTEMPT @lukas.petrauskas (public, aired) — an ambitious recipe that turned out great or hilariously bad
+13:59:37  POST PHOTO @lukas.petrauskas [HOBBY] an ambitious recipe that turned out great or hilariously bad  {LIKE=1}
+14:23        REPLY @mike.rinaldi → @lukas.petrauskas SUPPORT
+15:26:34  EVENT SPORTS_REACTION @jessica.vogel (public, aired) — a reaction to last night's Bears, Cubs, Sox, Bulls or Hawks game; suffering is communal
+15:27:34  POST STATUS @jessica.vogel [DAILY] a reaction to last night's Bears, Cubs, Sox, Bulls or Hawks game; suffering is communal
+16:16:52  EVENT COMMUTE_GRIPE @gary.moran (public, aired) — the Kennedy, the Ike, the Blue Line or Metra did something unforgivable today
+16:17:52  POST STATUS @gary.moran [DAILY] the Kennedy, the Ike, the Blue Line or Metra did something unforgivable today  {CARE=1, SAD=2}
+17:13        REPLY @amanda.sheehan → @gary.moran JOKE
+19:43:04  EVENT PARENT_VISIT @oksana.melnyk (public, aired) — a visit with their parents: a grandmother's recipe, a family argument, an old neighborhood
+19:44:04  POST STATUS @oksana.melnyk [FAMILY] a visit with their parents: a grandmother's recipe, a family argument, an old neighborhood
+20:26  POST PHOTO @rob.marlow [user] R's own post  {LIKE=6, LOVE=1}
+20:28      COMMENT @rob.marlow → @andre.whitfield JOKE
+20:30      COMMENT @rob.marlow → @mike.rinaldi CONGRATS  {LOVE=1}
+20:31        REPLY @rob.marlow → @ryan.kessler CONGRATS  {LOVE=2}
+20:32:16      COMMENT @amanda.sheehan → @rob.marlow AGREE
+20:40:38  EVENT MOOD_POST @oksana.melnyk (public, aired) — a post that is pure mood: tired, grateful, annoyed, or quoting a song title only
+20:41:38  POST STATUS @oksana.melnyk [DAILY] a post that is pure mood: tired, grateful, annoyed, or quoting a song title only
+20:54:49  EVENT DIY_PROJECT_POST @jessica.vogel (public, aired) — a DIY project mid-way: power tools, a ladder, questionable confidence
+20:55:49  POST PHOTO @jessica.vogel [HOBBY] a DIY project mid-way: power tools, a ladder, questionable confidence
+21:58:47  EVENT WORK_GRIPE @tim.kaczmarek (public, aired) — a vague complaint about a meeting, a manager or a customer; no names
+21:59:47  POST STATUS @tim.kaczmarek [DAILY] a vague complaint about a meeting, a manager or a customer; no names  {SAD=1}
+22:04:37  EVENT DM_USER_GOSSIP @samantha.dvorak (private, aired) — 'did you see what so-and-so posted??' — gossip about another resident
+22:05:37  DM @samantha.dvorak → @rob.marlow — 'did you see what so-and-so posted??' — gossip about another resident
+22:20:49  EVENT TRIP_BOOKED @jessica.vogel (public, aired) — booked a trip: a weekend in Michigan, a wedding out of state, or a bucket-list flight
+22:21:49  POST STATUS @jessica.vogel [LIFE] booked a trip: a weekend in Michigan, a wedding out of state, or a bucket-list flight
+22:42:27  EVENT HEADLINE_QUIET_SHARE @oksana.melnyk (public, aired) — Tax plan would cut rates for small businesses
+22:43:27  POST LINK @oksana.melnyk [NEWS, FOR] share the link with a one-liner: 'wow', 'about time', 'of course', or a single emoji — “Tax plan would cut rates for small businesses”
+23:29:31  EVENT MOOD_POST @oksana.melnyk (public, aired) — a post that is pure mood: tired, grateful, annoyed, or quoting a song title only
+23:30:31  POST STATUS @oksana.melnyk [DAILY] a post that is pure mood: tired, grateful, annoyed, or quoting a song title only
+23:37:40  EVENT HEADLINE_TAKE @adam.rosen (public, aired) — Senate passes stopgap bill hours before shutdown deadline
+23:38:40  POST LINK @adam.rosen [NEWS, AGAINST] react to the headline from your own perspective, in your own words; don't summarize it — “Senate passes stopgap bill hours before shutdown deadline”

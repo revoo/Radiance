@@ -48,3 +48,45 @@
   importance: 3
   tags: [ work ]
   output: { post: LIFE_EVENT, brief: "N years at the company; grateful, wry or quietly looking" }
+
+- id: career_win
+  category: LIFE
+  base_rate: 0.006
+  modifiers: { conscientiousness: 1.4, quirk.humblebragger: 2.5 }
+  excludes: { tags: [ unemployed ] }
+  cooldown_days: 30
+  importance: 4
+  tags: [ work ]
+  output: { post: STATUS, brief: "a small career win: a certification, a big client, a shout-out from the boss, a project shipped" }
+  effects: { mood: 0.2 }
+
+- id: trip_booked
+  category: LIFE
+  base_rate: 0.004
+  modifiers: { openness: 1.5, extraversion: 1.3 }
+  excludes: { tags: [ budget_tight, unemployed, homebound ] }
+  cooldown_days: 45
+  importance: 4
+  tags: [ travel, expensive ]
+  output: { post: STATUS, brief: "booked a trip: a weekend in Michigan, a wedding out of state, or a bucket-list flight" }
+  effects: { mood: 0.3 }
+
+- id: home_milestone
+  category: LIFE
+  base_rate: 0.004
+  modifiers: { conscientiousness: 1.3 }
+  excludes: { tags: [ budget_tight ] }
+  cooldown_days: 40
+  importance: 4
+  tags: [ home_improvement ]
+  output: { post: PHOTO, brief: "a home milestone: the lease renewed, the room finally finished, the mortgage paid down",
+            media: "a tidy room with afternoon light coming through a window" }
+  effects: { mood: 0.2 }
+
+- id: year_reflection
+  category: LIFE
+  base_rate: 0.004
+  modifiers: { openness: 1.3, quirk.nostalgic: 2.5, quirk.oversharer: 1.5 }
+  cooldown_days: 45
+  importance: 4
+  output: { post: STATUS, brief: "'a year ago today' or a this-year-so-far reflection on how much life has changed" }

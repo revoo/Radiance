@@ -50,7 +50,7 @@ public final class Stances {
     l.put(Stance.TROLL, -1.4 + (b.trait("argumentativeness") - 50) / 35 + hate / 40 + bias + edge);
     l.put(Stance.MOCK, -2.0 + hate / 30 + bias + (news && align < -0.4 ? 0.6 : 0) + edge);
     l.put(Stance.HOSTILE, -2.8 + hate / 22 + bias * 0.8 + (e != null && e.hasTag("feud") ? 2 : 0) + edge);
-    l.put(Stance.FLIRT, flirt(b, a, att, chem, k));
+    l.put(Stance.FLIRT, Math.abs(b.age(day) - a.age(day)) > 15 ? NEVER : flirt(b, a, att, chem, k));
     l.put(Stance.QUESTION, -0.9 + (b.trait("nosiness") - 50) / 50 + (good ? 0.3 : 0));
     l.put(Stance.ADVICE, -1.4 + (b.trait("conscientiousness") - 50) / 50 + (bad && !i.tragic ? 0.6 : 0));
     l.put(Stance.SELF_PIVOT, -2.2 + (b.trait("attention_seeking") - 50) / 30);
@@ -85,12 +85,13 @@ public final class Stances {
   /** The faithfulness ladder (SPEC §5.2), scaled by {@code romance.temptation}. */
   static double flirt(Person b, Person a, double attraction, double chemistry, Knobs k) {
     if (b.gender == a.gender) return NEVER;
-    if (k.temptation() <= 0 && (b.attached() || a.attached())) return NEVER;
     double base = -1.5 + attraction / 20 + chemistry * 1.5 + (b.trait("flirtatiousness") - 50) / 30;
+    if (a.id.equals(b.partnerId)) return base; // couples flirt; the ladder is about everyone else
+    if (k.temptation() <= 0 && (b.attached() || a.attached())) return NEVER;
     if (b.attached()) {
       double f = b.trait("faithfulness");
       if (f >= 80) return NEVER;
-      base += f >= 50 ? -1.4 : f >= 25 ? -0.3 : 0.4;
+      base += f >= 50 ? -1.4 : f >= 25 ? 0.6 : 1.2;
       double sat = b.partnerSatisfaction == null ? 0.7 : b.partnerSatisfaction;
       base += (0.7 - sat) * 2;
       base += Math.log(Math.max(0.01, k.temptation()));
