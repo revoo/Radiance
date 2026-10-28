@@ -146,7 +146,9 @@ public final class ModelStore {
       if (e.defId() != null) world.fired.computeIfAbsent(e.actorId() + "|" + e.defId(), k -> new TreeSet<>()).add(e.worldTime());
       if (e.importance() >= 6) world.majorEvents.computeIfAbsent(e.actorId(), k -> new TreeSet<>()).add(e.worldTime());
       var def = e.defId() == null ? null : lib.events().get(e.defId());
-      if (def != null && def.category() == Vocab.Category.DRAMA) world.dramaByDay.merge(world.day(e.worldTime()), 1, Integer::sum);
+      if (def != null && def.category() == Vocab.Category.DRAMA && e.arcId() == null) {
+        world.dramaByDay.merge(world.day(e.worldTime()), 1, Integer::sum);
+      }
     }
     for (var m : new MemoryRepository(sql).tagged("clash")) {
       for (JsonNode p : Json.tree(m.participantsJson())) {

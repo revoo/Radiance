@@ -67,6 +67,15 @@ public final class Rates {
    */
   public static Map<String, Double> calibrate(Map<String, EnumMap<Category, Double>> raw, Map<String, Double> rates,
       Map<String, Double> mix) {
+    return calibrate(raw, rates, mix, Map.of());
+  }
+
+  /**
+   * @param fixed posts per day the mix can't scale — arc beats and calendar posts — by category; they
+   *     count toward their category's share (SPEC §5.4), so the scaled part aims at what's left
+   */
+  public static Map<String, Double> calibrate(Map<String, EnumMap<Category, Double>> raw, Map<String, Double> rates,
+      Map<String, Double> mix, Map<String, Double> fixed) {
     var cats = List.of(Category.DAILY, Category.NEWS, Category.LIFE, Category.HOBBY, Category.FAMILY, Category.SOCIAL,
         Category.DRAMA);
     var available = new EnumMap<Category, Double>(Category.class);
@@ -76,7 +85,9 @@ public final class Rates {
       if (sum > 0) available.put(c, mix.getOrDefault(c.name(), 0.0));
     }
     double shareTotal = available.values().stream().mapToDouble(Double::doubleValue).sum();
-    double total = rates.values().stream().mapToDouble(Double::doubleValue).sum();
+    double fixedTotal = fixed.values().stream().mapToDouble(Double::doubleValue).sum();
+    double total = Math.max(0, rates.values().stream().mapToDouble(Double::doubleValue).sum() - fixedTotal);
+    double grand = total + fixedTotal;
     var col = new EnumMap<Category, Double>(Category.class);
     cats.forEach(c -> col.put(c, 1.0));
     var row = new TreeMap<String, Double>();
@@ -85,13 +96,14 @@ public final class Rates {
       for (var e : raw.entrySet()) {
         double s = 0;
         for (var c : cats) s += e.getValue().getOrDefault(c, 0.0) * col.get(c);
-        double want = rates.getOrDefault(e.getKey(), 0.0);
+        double want = rates.getOrDefault(e.getKey(), 0.0) * (grand > 0 ? total / grand : 1);
         row.put(e.getKey(), s > 0 ? want / s : 0);
       }
       for (var c : cats) {
         double s = 0;
         for (var e : raw.entrySet()) s += e.getValue().getOrDefault(c, 0.0) * row.get(e.getKey());
-        double want = shareTotal > 0 ? total * available.getOrDefault(c, 0.0) / shareTotal : 0;
+        double want = shareTotal > 0
+            ? Math.max(0, grand * available.getOrDefault(c, 0.0) / shareTotal - fixed.getOrDefault(c.name(), 0.0)) : 0;
         col.put(c, s > 0 ? want / s : 0);
       }
     }

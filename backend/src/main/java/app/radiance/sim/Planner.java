@@ -50,6 +50,10 @@ final class Planner {
   private final Map<String, Integer> planned = new HashMap<>();
   /** {@code actor|day} → unprompted engagements with R this run planned. */
   private final Map<String, Integer> userShare = new HashMap<>();
+  /** A guard rail under the feel band: nobody posts more than six times in a world-day. */
+  static final int MAX_POSTS_PER_DAY = 6;
+  /** The storyteller and news stop one short, leaving room for an arc's post the same day. */
+  static final int STORYTELLER_POSTS_PER_DAY = MAX_POSTS_PER_DAY - 1;
   /** Intents that fired in this run, so the writer can mark stored ones DONE. */
   final List<Intent> fired = new ArrayList<>();
 
@@ -91,7 +95,8 @@ final class Planner {
         if (!fidelityAllows(p, def)) continue;
         if (!calendarAllows(def, a, date, triggers, w)) continue;
         if (!Eligibility.holds(def, a, w, lib, p.in.weather(), t0)) continue;
-        if (onCooldown(w, a, def, t0) || overCap(w, def, a, t0)) continue;
+        if (onCooldown(w, a, def, t0) || overCap(p, def, a, t0)) continue;
+        if (posts(def) && postsOn(p, a, t0) >= STORYTELLER_POSTS_PER_DAY) continue;
         double lambda = rate(p, def, a, date) * share;
         var rng = p.rng.derive("incident:" + def.id() + ":" + a.id);
         if (!rng.chance(1 - Math.exp(-lambda))) continue;
@@ -112,6 +117,22 @@ final class Planner {
       x *= Storyteller.factor(k.profile(), p.w.seed, p.slice.start(), p.w.tension, k.dramaIntensity());
     }
     return x;
+  }
+
+  /** Posts {@code a} already has on {@code t}'s world-day: aired or planned, this slice included. */
+  static int postsOn(Plan p, Person a, long t) {
+    String day = p.w.day(t);
+    int n = 0;
+    for (var i : p.w.items.values()) {
+      if (i.type == Item.Type.POST && i.authorId.equals(a.id) && i.status != app.radiance.kernel.AirStatus.DROPPED
+          && p.w.day(i.time).equals(day)) n++;
+    }
+    for (var post : p.script.posts) if (post.authorId().equals(a.id) && p.w.day(post.createdAt()).equals(day)) n++;
+    return n;
+  }
+
+  private static boolean posts(EventDef def) {
+    return def.output() != null && def.output().post() != PostOutput.NONE && def.output().post() != PostOutput.DM;
   }
 
   private static boolean fidelityAllows(Plan p, EventDef def) {
@@ -148,8 +169,17 @@ final class Planner {
     return cd > 0 && t - times.last() < cd * DAY;
   }
 
-  private boolean overCap(SimWorld w, EventDef def, Person a, long t) {
-    if (def.category() == Category.DRAMA && w.dramaByDay.getOrDefault(w.day(t), 0) >= k.maxDramaPerDay()) return true;
+  private boolean overCap(Plan p, EventDef def, Person a, long t) {
+    var w = p.w;
+    if (def.category() == Category.DRAMA) {
+      String day = w.day(t);
+      int today = w.dramaByDay.getOrDefault(day, 0);
+      for (var e : p.script.events) {
+        var d = e.defId() == null || e.arcId() != null ? null : lib.events().get(e.defId());
+        if (d != null && d.category() == Category.DRAMA && w.day(e.worldTime()).equals(day)) today++;
+      }
+      if (today >= k.maxDramaPerDay()) return true;
+    }
     if (def.importance() >= 6) {
       var majors = w.majorEvents.get(a.id);
       return majors != null && majors.tailSet(t - 14 * DAY).size() >= k.maxMajorEventsPer14d();
@@ -251,7 +281,9 @@ final class Planner {
     long t0 = p.slice.start();
     var date = w.date(t0);
     long dayStart = date.atStartOfDay(w.zone).toInstant().toEpochMilli();
-    var fresh = p.in.headlines().stream().filter(h -> h.publishedAt() <= t0 && h.publishedAt() > t0 - 36 * HOUR).toList();
+    // takes draw on the batch's headlines of the last 36 hours, all day long (scripts trail the news)
+    long newest = p.in.headlines().stream().mapToLong(Headline::publishedAt).max().orElse(0);
+    var fresh = p.in.headlines().stream().filter(h -> h.publishedAt() <= t0 && h.publishedAt() > newest - 36 * HOUR).toList();
     if (fresh.isEmpty()) return;
     for (var a : w.residents()) {
       var curve = Presence.curve(a, date, p.in.primeHours(), k.primeTimeBoost());
@@ -262,11 +294,15 @@ final class Planner {
         if (p.slice.fidelity() != Fidelity.FULL && def.importance() < 4) continue;
         if (!Eligibility.holds(def, a, w, lib, p.in.weather(), t0)) continue;
         double min = def.trigger().headline().minInterest();
-        var eligible = fresh.stream().filter(h -> interest(a, h) >= min && !took(w, a, h)).toList();
-        if (eligible.isEmpty()) continue;
-        double lambda = rate(p, def, a, date) * eligible.size() / 24.0 * share;
         var rng = p.rng.derive("news:" + def.id() + ":" + a.id);
-        if (!rng.chance(1 - Math.exp(-lambda))) continue;
+        var interesting = fresh.stream().filter(h -> interest(a, h) >= min && !took(w, a, h)).toList();
+        if (interesting.isEmpty()) continue;
+        String region = region(p, rng);
+        var eligible = interesting.stream().filter(h -> h.region().equals(region)).toList();
+        if (postsOn(p, a, t0) >= STORYTELLER_POSTS_PER_DAY) continue;
+        // the region is drawn first, so takes follow region-mix; a region with nothing for them is a pass
+        double lambda = rate(p, def, a, date) * interesting.size() / 24.0 * share;
+        if (!rng.chance(1 - Math.exp(-lambda)) || eligible.isEmpty()) continue;
         var h = pickHeadline(eligible, a, rng);
         Long t = Presence.momentIn(curve, dayStart, t0, p.slice.end(), rng);
         if (t == null) continue;
@@ -288,24 +324,48 @@ final class Planner {
     return w.fired.containsKey(a.id + "|news:" + h.id());
   }
 
-  /** Region first, by {@code news.region-mix}; then the headline by interest (SPEC §5.12). */
-  private Headline pickHeadline(List<Headline> eligible, Person a, RandomSource rng) {
-    var byRegion = new TreeMap<String, List<Headline>>();
-    eligible.forEach(h -> byRegion.computeIfAbsent(h.region(), x -> new ArrayList<>()).add(h));
-    double total = 0;
-    for (String r : byRegion.keySet()) total += k.regionMix().getOrDefault(r, 0.0);
-    String region = byRegion.firstKey();
-    if (total > 0) {
-      double u = rng.nextDouble() * total;
-      for (String r : byRegion.keySet()) {
-        u -= k.regionMix().getOrDefault(r, 0.0);
-        if (u < 0) {
-          region = r;
-          break;
-        }
+  /**
+   * A take's region, drawn before its headline (SPEC §5.12): {@code news.region-mix}, leaning toward
+   * whichever region the last few days' takes have shorted, so the split holds over a month.
+   */
+  private String region(Plan p, RandomSource rng) {
+    var mix = new TreeMap<>(k.regionMix());
+    var byId = new HashMap<String, String>();
+    p.in.headlines().forEach(h -> byId.put(h.id(), h.region()));
+    var seen = new TreeMap<String, Integer>();
+    int total = 0;
+    for (var i : p.w.items.values()) {
+      String r = i.headlineId == null ? null : byId.get(i.headlineId);
+      if (r != null) {
+        seen.merge(r, 1, Integer::sum);
+        total++;
       }
     }
-    var list = byRegion.get(region);
+    for (var post : p.script.posts) {
+      String r = post.headlineId() == null ? null : byId.get(post.headlineId());
+      if (r != null) {
+        seen.merge(r, 1, Integer::sum);
+        total++;
+      }
+    }
+    double sum = 0;
+    var weights = new TreeMap<String, Double>();
+    for (var e : mix.entrySet()) {
+      double share = total == 0 ? e.getValue() : seen.getOrDefault(e.getKey(), 0) / (double) total;
+      double wgt = e.getValue() * Math.max(0.1, 1 + 4 * (e.getValue() - share));
+      weights.put(e.getKey(), wgt);
+      sum += wgt;
+    }
+    double u = rng.nextDouble() * sum;
+    for (var e : weights.entrySet()) {
+      u -= e.getValue();
+      if (u < 0) return e.getKey();
+    }
+    return mix.lastKey();
+  }
+
+  /** The headline within the drawn region, by interest. */
+  private Headline pickHeadline(List<Headline> list, Person a, RandomSource rng) {
     double sum = list.stream().mapToDouble(h -> interest(a, h)).sum();
     double u = rng.nextDouble() * sum;
     for (var h : list) {
@@ -419,6 +479,16 @@ final class Planner {
     return s * kind * inner - r.wFat() * fatigue - r.wSat() * sat + rng.nextGaussian(0, r.noiseSd());
   }
 
+  /**
+   * Past about a third of the cast, an ordinary thread stops drawing new commenters; only drama
+   * keeps a pile-on going (SPEC §5.8: saturation inverts on drama items).
+   */
+  static boolean crowded(SimWorld w, Item i, int extra) {
+    if (i.drama >= 0.5) return false;
+    long distinct = i.commenters.stream().distinct().count() + extra;
+    return distinct >= Math.floor(0.37 * w.residents().size());
+  }
+
   static String kindKey(Item i) {
     return switch (i.kind) {
       case "PHOTO" -> "PHOTO";
@@ -439,7 +509,7 @@ final class Planner {
     if (a.user && !userShareOk(w, b, a, day)) return;
     var r = lib.engagement();
     double u = utility(w, b, item, a, day, rng);
-    boolean comment = rng.chance(sigmoid(r.steepness() * (u - r.thetaComment())));
+    boolean comment = !crowded(w, item, 0) && rng.chance(sigmoid(r.steepness() * (u - r.thetaComment())));
     boolean react = comment ? rng.chance(0.5) : rng.chance(sigmoid(r.steepness() * (u - r.thetaReact())));
     if (!comment && !react) return;
     long t = s.start() + 30_000L + (long) (rng.nextDouble() * Math.max(MIN, s.end() - s.start()));
@@ -546,6 +616,9 @@ final class Planner {
   static Map<String, EnumMap<Category, Double>> rawRates(SimWorld w, ContentLibrary lib, LocalDate from, int days,
       List<Headline> headlines) {
     var out = new TreeMap<String, EnumMap<Category, Double>>();
+    // takes draw on the headlines of the last 36 hours, as news() does
+    long newest = headlines.stream().mapToLong(Headline::publishedAt).max().orElse(0);
+    var fresh = headlines.stream().filter(h -> h.publishedAt() > newest - 36 * HOUR).toList();
     for (var a : w.residents()) {
       var row = new EnumMap<Category, Double>(Category.class);
       for (int d = 0; d < days; d++) {
@@ -556,8 +629,13 @@ final class Planner {
           double x = def.baseRate() * Rates.modifiers(def, a, date, 50) / days;
           if (def.trigger() != null && def.trigger().headline() != null) {
             double min = def.trigger().headline().minInterest();
-            long n = headlines.stream().filter(h -> interest(a, h) >= min).count();
-            x *= n / Math.max(1.0, days) / 24.0 * Math.min(days, 1);
+            var interesting = fresh.stream().filter(h -> interest(a, h) >= min).toList();
+            // a take's region is drawn first; a region with nothing for them is a pass
+            double hit = 0;
+            for (var e : Knobs.defaults().regionMix().entrySet()) {
+              if (interesting.stream().anyMatch(h -> h.region().equals(e.getKey()))) hit += e.getValue();
+            }
+            x *= interesting.size() / 24.0 * hit;
           }
           row.merge(def.category(), x, Double::sum);
         }

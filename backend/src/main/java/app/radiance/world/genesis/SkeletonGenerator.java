@@ -99,6 +99,7 @@ public final class SkeletonGenerator {
   private final Map<String, Edge> edges = new TreeMap<>();
   private final Map<String, Double> chemistry = new TreeMap<>();
   private String jessicaPartner;
+  static final int QUIET_RESIDENTS = 4;
 
   private WorldSeed run() {
     for (var r : roster) traits.put(r.resolvedHandle(), baseTraits(r));
@@ -115,6 +116,15 @@ public final class SkeletonGenerator {
 
     var residents = new ArrayList<Resident>();
     for (var r : roster) residents.add(resident(r));
+    // Lurkers exist (SPEC §5.2, §10): the QUIET_RESIDENTS quietest post at most 0.1 times a day. Only
+    // their posting rate changes, after every draw, so nothing else moves. Nobody in a seeded storyline
+    // becomes a lurker: their arcs need them posting.
+    var inArcs = new java.util.HashSet<String>();
+    arcsAndEntities.arcs.forEach(a -> inArcs.addAll(a.roles().values()));
+    var quiet = residents.stream().filter(x -> !inArcs.contains(x.handle()))
+        .sorted(java.util.Comparator.comparingDouble((Resident x) -> x.routine().postsPerDay())
+        .thenComparing(Resident::handle)).limit(QUIET_RESIDENTS).map(Resident::handle).toList();
+    residents.replaceAll(x -> quiet.contains(x.handle()) ? quieter(x) : x);
     var rels = new ArrayList<Relationship>();
     for (var e : edges.values()) rels.add(e.toSeed());
     return new WorldSeed(WorldSeed.VERSION, settings.seed(), settings.referenceDate().toString(),
@@ -416,7 +426,9 @@ public final class SkeletonGenerator {
       e.kind = kind;
       // An acquaintance stays below the meaningful-tie threshold (familiarity 40).
       e.familiarity = clampRange(fam + rng.nextGaussian(0, 4), 0, kind.equals("ACQUAINTANCE") ? 38 : 100);
-      double aff = band(kind, "aff", rng) + t.baseline() * 0.5 + chem(a, b) * 12 + rng.nextGaussian(0, 5);
+      // a grouch starts where they'd settle: "hates everyone, just some people less" (SPEC §5.2)
+      double lean = t.preset() == app.radiance.content.Vocab.Temperament.GROUCH ? 1.0 : 0.5;
+      double aff = band(kind, "aff", rng) + t.baseline() * lean + chem(a, b) * 12 + rng.nextGaussian(0, 5);
       e.affinity = clampRange(aff, t.floor(), t.ceiling());
       e.trust = clampRange(band(kind, "trust", rng) + rng.nextGaussian(0, 6), 0, 100);
       e.respect = clampRange(rng.nextGaussian(15, 18) + chem(a, b) * 10, -100, 100);
@@ -912,6 +924,17 @@ public final class SkeletonGenerator {
       out.put(f, round2(Math.max(-1, Math.min(1, rng.nextGaussian(mean, 0.3)))));
     }
     return out;
+  }
+
+  private static Resident quieter(Resident x) {
+    var o = x.routine();
+    var routine = new Routine(o.chronotype(), o.schedule(), o.weekendPattern(), o.weekday(), o.weekend(),
+        Math.min(o.postsPerDay(), 0.1), o.attentionBudget());
+    return new Resident(x.handle(), x.name(), x.displayName(), x.gender(), x.birthDate(), x.heritage(), x.faithTradition(),
+        x.observance(), x.livesIn(), x.occupation(), x.employer(), x.status(), x.partner(), x.circles(), x.pinned(),
+        x.archetype(), x.traits(), x.quirks(), x.interests(), x.politics(), x.biases(), x.taste(), x.temperament(),
+        routine, x.state(), x.offNetwork(), x.bio(), x.backstory(), x.voice(), x.values(), x.fears(), x.desires(),
+        x.appearance());
   }
 
   private Routine routine(Roster.Resident r, RandomSource rng) {

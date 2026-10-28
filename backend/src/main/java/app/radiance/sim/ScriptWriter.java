@@ -69,7 +69,7 @@ public final class ScriptWriter {
     var raw = Planner.rawRates(copy, lib, copy.date(slices.getFirst().start()), 7, headlines);
     var rates = new TreeMap<String, Double>();
     copy.residents().forEach(r -> rates.put(r.id, r.routine.postsPerDay()));
-    var scales = Rates.calibrate(raw, rates, k.eventMix());
+    var scales = Rates.calibrate(raw, rates, k.eventMix(), fixedPerDay(slices.getFirst().start(), committed.userId));
     var inputs = new Plan.Inputs(headlines, weather, primeHours, scales, origin);
 
     var planner = new Planner(lib, k);
@@ -122,6 +122,24 @@ public final class ScriptWriter {
     for (var i : left) if (!stored.contains(i.id())) committed.intents.add(i);
     return new Result(hash(digest), slices.size(), events, posts, comments, reactions, dms, left.size(),
         List.copyOf(auditor.findings), rows + rowsLeft.size());
+  }
+
+  /**
+   * Posts per day the mix can't scale, by category, from the last week that aired: arc posts and
+   * calendar posts (SPEC §5.4: they count toward their category but are never scaled down).
+   */
+  private java.util.Map<String, Double> fixedPerDay(long now, String userId) {
+    long from = now - 7 * 86_400_000L;
+    var rows = sql.query("SELECT p.brief_json AS b, p.created_at AS t FROM post p LEFT JOIN event e ON e.id = p.event_id"
+        + " WHERE p.created_at >= ? AND p.created_at < ? AND p.air_status = 'AIRED' AND p.author_id <> ?"
+        + " AND (p.arc_id IS NOT NULL OR e.source = 'CALENDAR')", List.of(from, now, userId == null ? "" : userId),
+        r -> Brief.parse(r.str("b")).category());
+    var first = sql.queryOne("SELECT MIN(created_at) AS t FROM post", List.of(), r -> r.isNull("t") ? now : r.lng("t"))
+        .orElse(now);
+    double days = Math.max(1, Math.min(7, (now - first) / 86_400_000.0));
+    var out = new TreeMap<String, Double>();
+    for (String c : rows) if (c != null) out.merge(c, 1 / days, Double::sum);
+    return out;
   }
 
   /** Everything scripted that hasn't aired yet, to apply to the planning copy first. */

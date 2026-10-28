@@ -217,7 +217,8 @@ public final class Airing {
     if (actor != null && ev.defId() != null) w.fired.computeIfAbsent(actor + "|" + ev.defId(), k -> new java.util.TreeSet<>()).add(t);
     if (actor != null && ev.importance() >= 6) w.majorEvents.computeIfAbsent(actor, k -> new java.util.TreeSet<>()).add(t);
     boolean drama = Category.DRAMA.name().equals(p.category());
-    if (drama) w.dramaByDay.merge(w.day(t), 1, Integer::sum);
+    // the storyteller's daily DRAMA cap counts its own incidents; arcs run on their own clocks
+    if (drama && p.arc() == null) w.dramaByDay.merge(w.day(t), 1, Integer::sum);
 
     Object tension = p.effects().get("tension");
     if (tension instanceof Number n) {

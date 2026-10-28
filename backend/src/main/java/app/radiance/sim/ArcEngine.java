@@ -393,6 +393,7 @@ final class ArcEngine {
 
   private static void beats(Plan p) {
     long t0 = p.slice.start(), t1 = p.slice.end();
+    dailyBeat(p);
     for (var arc : p.w.arcs.values()) {
       if (!arc.active() || arc.isNew) continue;
       var def = p.lib.arcs().get(arc.defId);
@@ -421,6 +422,32 @@ final class ArcEngine {
     }
   }
 
+  /**
+   * The storyteller keeps a storyline visible every world-day: if nothing public has moved by the
+   * evening slice, the stalest PUBLIC arc gets a beat.
+   */
+  private static void dailyBeat(Plan p) {
+    var local = java.time.Instant.ofEpochMilli(p.slice.start()).atZone(p.w.zone);
+    long evening = local.toLocalDate().atTime(18, 0).atZone(p.w.zone).toInstant().toEpochMilli();
+    if (p.slice.start() > evening || p.slice.end() <= evening) return;
+    long dayStart = local.toLocalDate().atStartOfDay(p.w.zone).toInstant().toEpochMilli();
+    Arc stalest = null;
+    for (var arc : p.w.arcs.values()) {
+      if (!arc.active() || arc.visibility != Visibility.PUBLIC) continue;
+      long last = arc.lastBeatAt == null ? arc.phaseEnteredAt : Math.max(arc.lastBeatAt, arc.phaseEnteredAt);
+      if (last >= dayStart) return;
+      if (stalest == null || last < (stalest.lastBeatAt == null ? stalest.phaseEnteredAt : stalest.lastBeatAt)) stalest = arc;
+    }
+    for (var e : p.script.events) if (e.arcId() != null && e.visibility() == Visibility.PUBLIC) return;
+    if (stalest == null) return;
+    var def = p.lib.arcs().get(stalest.defId);
+    var phase = def == null ? null : phase(def, stalest.phase);
+    if (phase == null) return;
+    var beat = phase.beats().isEmpty() ? new app.radiance.content.Defs.Beat(BeatKind.MEMORY,
+        "life goes on: " + stalest.phase.replace('_', ' '), null) : phase.beats().getFirst();
+    beat(p, stalest, def, phase.beats().isEmpty() ? -1 : 0, beat, Math.max(p.slice.start(), evening) + 10 * 60_000L);
+  }
+
   private static boolean transitionsThisSlice(Plan p, Arc arc) {
     for (var e : p.script.events) if (arc.id.equals(e.arcId())) return true;
     return false;
@@ -438,6 +465,8 @@ final class ArcEngine {
     boolean post = kind == BeatKind.STATUS || kind == BeatKind.PHOTO || kind == BeatKind.LINK
         || kind == BeatKind.LIFE_EVENT || kind == BeatKind.CHECKIN || kind == BeatKind.MENTION;
     String author = subject;
+    // a lurker's beats surface through a friend's post, as forced beats may (SPEC §5.4)
+    if (post && kind != BeatKind.MENTION && person.routine.postsPerDay() < 0.15) kind = BeatKind.MENTION;
     if (kind == BeatKind.MENTION) author = p.w.closestFriend(subject);
     if (author == null) post = false;
     int importance = post ? 3 : 2;

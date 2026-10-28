@@ -65,6 +65,16 @@ val genesis by tasks.registering(JavaExec::class) {
     jvmArgs(nativeAccess)
 }
 
+// The tuning harness (SPEC §10): ./gradlew simulate --args='--days=30 --seed=42 --user=scripted:warm'. Offline.
+val simulate by tasks.registering(JavaExec::class) {
+    description = "Simulates world-days of nightly scripts with a scripted R and prints the feel report."
+    group = "application"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass = "app.radiance.sim.SimulateMain"
+    workingDir = projectDir
+    jvmArgs(nativeAccess)
+}
+
 // Opt-in contract tests against real providers whose keys are in the environment or .env.
 val liveTest by tasks.registering(Test::class) {
     description = "Runs @Tag(\"live\") contract tests against real LLM providers (costs a few cents)."
