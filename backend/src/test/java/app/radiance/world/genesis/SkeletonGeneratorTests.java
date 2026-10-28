@@ -88,6 +88,13 @@ class SkeletonGeneratorTests {
     assertThat(exPairs).isEqualTo(2);
     assertThat(s.relationships().stream().filter(e -> e.tags().contains("feud"))).hasSize(2);
     assertThat(s.relationships().stream().filter(e -> e.tags().contains("crush")).count()).isBetween(2L, 3L);
+    assertThat(s.relationships().stream().filter(e -> e.tags().contains("crush")))
+        .allSatisfy(e -> assertThat(e.attraction()).as("a crush means attraction").isGreaterThanOrEqualTo(65));
+    var offNetworkFirstNames = s.residents().stream().flatMap(r -> r.offNetwork().stream())
+        .map(p -> p.name().split(" ")[0]).toList();
+    assertThat(offNetworkFirstNames).as("no two people in the world share a first name").doesNotHaveDuplicates();
+    assertThat(offNetworkFirstNames).doesNotContainAnyElementsOf(
+        s.residents().stream().map(r -> r.name().split(" ")[0]).toList());
     assertThat(s.relationships().stream().filter(e -> e.tags().stream().anyMatch(t -> t.startsWith("debate_rival"))).count())
         .isBetween(3L, 6L);
     var jessicaMegan = edge(s, "jessica.vogel", "megan.quinlan");

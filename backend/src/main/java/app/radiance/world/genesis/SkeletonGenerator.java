@@ -513,6 +513,7 @@ public final class SkeletonGenerator {
     }
     specialTies(rng);
     balanceMeaningfulTies(rng);
+    crushes(rng);
   }
 
   private void specialTies(RandomSource rng) {
@@ -558,6 +559,7 @@ public final class SkeletonGenerator {
       used.add(jessica);
       used.add(jessicaPartner);
       tie(jessica, jessicaPartner, "FRIEND", true);
+      protectedPairs.add(pairKey(jessica, jessicaPartner)); // balancing must not undo the secret couple
       for (var pair : List.of(new String[] {jessica, jessicaPartner}, new String[] {jessicaPartner, jessica})) {
         var e = edge(pair[0], pair[1]);
         e.familiarity = 80;
@@ -613,7 +615,18 @@ public final class SkeletonGenerator {
       feud = new String[] {a, b};
       break;
     }
-    // Two or three one-sided crushes, always between a man and a woman.
+  }
+
+  /**
+   * Two or three one-sided crushes, always between a man and a woman. Placed after balancing so no
+   * later re-roll of the tie can erase the attraction.
+   */
+  private void crushes(RandomSource rng) {
+    String jessica = handleOf.get("Jessica Vogel");
+    var all = new ArrayList<>(traits.keySet());
+    var singles = roster.stream()
+        .filter(r -> r.status().kind() == StatusKind.SINGLE || r.status().kind() == StatusKind.DIVORCED)
+        .map(Roster.Resident::resolvedHandle).toList();
     int crushes = 2 + rng.nextInt(2);
     for (int tries = 0; tries < 300 && crushes > 0; tries++) {
       String a = rng.pick(all);
@@ -632,6 +645,7 @@ public final class SkeletonGenerator {
   }
 
   private String[] feud;
+  private final Set<String> protectedPairs = new HashSet<>();
 
   private boolean isFamily(String a, String b) {
     return hasTie(a, b) && "FAMILY".equals(edge(a, b).kind);
@@ -647,7 +661,7 @@ public final class SkeletonGenerator {
       if (meaningful.size() <= 12) continue;
       var demote = new ArrayList<>(meaningful.stream()
           .filter(e -> e.kind.equals("FRIEND") || e.kind.equals("COWORKER") || e.kind.equals("ACQUAINTANCE"))
-          .filter(e -> e.tags.isEmpty())
+          .filter(e -> e.tags.isEmpty() && !protectedPairs.contains(pairKey(e.from, e.to)))
           .sorted(Comparator.comparingDouble((Edge e) -> e.familiarity).thenComparing(e -> e.to))
           .toList());
       for (int i = 0; i < meaningful.size() - 12 && i < demote.size(); i++) {
@@ -1003,15 +1017,41 @@ public final class SkeletonGenerator {
 
   private String nameGroup(String heritage, RandomSource rng) {
     String h = heritage == null ? "" : heritage.toLowerCase();
-    for (String g : NAME_GROUPS) if (h.contains(g)) return rng.chance(0.75) ? g : "general";
+    for (String g : NAME_GROUPS) if (h.contains(g)) return rng.chance(0.85) ? g : "general";
     return "general";
+  }
+
+  /** First names already in the world: residents' and every off-network person's so far. */
+  private Set<String> usedFirstNames;
+
+  /** A first name nobody else in the cast has; a 30-person world with two Jims reads like a mistake. */
+  private String unique(List<String> options, List<String> fallback, RandomSource rng) {
+    if (usedFirstNames == null) {
+      usedFirstNames = new HashSet<>();
+      for (var r : roster) {
+        usedFirstNames.add(r.name().split(" ")[0]);
+        usedFirstNames.add(r.firstName());
+      }
+    }
+    var free = options.stream().filter(n -> !usedFirstNames.contains(n)).toList();
+    if (free.isEmpty()) free = fallback.stream().filter(n -> !usedFirstNames.contains(n)).toList();
+    String pick = rng.pick(free.isEmpty() ? options : free);
+    usedFirstNames.add(pick);
+    return pick;
   }
 
   @SuppressWarnings("unchecked")
   private String adultName(String group, Gender g, RandomSource rng) {
     var row = lib.table("names").stream().filter(t -> group.equals(t.get("group"))).findFirst()
         .orElseGet(() -> lib.table("names").stream().filter(t -> "general".equals(t.get("group"))).findFirst().orElseThrow());
-    return rng.pick((List<String>) row.get(g == Gender.M ? "male" : "female"));
+    return unique((List<String>) row.get(g == Gender.M ? "male" : "female"), everyName("names", g), rng);
+  }
+
+  /** Every name of that gender in a table: the fallback once a group's own list is used up. */
+  @SuppressWarnings("unchecked")
+  private List<String> everyName(String table, Gender g) {
+    return lib.table(table).stream()
+        .flatMap(t -> ((List<String>) t.get(g == Gender.M ? "male" : "female")).stream()).sorted().toList();
   }
 
   @SuppressWarnings("unchecked")
@@ -1019,6 +1059,6 @@ public final class SkeletonGenerator {
     int born = settings.referenceDate().getYear() - age;
     String era = born >= 2020 ? "2020s" : born >= 2010 ? "2010s" : "2000s";
     var row = lib.table("kid_names").stream().filter(t -> era.equals(t.get("era"))).findFirst().orElseThrow();
-    return rng.pick((List<String>) row.get(g == Gender.M ? "male" : "female"));
+    return unique((List<String>) row.get(g == Gender.M ? "male" : "female"), everyName("kid_names", g), rng);
   }
 }
