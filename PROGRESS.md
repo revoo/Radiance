@@ -1,17 +1,12 @@
 # Progress
 
 ## Resume here
-- Milestone: **M3 — Content library & genesis**, branch `m3-content-genesis` (from `main` at 0615af7).
-  **All steps done; stopped at ⏸ REVIEW** waiting for R. Don't start M4, and don't merge M3 into `main`
-  until R signs off.
+- **M3 approved by R (2026-10-27) and merged**: `main` fast-forwarded to `m3-content-genesis`.
+- Next: **M4** (SPEC §12), on a new branch from `main`. Start only when R says go.
 - The seed-7 prose is authored in-session (ADR 0017): `backend/src/main/resources/content/genesis/seed-7/`
   holds `residents-1.json` … `residents-6.json` (30 residents) and `ties-1.json` … `ties-3.json` (all 102
-  pairs). `AuthoredSeedTests` checks schema, entity ownership, the theme linter, word counts, full
-  coverage and that the secret couple reads as friends.
-- To rebuild the world bible: delete `backend/data/world-seed.*`, then
-  `./gradlew :backend:genesis -Pprofile=offline --args="--seed 7 --authored"` → `backend/data/world-seed.md`.
-- After review: apply R's notes (edit the authored files, re-run the line above and `AuthoredSeedTests`),
-  then fast-forward `main` once CI is green.
+  pairs). To rebuild the world bible: delete `backend/data/world-seed.*`, then
+  `./gradlew :backend:genesis -Pprofile=offline --args="--seed 7 --authored"`.
 - Half-done: nothing.
 
 ## M3 steps (all ✔)
@@ -25,7 +20,7 @@
 7. World bible with the Chicagoland section
 
 ## Done
-- **M3 — Content library & genesis** (2026-10-27), branch `m3-content-genesis` — at ⏸ REVIEW:
+- **M3 — Content library & genesis** (2026-10-27), branch `m3-content-genesis` — approved by R and merged:
   - AC: `genesis --seed 7` is deterministic at the skeleton level ✔ (byte-identical JSON; 15 random seeds
     property-tested); import yields exactly the roster's 30 residents with identities unchanged, 206
     relationship rows (150–300 ✔) and 8 active arcs including the pinned seeds ✔; invalid defs, an
@@ -152,7 +147,6 @@ Resolutions of spec issues raised at kickoff. Each gets an ADR when its mileston
 - `LlmRequest` has an extra `priority` component; `Usage.input` means uncached input (ADR 0014).
 
 ## Open questions for R
-- M3 REVIEW: see the review list in the M3 hand-off (cast sheet, world bible, quirk spread, prejudice).
 - Provider keys: which providers will you use? Put their keys in `.env` and run
   `./gradlew :backend:liveTest` (well under a cent at default models) to close M2's live ACs, including
   two unverified Anthropic details (Appendix C note).
