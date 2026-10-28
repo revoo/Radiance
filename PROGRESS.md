@@ -7,8 +7,9 @@
   1. ✔ Foundations: migration `0002_sim.sql` (actor constraints, impression hysteresis, interactions
      day); repositories for memory, notification, DM, weather and headlines; `FakeWeather` + named
      conditions; fixture headlines + selection; the calendar (holidays, observances, birthdays).
-  2. The in-memory world model: load from / write to the DB (dirty rows only), OU drift (exact),
-     temperament meter math (gains, mood, taper, bounds), relationship relaxation and decay.
+  2. ✔ The in-memory world model (`sim.model`: `SimWorld`, `Person`, `Edge`, `Arc`, `Thing`, `Item`,
+     `Intent`, `Tag`), `ModelStore` load / dirty-row write, OU drift (`Drift`, exact), temperament
+     meter math and lazy relaxation (`Meters`), `Brief` (the structure in `brief_json`).
   3. Airing: `WorldEngine.advanceTo`, validation, drop cascades, effects (deltas through temperament,
      memories, knowledge, notifications, arc transitions, constraints, entities).
   4. Planning: slices, presence/sessions, storyteller (tension, profiles, mix calibration), event
@@ -18,7 +19,21 @@
   5. Harness: `simulate` task, scripted R personas and his responders, impressions with hysteresis,
      feel report, plain-text script dump; property tests and feel bands in CI.
   6. Tune to the bands; PROGRESS; push; CI; ⏸ REVIEW (feel report + one day's script).
-- Half-done: nothing.
+- **Paused after step 2 at R's request (2026-10-27, end of day); resume with step 3.**
+- Design notes for steps 3–5 (decided, not yet built):
+  - Planning applies each slice's items to the copy through the same effects code airing uses (one
+    effects path); airing adds validation and drop cascades on top.
+  - Every storyteller incident is an `event` row (with `def_id`) plus its post; cooldowns, the
+    major-event cap and DRAMA-per-day are rebuilt from the event log at load (`ModelStore`).
+  - Planner code lives in `sim` next to the model, not in `story`, to avoid a sim↔story cycle;
+    `story` keeps canon persistence. Record as a deviation when step 4 lands.
+  - Event modifier semantics (SPEC is silent): trait `m` → ×m^((trait−50)/50); state `m` → ×m^value;
+    `quirk.*`, `weekend`, `has_kids`, `observance.*`, `season.*`, `temperament.*` → ×m when true;
+    `interest.*` → ×(1 + (m−1)·weight). Record in PROGRESS deviations.
+  - Feel bands that need the Pacer (first reaction ≤ 6 s, first comment ≤ 25 s, per-minute caps,
+    quiet gap) belong to M7; M4 asserts the rest. Seed 7 has only ~3 residents under 1 post/week
+    (Sam 0.10, Deepa 0.06, Daniel 0.14): check the "≥ 4 lurkers" band once the harness runs.
+- Half-done: nothing (tree clean at the step 2 commit).
 
 ## M3 steps (all ✔)
 1. `content` module: def schemas, YAML loader, cross-validation, blacklist, theme linter (ADR 0015)

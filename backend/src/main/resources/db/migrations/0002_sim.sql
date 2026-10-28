@@ -19,3 +19,7 @@ ALTER TABLE actor_state ADD COLUMN interactions_day TEXT;
 
 -- Cooldowns and caps read the recent log per actor and def.
 CREATE INDEX ix_event_def ON event(def_id, actor_id, world_time);
+
+-- The engine reloads the last few days of posts and comments (engagement, reply chains, airing checks).
+CREATE INDEX ix_post_created ON post(created_at);
+CREATE INDEX ix_comment_created ON comment(created_at);

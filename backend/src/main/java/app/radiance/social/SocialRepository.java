@@ -138,6 +138,16 @@ public final class SocialRepository {
     return COMMENTS.where(sql, "air_status = 'SCRIPTED' ORDER BY created_at, id");
   }
 
+  /** Aired posts since {@code from}, oldest first (uses {@code ix_post_created}). */
+  public List<PostRow> airedPostsSince(long from) {
+    return POSTS.where(sql, "created_at >= ? AND air_status = 'AIRED' ORDER BY created_at, id", from);
+  }
+
+  /** Aired comments since {@code from}, oldest first (uses {@code ix_comment_created}). */
+  public List<CommentRow> airedCommentsSince(long from) {
+    return COMMENTS.where(sql, "created_at >= ? AND air_status = 'AIRED' ORDER BY created_at, id", from);
+  }
+
   public List<ReactionRow> reactionsTo(ReactionRow.Target type, String targetId) {
     return REACTIONS.where(sql, "target_type = ? AND target_id = ?", type, targetId);
   }
