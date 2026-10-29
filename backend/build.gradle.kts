@@ -65,6 +65,18 @@ val genesis by tasks.registering(JavaExec::class) {
     jvmArgs(nativeAccess)
 }
 
+// The bake-off (SPEC §5.10): ./gradlew llm-bakeoff --args='--purpose=render-thread --models=haiku,<candidate> --fixtures=50'
+tasks.register<JavaExec>("llm-bakeoff") {
+    description = "Runs the same fixture packets through each candidate model; reports and a blind file in data/bakeoffs/."
+    group = "application"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass = "app.radiance.RadianceApplication"
+    workingDir = projectDir
+    systemProperty("radiance.mode", "bakeoff")
+    systemProperty("spring.profiles.active", providers.gradleProperty("profile").getOrElse("local"))
+    jvmArgs(nativeAccess)
+}
+
 // The tuning harness (SPEC §10): ./gradlew simulate --args='--days=30 --seed=42 --user=scripted:warm'. Offline.
 val simulate by tasks.registering(JavaExec::class) {
     description = "Simulates world-days of nightly scripts with a scripted R and prints the feel report."

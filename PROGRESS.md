@@ -17,7 +17,7 @@
   4. ✔ Script → jobs: the writer enqueues render jobs in air-time order; the harness renders a FULL day
      offline with a projected cost meter (tokens estimated, priced at the route's alias).
   5. ✔ Compaction (`REFLECT`) and relationship / impression summaries (`summary` route).
-  6. Bake-off harness: ~50 fixture packets from the seed-7 world (incl. a political and an ugly thread),
+  6. ✔ Bake-off harness: ~50 fixture packets from the seed-7 world (incl. a political and an ugly thread),
      `./gradlew llm-bakeoff`, per-model report and a blind A/B/C file in `data/bakeoffs/`.
   7. AC: 7 days of a constraint-heavy fixture (secret relationship, `budget_tight` vs a Bahamas trip,
      `injured:knee` vs a hike) against an adversarial fake renderer; zero blacklist mentions; prefix
