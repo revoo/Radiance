@@ -10,7 +10,7 @@
      `summary`), `ContextPacketBuilder` (prefix: world bible + cast directory; content: Today with
      today-so-far, people, canon, thread, briefs), memory retrieval scoring (§5.7), `RenderBatch`, and a
      FakeLlm render template so offline play shows text.
-  3. Render paths + validation: `RENDER_THREAD` / `RENDER_DM` jobs; ids, length, constraint linter +
+  3. ✔ Render paths + validation: `RENDER_THREAD` / `RENDER_DM` jobs; ids, length, constraint linter +
      judge, must_not_reveal, blacklist, major/minor facts, LLM-isms, softening, refusals, truncation,
      hard lines; fallbacks to a reaction or DROPPED; minor facts PENDING → ACTIVE at airing (VOID if
      dropped); gists into memories; recap lines on events of importance ≥ 6.

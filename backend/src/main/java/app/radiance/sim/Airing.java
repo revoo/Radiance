@@ -565,13 +565,15 @@ public final class Airing {
     }
     if (CLASH.contains(b.stance()) || "debate_exchange".equals(key)) {
       w.clashes.merge(Edge.pair(c.authorId(), receiver), 1, Integer::sum);
-      String text = author.name + " and " + w.person(receiver).name + " clashed in the comments"
+      // the renderer's gist, when the comment was written before it aired (SPEC §5.7)
+      String text = c.gist() != null ? c.gist() : author.name + " and " + w.person(receiver).name + " clashed in the comments"
           + (b.topics().isEmpty() ? "" : " about " + b.topics().getFirst());
       int imp = UGLY.contains(b.stance()) ? 5 : 3;
       out.memories.add(memory(w, c.authorId(), t, text, imp, List.of(receiver), List.of("clash"), null, c.id()));
       out.memories.add(memory(w, receiver, t, text, imp + 1, List.of(c.authorId()), List.of("clash"), null, c.id()));
     } else if ("FLIRT".equals(b.stance())) {
-      out.memories.add(memory(w, receiver, t, author.name + " flirted in the comments", 4, List.of(c.authorId()),
+      out.memories.add(memory(w, receiver, t, c.gist() != null ? c.gist() : author.name + " flirted in the comments", 4,
+          List.of(c.authorId()),
           List.of("flirt"), null, c.id()));
       jealousy(w, receiver, c.authorId(), t, ctx);
     }

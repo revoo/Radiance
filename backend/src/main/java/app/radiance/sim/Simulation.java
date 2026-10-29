@@ -316,6 +316,11 @@ public final class Simulation implements AutoCloseable {
     lane.run(() -> sql.commit(uow));
   }
 
+  /** The writer lane, for tools that write to the simulated world (rendering, the bake-off). */
+  public WriterLane sqlLane() {
+    return lane;
+  }
+
   @Override
   public void close() {
     lane.close();

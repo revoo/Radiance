@@ -127,13 +127,24 @@ public final class WorldEngine {
       String type = e.getKey().substring(0, i);
       String id = e.getKey().substring(i + 1);
       String status = e.getValue().name();
+      // facts the prose introduced become canon when their item airs, and void if it's dropped (SPEC P2)
+      if (!type.equals("REACTION") && !type.equals("EVENT")) {
+        uow.add("UPDATE fact SET status = ? WHERE origin_ref = ? AND status = 'PENDING'",
+            e.getValue() == AirStatus.AIRED ? "ACTIVE" : "VOID", id);
+      }
       switch (Script.Type.valueOf(type)) {
         case EVENT -> uow.add("UPDATE event SET air_status = ? WHERE id = ?", status, id);
         case POST -> {
           uow.add("UPDATE post SET air_status = ? WHERE id = ?", status, id);
           if (e.getValue() == AirStatus.DROPPED) uow.add("UPDATE post SET render_status = 'DROPPED' WHERE id = ?", id);
         }
-        case COMMENT -> uow.add("UPDATE comment SET air_status = ? WHERE id = ?", status, id);
+        case COMMENT -> {
+          uow.add("UPDATE comment SET air_status = ? WHERE id = ?", status, id);
+          // aired, rendered comments only (SPEC §4.3)
+          uow.add("UPDATE post SET comment_count = (SELECT COUNT(*) FROM comment c WHERE c.post_id = post.id"
+              + " AND c.air_status = 'AIRED' AND c.render_status = 'RENDERED') WHERE id = (SELECT post_id FROM comment"
+              + " WHERE id = ?)", id);
+        }
         case DM -> uow.add("UPDATE dm_message SET air_status = ? WHERE id = ?", status, id);
         case REACTION -> {
           var k = id.split(":", 3);

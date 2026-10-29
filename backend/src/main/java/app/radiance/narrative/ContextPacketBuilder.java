@@ -51,7 +51,7 @@ public final class ContextPacketBuilder {
   public record Packet(List<Block> prefix, String content, List<Brief> briefs, Map<String, Target> targets) {}
 
   /** What a brief renders into: a post, comment or DM row. */
-  public record Target(String type, String id, String authorId, String stance, String eventId, boolean recap) {}
+  public record Target(String type, String id, String authorId, String stance, String eventId, boolean recap, long time) {}
 
   static final long DAY = 86_400_000L;
   static final int MEMORIES = 6;
@@ -142,14 +142,14 @@ public final class ContextPacketBuilder {
     if (post.body() == null && renderable(post.renderStatus().name())) {
       boolean recap = recapWanted(post.eventId());
       briefs.add(postBrief(post, recap));
-      targets.put(post.id(), new Target("POST", post.id(), post.authorId(), null, post.eventId(), recap));
+      targets.put(post.id(), new Target("POST", post.id(), post.authorId(), null, post.eventId(), recap, post.createdAt()));
     }
     for (var c : comments) {
       if (c.body() != null || !renderable(c.renderStatus().name()) || c.airStatus().name().equals("DROPPED")) continue;
       var b = Brief.parse(c.briefJson());
       briefs.add(commentBrief(c, b));
       targets.put(c.id(), new Target(c.parentId() == null ? "COMMENT" : "REPLY", c.id(), c.authorId(), b.stance(), null,
-          false));
+          false, c.createdAt()));
       authors.add(c.authorId());
       if (b.toward() != null) authors.add(b.toward());
     }
@@ -176,7 +176,7 @@ public final class ContextPacketBuilder {
         var b = Brief.parse(m.briefJson());
         briefs.add(new Brief(b.defId(), b.category(), b.text(), b.stance(), b.toward(), b.interaction(), b.topics(),
             b.controversy(), b.drama(), extraWith(b.extra(), "briefId", m.id(), "kind", "DM", "author", handle(m.senderId()))));
-        targets.put(m.id(), new Target("DM", m.id(), m.senderId(), b.stance(), null, false));
+        targets.put(m.id(), new Target("DM", m.id(), m.senderId(), b.stance(), null, false, m.createdAt()));
       }
     }
     String content = fill("render-dm", today(t, null, authors), people(authors, t, budget), canon(authors, t),
@@ -487,6 +487,14 @@ public final class ContextPacketBuilder {
       lines.remove(i);
     }
     return String.join("\n", lines);
+  }
+
+  public String lengthBand(String actorId) {
+    return voice(actorId).path("lengthBand").asString("SHORT");
+  }
+
+  public long timeOf(Target t) {
+    return t.time();
   }
 
   String handle(String id) {
