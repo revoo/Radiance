@@ -120,7 +120,7 @@ final class ArcEngine {
     var ev = p.event("arc:" + arc.id + ":" + to + ":" + t, t, type, def.id(), roles.firstEntry().getValue(),
         roles.size() > 1 ? roles.lastEntry().getValue() : null, arc.id, importance, vis, EventRow.Source.ARC, payload);
     if (entry != null && entry.post() != null && entry.post() != PostOutput.NONE && entry.post() != PostOutput.DM
-        && vis == Visibility.PUBLIC && postsAllowed(p, importance)) {
+        && vis == Visibility.PUBLIC && postsAllowed(p, importance) && !atCap(p, roles.firstEntry().getValue(), t)) {
       var brief = new Brief(def.id(), def.category().name(), def.description() + " — " + to.replace('_', ' '), null, null,
           null, topics(def), 0.2, def.category() == Category.DRAMA ? 0.7 : 0.2,
           Plan.extra("valence", valence(entry.type()), "arcPhase", to, "media", entry.media(), "roles", roles));
@@ -380,7 +380,7 @@ final class ArcEngine {
     var ev = p.event("arc-start:" + arcId, t, entry != null ? entry.type() : "ARC_STARTED", defId, subject, other, arcId,
         importance, arc.visibility, EventRow.Source.ARC, payload);
     if (entry != null && entry.post() != null && entry.post() != PostOutput.NONE && entry.post() != PostOutput.DM
-        && arc.visibility == Visibility.PUBLIC && postsAllowed(p, importance)) {
+        && arc.visibility == Visibility.PUBLIC && postsAllowed(p, importance) && !atCap(p, subject, t)) {
       var brief = new Brief(defId, def.category().name(), def.description() + " — " + first.id().replace('_', ' '), null,
           null, null, topics(def), 0.2, 0.2, Plan.extra("valence", valence(entry.type()), "arcPhase", first.id(),
           "roles", roles, "data", data));
@@ -472,6 +472,8 @@ final class ArcEngine {
     if (author != null && !author.equals(subject) && arc.visibility != Visibility.PUBLIC
         && !arc.involves(author) && !p.w.knows("ARC", arc.id, author)) author = null;
     if (author == null) post = false;
+    // the daily cap holds for arcs too: past it, the beat is an event and a memory, not a post
+    if (post && atCap(p, author, t)) post = false;
     int importance = post ? 3 : 2;
     var ev = p.event("beat:" + arc.id + ":" + t, t, "ARC_BEAT", def.id(), subject, null, arc.id, importance,
         arc.visibility, EventRow.Source.ARC, payload);
@@ -491,6 +493,12 @@ final class ArcEngine {
   static Phase phase(ArcDef def, String id) {
     for (var ph : def.phases()) if (ph.id().equals(id)) return ph;
     return null;
+  }
+
+  /** {@code actorId} already has {@link Planner#MAX_POSTS_PER_DAY} posts on {@code t}'s world-day. */
+  static boolean atCap(Plan p, String actorId, long t) {
+    var person = p.w.people.get(actorId);
+    return person != null && Planner.postsOn(p, person, t) >= Planner.MAX_POSTS_PER_DAY;
   }
 
   private static boolean postsAllowed(Plan p, int importance) {
