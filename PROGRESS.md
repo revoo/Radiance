@@ -1,10 +1,24 @@
 # Progress
 
 ## Resume here
-- **M5 accepted by R on the offline results (2026-10-28) and merged**: `main` fast-forwarded to
-  `m5-narrative`. The live bake-off is skipped for V1 (decision 18).
-- Next: **M6 — Nightly batch (local)** (SPEC §12), on a new branch from `main`. **Don't start until R
-  says go.**
+- Milestone: **M6 — Nightly batch (local)**, branch `m6-nightly-batch` (from `main` at 487845f). R said
+  go on 2026-10-28.
+- Plan (each step ends green and committed; ✔ = done):
+  1. ✔ Spring wiring: `Knobs` from `radiance.*` config (batch, backfill, storyteller, social, romance,
+     drift, news), the `WorldEngine` and `ScriptWriter` beans, the config sections in `application.yml`.
+  2. `NightlyBatch` (§5.1): lease check (DEFERRED), headlines and weather, `advanceTo(now)` with a
+     backfill of any gap first (TIME_SKIP beyond max-gap), fidelity from idle time, the next script to
+     the next batch + slack, render jobs (parked ones leave the run PARTIAL), recap lines for every
+     event of importance ≥ 6, maintenance, and a `batch_run` report with the script's plan hash.
+  3. Scheduling: crons from `radiance.batch.crons`, overdue detection at startup and every minute (the
+     lease holder runs a deferred or missed batch in-process), the one-shot `./gradlew batch` command.
+  4. Genesis ends with a first batch: import 14 days back, then the batch backfills them and writes the
+     first script (SPEC §6.4 steps 5 and 8). OS-timer recipe in `docs/ops/nightly-batch.md`.
+  5. AC tests: a FULL day under 5 minutes and ≤ $0.15 (projected); twice is a no-op; kill mid-render and
+     re-run → same plan hash; a tiny `daily-usd` parks renders and they finish after the reset with
+     nothing lost or rendered twice; a held lease → DEFERRED, then the app runs it; two skipped nights
+     backfilled; recap lines. PROGRESS; push; CI.
+- M6 has no ⏸ REVIEW in SPEC §12; stop after it and wait for R before M7.
 - Half-done: nothing.
 
 ## M5 steps (all ✔)

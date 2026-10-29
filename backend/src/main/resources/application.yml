@@ -35,6 +35,43 @@ radiance:
     network-name: Radiance
     roster: content/cast/roster.yaml
     seed: 42                           # placeholder world row only; genesis picks the real seed
+  batch:
+    enabled: true                      # in-process scheduling; one-shot runs use ./gradlew batch
+    crons: ["0 9 * * *", "0 11 * * *"] # UTC; with the default time zone, 3–4 am and 5–6 am. The second run finishes or no-ops
+    script-slack: 6h                   # each script runs this far past the next batch, in case one fails
+    idle-reduced-after: 7d             # idle decay (§5.1)
+    idle-summary-after: 21d
+    pause-rendering-after: 60d
+    prime-time-boost: 1.5              # extra resident activity in your usual online hours
+    genesis-history: 14d               # genesis backfills this much history before the first script (§6.4)
+  backfill:
+    full-window: 48h
+    reduced-window: 7d
+    max-gap: 30d
+  storyteller:                         # live-tunable
+    profile: STEADY                    # STEADY | CHAOTIC | COZY
+    drama-intensity: 1.0
+    max-major-events-per-actor-per-14d: 2
+    max-drama-per-day: 2
+    event-mix: { DAILY: 0.25, NEWS: 0.25, LIFE: 0.15, HOBBY: 0.12, FAMILY: 0.12, SOCIAL: 0.08, DRAMA: 0.03 }
+  social:                              # live-tunable
+    user-salience: 2.0
+    max-user-share-of-attention: 0.5
+    content-kind-weights: { PHOTO: 1.3, TEXT: 1.0, LINK: 0.7, COMMENT: 0.45, REPLY: 0.3 }
+    impression-sensitivity: 1.0
+    crush-propensity: 1.0
+    dm-initiation-rate: 1.0
+    affinity-half-life: 21d
+  romance:                             # live-tunable
+    temptation: 1.0
+    affairs: true
+  drift:
+    mood-half-life: 36h
+    trait-half-life: 60d
+    max-trait-drift: 10
+  news:
+    headlines-per-sim-day: 25
+    region-mix: { NATIONAL: 0.60, WORLD: 0.30, LOCAL: 0.10 }   # share of news takes by region; live-tunable
   content:
     edge: 1.0                          # mockery, hostility and prejudice: 0 = wholesome, 1 = a real community, 2 = the worst comment section (§5.8)
     strong-prejudice: 4                # residents with real prejudice (§5.2); applies at genesis
