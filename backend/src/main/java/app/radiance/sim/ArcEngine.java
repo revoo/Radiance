@@ -468,6 +468,9 @@ final class ArcEngine {
     // a lurker's beats surface through a friend's post, as forced beats may (SPEC §5.4)
     if (post && kind != BeatKind.MENTION && person.routine.postsPerDay() < 0.15) kind = BeatKind.MENTION;
     if (kind == BeatKind.MENTION) author = p.w.closestFriend(subject);
+    // invariant 7: a private or secret beat only surfaces through someone who knows
+    if (author != null && !author.equals(subject) && arc.visibility != Visibility.PUBLIC
+        && !arc.involves(author) && !p.w.knows("ARC", arc.id, author)) author = null;
     if (author == null) post = false;
     int importance = post ? 3 : 2;
     var ev = p.event("beat:" + arc.id + ":" + t, t, "ARC_BEAT", def.id(), subject, null, arc.id, importance,

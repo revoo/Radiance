@@ -19,7 +19,7 @@ public record Headline(
 
   public Headline {
     topics = topics == null ? List.of() : List.copyOf(topics);
-    axisSignal = axisSignal == null ? Map.of() : Map.copyOf(axisSignal);
+    axisSignal = axisSignal == null ? Map.of() : java.util.Collections.unmodifiableMap(new java.util.TreeMap<>(axisSignal));
   }
 
   public boolean tragic() {

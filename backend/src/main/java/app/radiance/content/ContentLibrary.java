@@ -52,8 +52,10 @@ public record ContentLibrary(
 
   /** Arcs that may start: everything not blacklisted. */
   public Map<String, ArcDef> startableArcs() {
-    return Map.copyOf(arcs.entrySet().stream()
-        .filter(e -> !isBlacklisted(e.getKey()))
-        .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+    var out = new java.util.TreeMap<String, ArcDef>();
+    arcs.forEach((k, v) -> {
+      if (!isBlacklisted(k)) out.put(k, v);
+    });
+    return java.util.Collections.unmodifiableMap(out);
   }
 }

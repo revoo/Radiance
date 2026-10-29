@@ -88,12 +88,12 @@ public final class Person {
     this.gender = gender;
     this.birthDate = birthDate;
     this.circles = List.copyOf(circles);
-    this.traits = Map.copyOf(traits);
-    this.quirks = Set.copyOf(quirks);
-    this.interests = Map.copyOf(interests);
+    this.traits = java.util.Collections.unmodifiableMap(new java.util.TreeMap<>(traits));
+    this.quirks = java.util.Collections.unmodifiableSet(new java.util.TreeSet<>(quirks));
+    this.interests = java.util.Collections.unmodifiableMap(new java.util.TreeMap<>(interests));
     this.politics = politics;
     this.biases = List.copyOf(biases);
-    this.taste = Map.copyOf(taste);
+    this.taste = java.util.Collections.unmodifiableMap(new java.util.TreeMap<>(taste));
     this.temper = temper;
     this.routine = routine;
     this.faith = faith;

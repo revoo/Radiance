@@ -34,16 +34,25 @@ public enum Persona {
     this.commentsPerDay = commentsPerDay;
     this.replyRate = replyRate;
     this.features = features;
-    this.stances = stances;
+    this.stances = java.util.Collections.unmodifiableMap(new java.util.TreeMap<>(stances));
   }
 
   static Map<String, Double> features(double humor, double warmth, double intellect, double pretentiousness,
       double bragging, double vulnerability, double positivity, double edginess, double preachiness, double effort,
       double flirtiness) {
-    return Map.ofEntries(Map.entry("humor", humor), Map.entry("warmth", warmth), Map.entry("intellect", intellect),
-        Map.entry("pretentiousness", pretentiousness), Map.entry("bragging", bragging),
-        Map.entry("vulnerability", vulnerability), Map.entry("positivity", positivity), Map.entry("edginess", edginess),
-        Map.entry("preachiness", preachiness), Map.entry("effort", effort), Map.entry("flirtiness", flirtiness));
+    var m = new java.util.TreeMap<String, Double>();
+    m.put("humor", humor);
+    m.put("warmth", warmth);
+    m.put("intellect", intellect);
+    m.put("pretentiousness", pretentiousness);
+    m.put("bragging", bragging);
+    m.put("vulnerability", vulnerability);
+    m.put("positivity", positivity);
+    m.put("edginess", edginess);
+    m.put("preachiness", preachiness);
+    m.put("effort", effort);
+    m.put("flirtiness", flirtiness);
+    return java.util.Collections.unmodifiableMap(m);
   }
 
   /** {@code scripted:warm} or {@code warm}. */

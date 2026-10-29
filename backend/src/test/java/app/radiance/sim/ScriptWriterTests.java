@@ -85,6 +85,23 @@ class ScriptWriterTests {
     }
   }
 
+  /**
+   * The plan hash is the same in every JVM, not just within one: {@code Map.copyOf} and friends
+   * iterate in a per-JVM order, so any of them on the planning path would change this. Update the
+   * expected value only when planning itself changes on purpose.
+   */
+  @Test
+  void thePlanHashIsTheSameInEveryJvm() {
+    var run = day(dir.resolve("g"), LIB, 1);
+    try {
+      assertThat(run.result().planHash()).isEqualTo(GOLDEN);
+    } finally {
+      run.db().close();
+    }
+  }
+
+  static final String GOLDEN = "23651e4c6d8d6640";
+
   @Test
   void anArcBlacklistedMidWorldTakesItsAbandonExit() {
     var lib = ClasspathContent.load(List.of(new ContentProperties.BlacklistEntry("pregnancy", List.of("pregnant")),

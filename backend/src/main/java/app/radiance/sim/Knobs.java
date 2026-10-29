@@ -28,13 +28,20 @@ public record Knobs(
   public static Knobs defaults() {
     return new Knobs(36, 21, 2, 10,
         "STEADY", 1.0, 2, 2,
-        Map.of("DAILY", 0.25, "NEWS", 0.25, "LIFE", 0.15, "HOBBY", 0.12, "FAMILY", 0.12, "SOCIAL", 0.08,
+        sorted("DAILY", 0.25, "NEWS", 0.25, "LIFE", 0.15, "HOBBY", 0.12, "FAMILY", 0.12, "SOCIAL", 0.08,
             "DRAMA", 0.03),
-        2.0, 0.5, Map.of("PHOTO", 1.3, "TEXT", 1.0, "LINK", 0.7, "COMMENT", 0.45, "REPLY", 0.3),
+        2.0, 0.5, sorted("PHOTO", 1.3, "TEXT", 1.0, "LINK", 0.7, "COMMENT", 0.45, "REPLY", 0.3),
         1.0, 1.0, 1.0, 1.0,
         1.0, true,
-        25, Map.of("NATIONAL", 0.60, "WORLD", 0.30, "LOCAL", 0.10),
+        25, sorted("NATIONAL", 0.60, "WORLD", 0.30, "LOCAL", 0.10),
         7, 21, 60, 6, 1.5, 48, 7, 30);
+  }
+
+  /** Sorted, so every JVM iterates the mix in the same order. */
+  static Map<String, Double> sorted(Object... kv) {
+    var m = new java.util.TreeMap<String, Double>();
+    for (int i = 0; i < kv.length; i += 2) m.put((String) kv[i], ((Number) kv[i + 1]).doubleValue());
+    return java.util.Collections.unmodifiableMap(m);
   }
 
   public Knobs withProfile(String p) {

@@ -19,7 +19,7 @@ public record Brief(String defId, String category, String text, String stance, S
 
   public Brief {
     topics = topics == null ? List.of() : List.copyOf(topics);
-    extra = extra == null ? Map.of() : Map.copyOf(extra);
+    extra = extra == null ? Map.of() : java.util.Collections.unmodifiableMap(new java.util.TreeMap<>(extra));
   }
 
   public static final Brief NONE = new Brief(null, null, null, null, null, null, List.of(), 0, 0, Map.of());

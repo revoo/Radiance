@@ -40,7 +40,11 @@
     ~15 s.
   - Bands that need the Pacer (first reaction ≤ 6 s, first comment ≤ 25 s, per-minute caps, the quiet
     gap) are M7's and aren't measured yet.
-  - Tests: 157 in `check`.
+  - Tests: 158 in `check`.
+  - Fixed after merge (2026-10-28): CI caught a flaky property run. Cause: `Map.copyOf`/`Set.copyOf`/
+    `Map.of` iterate in a per-JVM order, so plans differed between processes (and a secret beat could
+    surface through a non-knower's mention). Content and sim collections are now ordered; a golden
+    plan-hash test guards it; a 30-seed sweep and the feel bands pass; the faithfulness ladder is steeper.
 - **M3 — Content library & genesis** (2026-10-27), branch `m3-content-genesis` — approved by R and merged:
   - AC: `genesis --seed 7` is deterministic at the skeleton level ✔ (byte-identical JSON; 15 random seeds
     property-tested); import yields exactly the roster's 30 residents with identities unchanged, 206

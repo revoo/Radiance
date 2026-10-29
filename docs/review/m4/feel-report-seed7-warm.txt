@@ -7,7 +7,7 @@ Posts per resident per day:
   @kristen.wagner         1.40 (routine 1.43)
   @donna.novotny          1.27 (routine 0.90)
   @lukas.petrauskas       1.43 (routine 1.13)
-  @jessica.vogel          2.37 (routine 2.19)
+  @jessica.vogel          2.33 (routine 2.19)
   @andre.whitfield        2.20 (routine 3.32)
   @nick.grabowski         0.43 (routine 0.62)
   @eleni.galanis          0.10 (routine 0.10)
@@ -32,29 +32,29 @@ Posts per resident per day:
   @ryan.kessler           0.90 (routine 0.53)
   @brian.whitlock         0.30 (routine 0.45)
 Comments per resident post: median 0.0, p90 2.0, max 7
-R's photo posts (20): median 11.5 reactions, 4.0 comments
-R's text posts (17): median 11.0 reactions, 3.0 comments
-R's comments (254): median 0.0 reactions, 0.0 answers
+R's photo posts (23): median 12.0 reactions, 6.0 comments
+R's text posts (15): median 11.0 reactions, 3.0 comments
+R's comments (263): median 0.0 reactions, 0.0 answers
 R's impression tags: {fan=19, finds_funny=5}
 Arcs started 5, resolved 1; drama events per week 4.2; debate threads 5
-Dropped at airing 0 of 689; continuity findings 0
-Estimated render cost if rendered: $0.031 per world-day (≈38 thread renders at $0.0008)
+Dropped at airing 0 of 682; continuity findings 0
+Estimated render cost if rendered: $0.031 per world-day (≈39 thread renders at $0.0008)
 Rows written per world-day (statements + inserted rows): mean 206, max 270
 
 Bands (SPEC §10, at default knobs):
   ✔ no resident posts more than 6 times a day — max 5
   ✔ at least 4 residents post less than once a week — 5 lurkers
-  ✔ R's median photo post: 10–18 reactions — 11.5
-  ✔ R's median photo post: 4–9 comments — 4.0
+  ✔ R's median photo post: 10–18 reactions — 12.0
+  ✔ R's median photo post: 4–9 comments — 6.0
   ✔ R's median text post: 6–12 reactions — 11.0
   ✔ R's median text post: 2–6 comments — 3.0
   ✔ R's median comment: 0–3 reactions, at most one answer — 0.0 / 0.0
-  ✔ no post of R's draws comments from more than 40% of the cast — 20%
-  ✘ each grouch's median meter toward the cast stays below 0 — @jake.zielinski -2.0, @amra.hodzic -13.8, @kendra.gaines 0.0
+  ✔ no post of R's draws comments from more than 40% of the cast — 27%
+  ✔ each grouch's median meter toward the cast stays below 0 — @jake.zielinski -2.0, @amra.hodzic -13.8, @kendra.gaines -0.0
   ✔ no sweetheart's meter for R drops below 0 — 46.2
   ✔ typical residents stay above −30 for R without arc events — 1.5
-  ✔ at least 10 resident pairs' meters shift by 15+ points — 20 pairs
-  ✔ least faithful third flirts 3× as often as the most faithful third — 8 vs 0
+  ✔ at least 10 resident pairs' meters shift by 15+ points — 18 pairs
+  ✔ least faithful third flirts 3× as often as the most faithful third — 11 vs 0
   ✔ nobody with faithfulness 80+ flirts back — 0
   ✔ at most one affair arc starts — 0
   ✔ TROLL, MOCK and HOSTILE are 5–12% of comments — 8%
@@ -66,4 +66,4 @@ Bands (SPEC §10, at default knobs):
   ✔ news takes split within 5 points of region-mix — LOCAL 9%/10%, NATIONAL 58%/60%, WORLD 32%/30%
   ✔ a world-day writes at most 20k rows — 270
 
-Plan hashes: 78d5bd950148176e 9e6c3d2eb85f000a 6d1fc15224f5e160 27b4e12e3c3d78ae 073a67df740f2815 2512490f5dd2c6d5 7836221137ef8d57 e91876237663e61e 27f55dede77a59cb cec45a913ca3e9b4 1777a4785cffc8be 88aa7ec070e8e6ec 377b8a7e7da6f30b 2dcdc6ca46a508d3 8b5b9c579216ce2b 23bc313b50a2979c 0ba393d7a9425cc8 ab558ed5fe610523 d7354c6fea8eafe9 ee551e0ea33ab765 fae81ce366dad87a 414f888be59a3919 a8dd9f9ea60fb9e0 a6d19d406dd6841f bb2a3a719550a9f1 7319910c17946ba2 e49b14ec74eca8aa 91d609423c2c225b 2f17d9bfe0154c85 d14bc4edfb1fe343
+Plan hashes: a7395f7e58fb097d c13ff25f5a5bbfe3 4380379d2b59b154 2800d015ff192d5a 54b8ac38684c8ef4 e7a3111e614cd831 6f6a8de0f6879762 af8c7d5f70d50f24 af7eef45e7afb27d 4ae2a8fb6fa899b2 a771585c638b4ae4 d78601be3249aeee 41f1b61aa4a4c4ea 81b46e79d4ebfd59 23dc8362b0d8eb64 6e65c424600ebf8b d05864cf87919753 fab476bf109ffca1 fccdf789f1b8de57 44ee0e837b0b7eed 7433abcc9bf60996 bc5f96a81288b5d0 f355b9056f6b2fb4 0745059dfe2202f1 8b541a059e497334 24476a5f5910b0a9 5c33c71ac1ef4b73 9b8a886961655f77 2aff92a2660372ec 13a8dac7cd287765

@@ -21,7 +21,8 @@ public record EventPayload(
     NewThing entity, List<List<String>> learned, String weather, String text) {
 
   public EventPayload {
-    participants = participants == null ? Map.of() : Map.copyOf(participants);
+    participants = participants == null ? Map.of()
+        : java.util.Collections.unmodifiableMap(new java.util.TreeMap<>(participants));
     effects = effects == null ? Map.of() : effects;
     learned = learned == null ? List.of() : List.copyOf(learned);
   }
@@ -38,7 +39,7 @@ public record EventPayload(
 
     public ArcChange {
       knowers = knowers == null ? List.of() : List.copyOf(knowers);
-      roles = roles == null ? Map.of() : Map.copyOf(roles);
+      roles = roles == null ? Map.of() : java.util.Collections.unmodifiableMap(new java.util.TreeMap<>(roles));
       data = data == null ? Map.of() : data;
     }
   }

@@ -12,6 +12,6 @@ public record Intent(String id, long dueAt, String actorId, String kind, String 
     Map<String, Object> payload, String causeEventId) {
 
   public Intent {
-    payload = payload == null ? Map.of() : Map.copyOf(payload);
+    payload = payload == null ? Map.of() : java.util.Collections.unmodifiableMap(new java.util.TreeMap<>(payload));
   }
 }

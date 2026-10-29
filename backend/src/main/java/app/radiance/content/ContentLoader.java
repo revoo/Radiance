@@ -73,8 +73,8 @@ public final class ContentLoader {
 
     if (!problems.isEmpty()) throw new ContentException(problems);
     var library = new ContentLibrary(quirks, events, arcs, constraints, temperament,
-        weather == null ? Map.of() : Map.copyOf(weather), relationships, engagement, pacing, roster,
-        tables, Map.copyOf(prompts), List.copyOf(blacklist));
+        weather == null ? Map.of() : Defs.ordered(weather), relationships, engagement, pacing, roster,
+        tables, Defs.ordered(prompts), List.copyOf(blacklist));
     problems.addAll(ContentValidator.validate(library));
     if (!problems.isEmpty()) throw new ContentException(problems);
     return library;
@@ -133,7 +133,7 @@ public final class ContentLoader {
         problems.add(path + ": " + e.getOriginalMessage() + location(e));
       }
     });
-    return Map.copyOf(out);
+    return Defs.ordered(out);
   }
 
   private static <T> T one(Map<String, String> files, String path, YAMLMapper mapper, Class<T> type,

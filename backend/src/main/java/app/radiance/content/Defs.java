@@ -17,12 +17,20 @@ public final class Defs {
 
   private Defs() {}
 
+  /**
+   * Content maps keep their YAML order: {@code Map.copyOf} iterates in an order that changes from JVM
+   * to JVM, and the planner's sums and picks must not.
+   */
+  static <K, V> Map<K, V> ordered(Map<K, V> m) {
+    return java.util.Collections.unmodifiableMap(new java.util.LinkedHashMap<>(m));
+  }
+
   static <T> List<T> list(List<T> l) {
     return l == null ? List.of() : List.copyOf(l);
   }
 
   static <K, V> Map<K, V> map(Map<K, V> m) {
-    return m == null ? Map.of() : Map.copyOf(m);
+    return m == null ? Map.of() : ordered(m);
   }
 
   // ---------------------------------------------------------------- quirks (SPEC §5.2, A.3)

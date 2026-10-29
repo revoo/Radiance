@@ -91,7 +91,7 @@ public final class Stances {
     if (b.attached()) {
       double f = b.trait("faithfulness");
       if (f >= 80) return NEVER;
-      base += f >= 50 ? -1.4 : f >= 25 ? 0.6 : 1.2;
+      base += f >= 50 ? -2.6 : f >= 25 ? 1.0 : 1.6;
       double sat = b.partnerSatisfaction == null ? 0.7 : b.partnerSatisfaction;
       base += (0.7 - sat) * 2;
       base += Math.log(Math.max(0.01, k.temptation()));
