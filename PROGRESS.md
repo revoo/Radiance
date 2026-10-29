@@ -1,11 +1,29 @@
 # Progress
 
 ## Resume here
-- **M4 approved by R (2026-10-28) and merged**: `main` fast-forwarded to `m4-simulation-engine`.
-- Next: **M5 — Narrative rendering** (SPEC §12), on a new branch from `main`. **Don't start until R says
-  go** (R asked to pause before M5). M5 needs a model API key for live checks; offline work runs on FakeLlm.
-- Review artifacts kept in `docs/review/m4/`; rerun the harness with
-  `./gradlew :backend:simulate --args='--days=30 --seed=7 --user=scripted:warm --dump-day=3 --out=data/sim-seed7'`.
+- Milestone: **M5 — Narrative rendering**, branch `m5-narrative` (from `main` at 011a9e7). R said go on
+  2026-10-28.
+- Plan (each step ends green and committed; ✔ = done):
+  1. ✔ Jobs: `JobRepository` and `JobRunner` (claim by priority and `run_after`, virtual threads, retries,
+     park WAITING on a budget window and resume at its reset, idempotent via `ux_job_active`).
+  2. Narrative core: prompt templates (`render-thread`, `render-dm`, `linter-judge`, `compaction`,
+     `summary`), `ContextPacketBuilder` (prefix: world bible + cast directory; content: Today with
+     today-so-far, people, canon, thread, briefs), memory retrieval scoring (§5.7), `RenderBatch`, and a
+     FakeLlm render template so offline play shows text.
+  3. Render paths + validation: `RENDER_THREAD` / `RENDER_DM` jobs; ids, length, constraint linter +
+     judge, must_not_reveal, blacklist, major/minor facts, LLM-isms, softening, refusals, truncation,
+     hard lines; fallbacks to a reaction or DROPPED; minor facts PENDING → ACTIVE at airing (VOID if
+     dropped); gists into memories; recap lines on events of importance ≥ 6.
+  4. Script → jobs: the writer enqueues render jobs in air-time order; the harness renders a FULL day
+     offline with a projected cost meter (tokens estimated, priced at the route's alias).
+  5. Compaction (`REFLECT`) and relationship / impression summaries (`summary` route).
+  6. Bake-off harness: ~50 fixture packets from the seed-7 world (incl. a political and an ugly thread),
+     `./gradlew llm-bakeoff`, per-model report and a blind A/B/C file in `data/bakeoffs/`.
+  7. AC: 7 days of a constraint-heavy fixture (secret relationship, `budget_tight` vs a Bahamas trip,
+     `injured:knee` vs a hike) against an adversarial fake renderer; zero blacklist mentions; prefix
+     byte-identical across calls and days; PROGRESS; push; CI; ⏸ REVIEW.
+- Live checks wait on keys (open question): the ≤ $0.15/day meter and ≥ 80% cache hits are verified
+  offline by projection only until a key is in `.env`; the REVIEW bake-off needs two providers' keys.
 - Half-done: nothing.
 
 ## M4 steps (all ✔)
