@@ -1,9 +1,8 @@
 # Progress
 
 ## Resume here
-- Milestone: **M6 — Nightly batch (local)**, branch `m6-nightly-batch` (from `main` at 487845f). **All steps
-  done.** M6 has no ⏸ REVIEW in SPEC §12, but R asked to pause between milestones: wait for R before
-  merging into `main` and before starting M7.
+- **M6 accepted by R (2026-10-28) and merged**: `main` fast-forwarded to `m6-nightly-batch`.
+- Next: **M7** (SPEC §12), on a new branch from `main`. **Don't start until R says go.**
 - Half-done: nothing.
 
 ## M6 steps (all ✔)
