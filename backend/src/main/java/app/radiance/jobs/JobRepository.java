@@ -62,6 +62,18 @@ public final class JobRepository {
     return TABLE.where(sql, "status = 'PENDING' AND run_after <= ? ORDER BY priority, run_after, id LIMIT ?", now, limit);
   }
 
+  /** Ready jobs of these kinds only, best first: a runner never takes work it can't do. */
+  public List<JobRow> ready(long now, int limit, java.util.Collection<String> kinds) {
+    if (kinds.isEmpty()) return List.of();
+    var args = new java.util.ArrayList<Object>();
+    args.add(now);
+    args.addAll(kinds);
+    args.add(limit);
+    String in = String.join(", ", java.util.Collections.nCopies(kinds.size(), "?"));
+    return TABLE.where(sql, "status = 'PENDING' AND run_after <= ? AND kind IN (" + in + ")"
+        + " ORDER BY priority, run_after, id LIMIT ?", args.toArray());
+  }
+
   public Optional<JobRow> find(String id) {
     return TABLE.one(sql, "id = ?", id);
   }

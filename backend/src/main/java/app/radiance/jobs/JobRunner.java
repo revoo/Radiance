@@ -64,7 +64,7 @@ public final class JobRunner {
       while (true) {
         long now = clock.nowMs();
         lane.run(() -> sql.commit(repo.wake(new UnitOfWork(), now, now - STALE_MS)));
-        var batch = repo.ready(now, parallelism).stream().filter(j -> handlers.containsKey(j.kind())).toList();
+        var batch = repo.ready(now, parallelism, new java.util.TreeSet<>(handlers.keySet()));
         if (batch.isEmpty()) break;
         var futures = new ArrayList<Future<Outcome>>();
         for (var job : batch) {

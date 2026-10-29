@@ -25,7 +25,7 @@ public final class Impressions {
 
   static final long HYSTERESIS = 2 * 86_400_000L;
   static final double MARGIN = 0.05;
-  static final List<String> TAGS = List.of("fan", "finds_funny", "finds_pretentious", "annoyed_by", "crush",
+  public static final List<String> TAGS = List.of("fan", "finds_funny", "finds_pretentious", "annoyed_by", "crush",
       "thinks_cool", "rival", "protective");
 
   /** One viewer sees one of R's posts or comments. */

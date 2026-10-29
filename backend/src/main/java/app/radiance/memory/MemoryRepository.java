@@ -43,6 +43,12 @@ public final class MemoryRepository {
         ownerId, from);
   }
 
+  /** An owner's uncompacted episodes before {@code before}, oldest first: what compaction condenses. */
+  public List<MemoryRow> olderEpisodes(String ownerId, long before) {
+    return TABLE.where(sql, "owner_id = ? AND compacted = 0 AND kind = 'EPISODE' AND world_time < ?"
+        + " ORDER BY world_time, id", ownerId, before);
+  }
+
   /** Every memory carrying a tag such as {@code clash}, for counters the engine keeps in memory. */
   public List<MemoryRow> tagged(String tag) {
     return TABLE.where(sql, "tags_json LIKE ? ORDER BY world_time, id", "%\"" + tag + "%");
