@@ -42,8 +42,17 @@ public final class JobRepository {
    * enqueueing twice — a re-run batch, a retried unit — changes nothing.
    */
   public UnitOfWork enqueue(UnitOfWork uow, String kind, String refId, int priority, long runAfter, long now) {
+    return enqueue(uow, kind, refId, priority, runAfter, now, now);
+  }
+
+  /**
+   * @param orderTime sorts jobs of one priority: render jobs pass their item's air time, so the
+   *     earliest items are ready first (SPEC §5.10)
+   */
+  public UnitOfWork enqueue(UnitOfWork uow, String kind, String refId, int priority, long runAfter, long now,
+      long orderTime) {
     // job ids are operational, not part of any plan: a nonce lets a finished job be enqueued again
-    String id = Ulid.next(now, RandomSource.seeded(System.nanoTime()).derive("job:" + kind + ":" + refId));
+    String id = Ulid.next(Math.max(0, orderTime), RandomSource.seeded(System.nanoTime()).derive("job:" + kind + ":" + refId));
     return uow.add("INSERT INTO job (id, kind, ref_id, priority, status, attempts, run_after, created_at)"
         + " VALUES (?, ?, ?, ?, 'PENDING', 0, ?, ?) ON CONFLICT DO NOTHING", id, kind, refId, priority, runAfter, now);
   }

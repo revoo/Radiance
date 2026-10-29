@@ -19,7 +19,8 @@ public final class SimulateMain {
     var persona = Persona.parse(arg(args, "user", "scripted:warm"));
     var out = Path.of(arg(args, "out", "data/sim"));
     String dump = arg(args, "dump-day", null);
-    var options = new Simulation.Options(seed, days, persona, out, Knobs.defaults(), ContinuityAuditor.Mode.RECORD);
+    var options = new Simulation.Options(seed, days, persona, out, Knobs.defaults(), ContinuityAuditor.Mode.RECORD,
+        s -> { });
     try (var sim = new Simulation(options).run()) {
       var report = FeelReport.of(sim);
       String text = report.render(sim);

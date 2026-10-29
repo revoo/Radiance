@@ -71,15 +71,19 @@ public final class Renderer {
 
   public Result renderThread(String postId) {
     var packet = packets.thread(postId, gateway.budgetFor(Purpose.RENDER_THREAD));
-    return render(Purpose.RENDER_THREAD, packet);
+    // fidelity (SPEC §5.1): REDUCED renders at most 3 comments per post, SUMMARY none
+    String fidelity = sql.queryOne("SELECT fidelity FROM post WHERE id = ?", List.of(postId), r -> r.str("fidelity"))
+        .orElse("FULL");
+    int cap = fidelity.equals("SUMMARY") ? 0 : fidelity.equals("REDUCED") ? 3 : Integer.MAX_VALUE;
+    return render(Purpose.RENDER_THREAD, packet, cap);
   }
 
   public Result renderDms(String threadId) {
     var packet = packets.dms(threadId, gateway.budgetFor(Purpose.RENDER_DM));
-    return render(Purpose.RENDER_DM, packet);
+    return render(Purpose.RENDER_DM, packet, Integer.MAX_VALUE);
   }
 
-  private Result render(Purpose purpose, ContextPacketBuilder.Packet packet) {
+  private Result render(Purpose purpose, ContextPacketBuilder.Packet packet, int commentCap) {
     var targets = new LinkedHashMap<>(packet.targets());
     if (targets.isEmpty()) return new Result(0, 0, 0, 0, List.of());
     var uow = new UnitOfWork();
@@ -89,11 +93,12 @@ public final class Renderer {
     // the degradation ladder (SPEC §5.15): fewer comments, then reactions only, then nothing rendered
     int rung = gateway.degradationLevel();
     if (rung >= 5) return new Result(0, 0, 0, 0, List.of("degraded: structure only"));
-    if (rung >= 3) {
+    int cap = Math.min(commentCap, rung >= 4 ? 0 : rung >= 3 ? 2 : Integer.MAX_VALUE);
+    if (cap < Integer.MAX_VALUE) {
       int kept = 0;
       for (var t : List.copyOf(targets.values())) {
         if (!t.type().equals("COMMENT") && !t.type().equals("REPLY")) continue;
-        if (rung >= 4 || ++kept > 2) {
+        if (++kept > cap) {
           fallBack(uow, t);
           targets.remove(t.id());
           fellBack++;

@@ -14,7 +14,7 @@
      judge, must_not_reveal, blacklist, major/minor facts, LLM-isms, softening, refusals, truncation,
      hard lines; fallbacks to a reaction or DROPPED; minor facts PENDING → ACTIVE at airing (VOID if
      dropped); gists into memories; recap lines on events of importance ≥ 6.
-  4. Script → jobs: the writer enqueues render jobs in air-time order; the harness renders a FULL day
+  4. ✔ Script → jobs: the writer enqueues render jobs in air-time order; the harness renders a FULL day
      offline with a projected cost meter (tokens estimated, priced at the route's alias).
   5. Compaction (`REFLECT`) and relationship / impression summaries (`summary` route).
   6. Bake-off harness: ~50 fixture packets from the seed-7 world (incl. a political and an ugly thread),

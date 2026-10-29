@@ -41,12 +41,20 @@ public final class ScriptWriter {
   private final WriterLane lane;
   private final WorldEngine engine;
   private final ContinuityAuditor.Mode auditMode;
+  private final app.radiance.kernel.WallClock wallClock;
 
   public ScriptWriter(Sql sql, WriterLane lane, WorldEngine engine, ContinuityAuditor.Mode auditMode) {
+    this(sql, lane, engine, auditMode, app.radiance.kernel.WallClock.system());
+  }
+
+  /** @param wallClock stamps the render jobs (jobs run on wall time, ADR 0010) */
+  public ScriptWriter(Sql sql, WriterLane lane, WorldEngine engine, ContinuityAuditor.Mode auditMode,
+      app.radiance.kernel.WallClock wallClock) {
     this.sql = sql;
     this.lane = lane;
     this.engine = engine;
     this.auditMode = auditMode;
+    this.wallClock = wallClock;
   }
 
   /** The nightly path: slices of one fidelity from {@code from} to {@code to}. */
@@ -98,6 +106,7 @@ public final class ScriptWriter {
       var dmRepo = new DmRepository(sql);
       dmRepo.saveThreads(uow, script.threads);
       dmRepo.saveMessages(uow, script.dms);
+      if (slice.fidelity() != null) renderJobs(uow, script, origin);
       uow.add("UPDATE world SET scripted_until = ? WHERE id = ? AND scripted_until < ?", slice.end(), Schema.WORLD_ID,
           slice.end());
       rows += script.size() + script.threads.size() + 1;
@@ -145,6 +154,24 @@ public final class ScriptWriter {
     var out = new TreeMap<String, Double>();
     for (String c : rows) if (c != null) out.merge(c, 1 / days, Double::sum);
     return out;
+  }
+
+  /**
+   * Render jobs for a slice's items, committed with them (SPEC §5.1 step 7): one RENDER_THREAD per post
+   * that gained a post or comments, one RENDER_DM per thread, in air-time order. A post whose job is
+   * still pending already covers its new comments.
+   */
+  private void renderJobs(UnitOfWork uow, Script script, ContentOrigin origin) {
+    var jobs = new app.radiance.jobs.JobRepository(sql);
+    int priority = origin == ContentOrigin.BACKFILL ? app.radiance.jobs.JobKinds.BACKFILL : app.radiance.jobs.JobKinds.SCRIPT;
+    long now = wallClock.nowMs();
+    var threads = new java.util.TreeMap<String, Long>();
+    script.posts.forEach(p -> threads.merge(p.id(), p.createdAt(), Math::min));
+    script.comments.forEach(c -> threads.merge(c.postId(), c.createdAt(), Math::min));
+    threads.forEach((post, t) -> jobs.enqueue(uow, app.radiance.jobs.JobKinds.RENDER_THREAD, post, priority, now, now, t));
+    var dms = new java.util.TreeMap<String, Long>();
+    script.dms.forEach(d -> dms.merge(d.threadId(), d.createdAt(), Math::min));
+    dms.forEach((thread, t) -> jobs.enqueue(uow, app.radiance.jobs.JobKinds.RENDER_DM, thread, priority, now, now, t));
   }
 
   /** Everything scripted that hasn't aired yet, to apply to the planning copy first. */

@@ -53,9 +53,18 @@ import java.util.TreeSet;
  */
 public final class Simulation implements AutoCloseable {
 
-  public record Options(long seed, int days, Persona persona, Path dir, Knobs knobs, ContinuityAuditor.Mode audit) {
+  /**
+   * @param afterBatch runs after each nightly script is written — the render step, when a tool that can
+   *     render (narrative) drives the simulation
+   */
+  public record Options(long seed, int days, Persona persona, Path dir, Knobs knobs, ContinuityAuditor.Mode audit,
+      java.util.function.Consumer<Simulation> afterBatch) {
     public static Options of(long seed, int days, Persona persona, Path dir) {
-      return new Options(seed, days, persona, dir, Knobs.defaults(), ContinuityAuditor.Mode.THROW);
+      return new Options(seed, days, persona, dir, Knobs.defaults(), ContinuityAuditor.Mode.THROW, s -> { });
+    }
+
+    public Options rendering(java.util.function.Consumer<Simulation> render) {
+      return new Options(seed, days, persona, dir, knobs, audit, render);
     }
   }
 
@@ -116,7 +125,7 @@ public final class Simulation implements AutoCloseable {
     var lease = new WriterLease(sql, sql, holder, clock, "simulate", Duration.ofDays(3650));
     if (!lease.tryAcquire()) throw new IllegalStateException("could not take the writer lease");
     this.engine = new WorldEngine(sql, lane, lib, o.knobs());
-    this.writer = new ScriptWriter(sql, lane, engine, o.audit());
+    this.writer = new ScriptWriter(sql, lane, engine, o.audit(), clock);
     this.responder = new LiveResponder(lib, o.knobs());
     this.weather = new FakeWeather(o.seed(), ZONE);
     this.fixtures = new FixtureHeadlines(o.seed(), ZONE, 100);
@@ -184,6 +193,12 @@ public final class Simulation implements AutoCloseable {
     days.add(new Day(today, fidelity, result.planHash(), result.posts() + result.comments() + result.reactions()
         + result.events() + result.dms(), aired.aired(), aired.dropped(), result.rowsWritten() + aired.rowsWritten(),
         result.findings(), aired.dropReasons()));
+    options.afterBatch().accept(this);
+  }
+
+  /** The clock jobs and leases run on in the harness (world time doubles as wall time here). */
+  public ManualClock clock() {
+    return clock;
   }
 
   /** R's usual online hours over the last 14 days (SPEC §5.1 prime time). */
