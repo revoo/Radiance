@@ -1,30 +1,30 @@
 # Progress
 
 ## Resume here
-- Milestone: **M5 — Narrative rendering**, branch `m5-narrative` (from `main` at 011a9e7). R said go on
-  2026-10-28.
-- Plan (each step ends green and committed; ✔ = done):
-  1. ✔ Jobs: `JobRepository` and `JobRunner` (claim by priority and `run_after`, virtual threads, retries,
-     park WAITING on a budget window and resume at its reset, idempotent via `ux_job_active`).
-  2. ✔ Narrative core: prompt templates (`render-thread`, `render-dm`, `linter-judge`, `compaction`,
-     `summary`), `ContextPacketBuilder` (prefix: world bible + cast directory; content: Today with
-     today-so-far, people, canon, thread, briefs), memory retrieval scoring (§5.7), `RenderBatch`, and a
-     FakeLlm render template so offline play shows text.
-  3. ✔ Render paths + validation: `RENDER_THREAD` / `RENDER_DM` jobs; ids, length, constraint linter +
-     judge, must_not_reveal, blacklist, major/minor facts, LLM-isms, softening, refusals, truncation,
-     hard lines; fallbacks to a reaction or DROPPED; minor facts PENDING → ACTIVE at airing (VOID if
-     dropped); gists into memories; recap lines on events of importance ≥ 6.
-  4. ✔ Script → jobs: the writer enqueues render jobs in air-time order; the harness renders a FULL day
-     offline with a projected cost meter (tokens estimated, priced at the route's alias).
-  5. ✔ Compaction (`REFLECT`) and relationship / impression summaries (`summary` route).
-  6. ✔ Bake-off harness: ~50 fixture packets from the seed-7 world (incl. a political and an ugly thread),
-     `./gradlew llm-bakeoff`, per-model report and a blind A/B/C file in `data/bakeoffs/`.
-  7. AC: 7 days of a constraint-heavy fixture (secret relationship, `budget_tight` vs a Bahamas trip,
-     `injured:knee` vs a hike) against an adversarial fake renderer; zero blacklist mentions; prefix
-     byte-identical across calls and days; PROGRESS; push; CI; ⏸ REVIEW.
-- Live checks wait on keys (open question): the ≤ $0.15/day meter and ≥ 80% cache hits are verified
-  offline by projection only until a key is in `.env`; the REVIEW bake-off needs two providers' keys.
+- Milestone: **M5 — Narrative rendering**, branch `m5-narrative` (from `main` at 011a9e7). **All steps
+  built offline; stopped at ⏸ REVIEW.** Don't merge into `main` until R signs off; don't start M6.
+- The REVIEW needs model keys: R reads ~50 rendered threads and a blind bake-off of at least two
+  providers' models. With keys in `.env`:
+  `./gradlew llm-bakeoff --args='--purpose=render-thread --models=haiku,<candidate> --fixtures=50'`
+  → `backend/data/bakeoffs/<time>/` (`report.md`, `side-by-side.md`, `key.json`, `outputs.json`).
+  Fixtures are saved once (`data/bakeoffs/fixtures-seed7-50.json`), so every model sees the same packets.
 - Half-done: nothing.
+
+## M5 steps (all ✔)
+1. Jobs: `JobRepository`, `JobRunner` (priorities, virtual threads, parking at a budget window, retries,
+   crash recovery; claims only kinds it handles)
+2. Narrative core: prompt templates, `ContextPacketBuilder` (stable prefix; Today / people / canon /
+   thread / briefs), `MemoryRetrieval`, `RenderBatch`, offline `FakeRender`
+3. `Renderer` (RENDER_THREAD / RENDER_DM) with `ProseChecks`: ids, length bands, constraint linter +
+   judge, must_not_reveal, blacklist, major facts, LLM-isms, softening, hard lines; re-render once, then
+   a reaction or DROPPED; refusals → reactions; facts PENDING → ACTIVE / VOID at airing; gists into
+   memories; recap lines
+4. Script → jobs (in air-time order, committed with each slice); fidelity caps; `ProjectedMeter`;
+   `RenderedRun`
+5. `Maintenance`: REFLECT compaction and SUMMARY refreshes
+6. `Bakeoff` + `llm-bakeoff` run mode
+7. AC tests: `ConstraintFixtureTests` (7 days, adversarial renderer), `RenderedRunTests`,
+   `ContextPacketTests`, `RendererTests`, `MaintenanceTests`, `BakeoffTests`
 
 ## M4 steps (all ✔)
 1. Foundations: migration `0002_sim.sql`; repositories for memory, notification, DM, weather, headlines,
@@ -50,6 +50,13 @@
 7. World bible with the Chicagoland section
 
 ## Done
+- **M5 — Narrative rendering** (2026-10-28), branch `m5-narrative` — at ⏸ REVIEW:
+  - AC, offline: zero unhandled constraint violations and zero blacklisted-theme mentions across 7
+    scripted days of the constraint-heavy fixture, against a renderer that writes every violation on
+    its first try ✔; a FULL day projects under $0.15 at haiku prices with one cached prefix and ≥ 80% of
+    calls hitting it ✔ (`ProjectedMeter`, estimated tokens). The real meter and the provider-reported
+    cache-hit rate need a key (open question).
+  - Tests: 173 in `check`.
 - **M4 — Simulation engine & the script (offline)** (2026-10-28), branch `m4-simulation-engine` — approved by R and merged:
   - AC (amended by decision 17): property tests green ✔ (random seeds × 30 days, auditor throwing,
     no spoilers checked after every advance, blacklist, attention, caps, invariant 11); feel-report
@@ -220,7 +227,20 @@ Resolutions of spec issues raised at kickoff. Each gets an ADR when its mileston
 - M4: the harness R answers some top-level comments on his posts; the Pacer, R's DMs and friend
   requests come in M7/M8. Render jobs are M5 (scripted rows stay `PLANNED`).
 
+- M5: threads over 25 items render in one call (the split by time window isn't built; scripts rarely
+  get there). Backfill canon ("established later — don't contradict") waits for newest-first backfill
+  rendering in M6. Packets use the committed world's state (mood, constraints) for scripted items.
+- M5: a softened MOCK/HOSTILE/TROLL item is re-rendered once and then kept (the spec sends it on to the
+  route's fallback model). The LLM-ism and hard-line lexicons live in `ProseChecks`, not content.
+- M5: offline cost and cache-hit checks are projections (`ProjectedMeter`: 4 chars/token, haiku prices,
+  a repeated prefix billed as a cache read).
+- M5: `sim.model` is a named interface so `narrative` can read the world; the harness gained an
+  after-batch hook and its clock; `JobKinds` names the job kinds.
+
 ## Open questions for R
+- **M5 REVIEW needs keys.** Which providers will you try? Put their keys in `.env`, run the bake-off
+  command in Resume here with `haiku` and at least one candidate (add the candidate alias under
+  `radiance.llm.models` first), then read `side-by-side.md` blind and pick the model for each purpose.
 - Provider keys: which providers will you use? Put their keys in `.env` and run
   `./gradlew :backend:liveTest` (well under a cent at default models) to close M2's live ACs, including
   two unverified Anthropic details (Appendix C note).

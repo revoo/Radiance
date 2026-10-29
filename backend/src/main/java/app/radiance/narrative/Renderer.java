@@ -42,7 +42,6 @@ public final class Renderer {
   public record Result(int rendered, int rerendered, int fellBack, int dropped, List<String> problems) {}
 
   private static final Logger log = LoggerFactory.getLogger(Renderer.class);
-  static final int MAX_BRIEFS = 25;
 
   private final Sql sql;
   private final WriterLane lane;
