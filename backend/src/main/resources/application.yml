@@ -7,6 +7,18 @@ spring:
   threads:
     virtual:
       enabled: true
+  mvc:
+    problemdetails:
+      enabled: true                    # errors as RFC 9457 problem details (SPEC §7)
+
+server:
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
+        secure: ${RADIANCE_SECURE_COOKIE:false}   # true outside localhost (SPEC §5.17)
+      timeout: 30d
 
 management:
   endpoints:

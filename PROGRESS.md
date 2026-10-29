@@ -3,8 +3,16 @@
 ## Resume here
 - Milestone: **M7 — Feed UI & live play**, branch `m7-live-play` (from `main` at fe5f8d7). R said go on
   2026-10-28 and asked to stop after M7 (it ends at ⏸ REVIEW: R plays for 20 minutes and tunes `pacing.yaml`).
-- Current step: 3 (REST + security). Steps 1–2 done and committed.
-- Half-done: nothing.
+- Current step: 4 (the SPA). Steps 1–3 done and committed; all 194 backend tests pass.
+- Half-done (not committed, on disk only; they don't typecheck yet): `frontend/src/api/client.ts`,
+  `api/types.ts`, `api/queries.ts`, `live/store.ts`, `live/useRadianceStream.ts`, `live/useHeartbeat.ts`,
+  `ui/format.ts`. Next: fix the strict-null errors (`cd frontend && npx tsc -b`), then write the components
+  and pages (Layout, Login, Onboarding, Feed + Composer + PostCard + ReactionPicker + comments, Post page,
+  Profile, Notifications, Recap card, New-posts pill, Backfill banner, toasts, `/director/pacer`), wire
+  `App.tsx`, Vitest tests (PostCard, ReactionPicker, useRadianceStream, typing row), then step 5.
+- Observation for R's review: right after onboarding, a post of R's draws about 3 reactions and fewer
+  than one comment within the 5-minute burst. The harness medians (11 / 3) also count residents finding
+  the post in later scripts. Responders are the M4-tuned engagement model's call, not the Pacer's.
 
 ## M7 steps
 1. ✔ Live core: the `Pacer` (pure: response curves, token buckets, priority release, breathing room, hooks,
@@ -12,7 +20,7 @@
    responders); `Appraiser` (the `appraisal` route, cached by content hash, offline heuristics)
 2. ✔ `LivePlay`: sessions and heartbeats, the real-time loop (airing, Pacer releases, typing indicators,
    hooks), live renders on virtual threads, SSE events, background backfill when no script covers now
-3. REST + security: JSON login with CSRF cookie and rate limiting; me, heartbeat, world, recap, profile,
+3. ✔ REST + security: JSON login with CSRF cookie and rate limiting; me, heartbeat, world, recap, profile,
    feed, posts, comments, reactions, people, notifications, stream; `GET /api/director/pacer`
 4. The SPA: shell, login, onboarding, feed (Recent/Top), PostCard, comments, ReactionPicker, composer,
    profile, notifications, recap card, new-posts pill, typing rows, backfill banner, `useRadianceStream`,

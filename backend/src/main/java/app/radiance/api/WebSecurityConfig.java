@@ -1,11 +1,16 @@
 package app.radiance.api;
 
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -13,10 +18,18 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Single-user web security (SPEC §5.17). The SPA login flow and CSRF wiring arrive in M7. Only for
- * the web app: one-shot command modes (genesis, and batch from M6) run without a web server.
+ * Single-user web security (SPEC §5.17): the SPA logs in with a form POST to {@code /api/auth/login}
+ * and gets JSON back, not a redirect; the session cookie is HttpOnly and SameSite=Lax (Secure outside
+ * localhost, from {@code server.servlet.session.cookie.secure}); a cookie-based CSRF token guards every
+ * write; failed logins are rate limited. Only for the web app: one-shot command modes run without one.
  */
 @Configuration
 @ConditionalOnWebApplication
@@ -44,14 +57,45 @@ class WebSecurityConfig {
   }
 
   @Bean
-  SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+  LoginLimiter loginLimiter() {
+    return new LoginLimiter();
+  }
+
+  @Bean
+  SecurityFilterChain securityFilterChain(HttpSecurity http, LoginLimiter limiter) throws Exception {
     return http.authorizeHttpRequests(
             auth ->
-                auth.requestMatchers("/actuator/health", "/actuator/health/**")
+                auth.requestMatchers("/actuator/health", "/actuator/health/**", "/api/auth/login")
                     .permitAll()
                     .anyRequest()
                     .authenticated())
-        .formLogin(Customizer.withDefaults())
+        .csrf(csrf -> csrf.spa())
+        .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
+        .addFilterBefore(limiter, UsernamePasswordAuthenticationFilter.class)
+        .formLogin(form -> form.loginProcessingUrl("/api/auth/login")
+            .successHandler((req, res, auth) -> {
+              limiter.succeeded(req);
+              res.setStatus(HttpStatus.OK.value());
+              res.setContentType("application/json");
+              res.getWriter().write("{\"username\":\"" + auth.getName().replace("\"", "") + "\"}");
+            })
+            .failureHandler((req, res, e) -> {
+              limiter.failed(req);
+              Problems.write(res, HttpStatus.UNAUTHORIZED, "Wrong username or password.");
+            }))
+        .logout(out -> out.logoutUrl("/api/auth/logout")
+            .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.NO_CONTENT)))
+        .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
         .build();
+  }
+
+  /** Renders the CSRF cookie on every response, so the SPA has a token before its first write. */
+  static final class CsrfCookieFilter extends OncePerRequestFilter {
+    @Override
+    protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
+        throws ServletException, IOException {
+      if (req.getAttribute(CsrfToken.class.getName()) instanceof CsrfToken token) token.getToken();
+      chain.doFilter(req, res);
+    }
   }
 }

@@ -28,6 +28,6 @@ class HealthEndpointTests {
 
   @Test
   void everythingElseNeedsALogin() throws Exception {
-    mvc.perform(get("/api/me")).andExpect(status().is3xxRedirection());
+    mvc.perform(get("/api/me")).andExpect(status().isUnauthorized());
   }
 }
