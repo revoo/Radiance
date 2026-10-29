@@ -38,12 +38,16 @@ public class GenesisService {
   private final Path seedFile;
   private final int grouches;
   private final int sweethearts;
+  private final java.time.Duration history;
+  private final org.springframework.context.ApplicationEventPublisher events;
 
   public GenesisService(ContentLibrary lib, ContentProperties content, WorldProperties world,
       LlmGateway gateway, FakeResponses fakes, Sql sql, WriterLane lane, LeaseHolder lease, WallClock clock,
       @Value("${radiance.genesis.seed-file:data/world-seed.json}") String seedFile,
       @Value("${radiance.social.temperament.grouches:3}") int grouches,
-      @Value("${radiance.social.temperament.sweethearts:5}") int sweethearts) {
+      @Value("${radiance.social.temperament.sweethearts:5}") int sweethearts,
+      @Value("${radiance.batch.genesis-history:14d}") String history,
+      org.springframework.context.ApplicationEventPublisher events) {
     this.lib = lib;
     this.content = content;
     this.world = world;
@@ -55,6 +59,8 @@ public class GenesisService {
     this.seedFile = Path.of(seedFile);
     this.grouches = grouches;
     this.sweethearts = sweethearts;
+    this.history = app.radiance.content.Durations.parse(history);
+    this.events = events;
     GenesisFakes.register(fakes);
   }
 
@@ -117,7 +123,12 @@ public class GenesisService {
     if (!lease.isHeld()) {
       throw new IllegalStateException("couldn't get the writer lease; is another process writing the world?");
     }
-    return new SeedImporter(sql, lane, lib).importSeed(SeedFiles.read(seedFile), clock.nowMs());
+    // the world starts genesis-history back: the first batch backfills those days, then writes the
+    // first script (SPEC §6.4 steps 5 and 8)
+    var seed = SeedFiles.read(seedFile);
+    var result = new SeedImporter(sql, lane, lib).importSeed(seed, clock.nowMs() - history.toMillis());
+    events.publishEvent(new app.radiance.world.GenesisImported(seed.seed(), result.residents()));
+    return result;
   }
 
   public Summary summary(WorldSeed s) {

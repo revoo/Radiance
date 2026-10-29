@@ -1,25 +1,18 @@
 # Progress
 
 ## Resume here
-- Milestone: **M6 — Nightly batch (local)**, branch `m6-nightly-batch` (from `main` at 487845f). R said
-  go on 2026-10-28.
-- Plan (each step ends green and committed; ✔ = done):
-  1. ✔ Spring wiring: `Knobs` from `radiance.*` config (batch, backfill, storyteller, social, romance,
-     drift, news), the `WorldEngine` and `ScriptWriter` beans, the config sections in `application.yml`.
-  2. ✔ `NightlyBatch` (§5.1): lease check (DEFERRED), headlines and weather, `advanceTo(now)` with a
-     backfill of any gap first (TIME_SKIP beyond max-gap), fidelity from idle time, the next script to
-     the next batch + slack, render jobs (parked ones leave the run PARTIAL), recap lines for every
-     event of importance ≥ 6, maintenance, and a `batch_run` report with the script's plan hash.
-  3. Scheduling: crons from `radiance.batch.crons`, overdue detection at startup and every minute (the
-     lease holder runs a deferred or missed batch in-process), the one-shot `./gradlew batch` command.
-  4. Genesis ends with a first batch: import 14 days back, then the batch backfills them and writes the
-     first script (SPEC §6.4 steps 5 and 8). OS-timer recipe in `docs/ops/nightly-batch.md`.
-  5. AC tests: a FULL day under 5 minutes and ≤ $0.15 (projected); twice is a no-op; kill mid-render and
-     re-run → same plan hash; a tiny `daily-usd` parks renders and they finish after the reset with
-     nothing lost or rendered twice; a held lease → DEFERRED, then the app runs it; two skipped nights
-     backfilled; recap lines. PROGRESS; push; CI.
-- M6 has no ⏸ REVIEW in SPEC §12; stop after it and wait for R before M7.
+- Milestone: **M6 — Nightly batch (local)**, branch `m6-nightly-batch` (from `main` at 487845f). **All steps
+  done.** M6 has no ⏸ REVIEW in SPEC §12, but R asked to pause between milestones: wait for R before
+  merging into `main` and before starting M7.
 - Half-done: nothing.
+
+## M6 steps (all ✔)
+1. Spring wiring: `SimConfig` (`Knobs` from `radiance.*`, `WorldEngine`, `ScriptWriter`); the config sections
+2. `NightlyBatch` (§5.1) with `batch_run` reports and the script's plan hash; `BatchScheduler`
+3. One-shot `./gradlew batch` (`BatchCommand`), DEFERRED when the app holds the lease
+4. Genesis imports 14 days back and publishes `GenesisImported`; `FirstBatch` backfills and writes the
+   first script. OS-timer recipe: `docs/ops/nightly-batch.md`
+5. AC tests: `NightlyBatchTests`, `FirstBatchTests`
 
 ## M5 steps (all ✔)
 1. Jobs: `JobRepository`, `JobRunner` (priorities, virtual threads, parking at a budget window, retries,
@@ -61,6 +54,16 @@
 7. World bible with the Chicagoland section
 
 ## Done
+- **M6 — Nightly batch (local)** (2026-10-28), branch `m6-nightly-batch`:
+  - AC: a FULL night writes and renders in seconds offline and projects under $0.15 at haiku prices ✔;
+    a second run the same night plans, renders and calls nothing ✔; a run killed mid-render is
+    completed by the next with the same plan hash ✔; a tiny daily budget leaves the night PARTIAL with
+    renders parked, and after the reset they finish with nothing lost or rendered twice ✔; a one-shot
+    run with the lease held elsewhere records DEFERRED, and the lease holder's scheduler runs it ✔; two
+    skipped nights are backfilled by the next run ✔; every event of importance ≥ 6 has a recap line ✔.
+  - Verified end to end offline: `genesis --import` → first batch backfilled 336 h in 78 slices and
+    wrote the first script; `./gradlew batch` the same night → DONE, nothing to do.
+  - Tests: 180 in `check`.
 - **M5 — Narrative rendering** (2026-10-28), branch `m5-narrative` — accepted by R on the offline results and merged:
   - AC, offline: zero unhandled constraint violations and zero blacklisted-theme mentions across 7
     scripted days of the constraint-heavy fixture, against a renderer that writes every violation on
@@ -252,6 +255,15 @@ Resolutions of spec issues raised at kickoff. Each gets an ADR when its mileston
   a repeated prefix billed as a cache read).
 - M5: `sim.model` is a named interface so `narrative` can read the world; the harness gained an
   after-batch hook and its clock; `JobKinds` names the job kinds.
+
+- M6: headlines and weather in the batch come from the offline sources (fixture headlines,
+  `FakeWeather`) until M10 wires RSS and Open-Meteo. Images (§5.13) wait for M12.
+- M6: a one-shot run that finds the lease held records its DEFERRED `batch_run` row through `SqlAdmin`
+  (it has no lease to write through the lane).
+- M6: events of importance ≥ 6 that have no rendered post get a recap line built from the event's own
+  words (the renderer writes the rest).
+- M6: a batch resets jobs left RUNNING by a killed run before it renders: it holds the lease, so nobody
+  else is running them. Backfill render jobs run newest first, scripts earliest first.
 
 ## Open questions for R
 - Provider keys: which providers will you use? Put their keys in `.env` and run

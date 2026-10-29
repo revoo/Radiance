@@ -65,6 +65,20 @@ val genesis by tasks.registering(JavaExec::class) {
     jvmArgs(nativeAccess)
 }
 
+// The nightly batch, one-shot (SPEC §5.1): ./gradlew batch [-Pprofile=offline]. Runs `batch nightly` and exits;
+// defers to the running app if it holds the writer lease. See docs/ops/nightly-batch.md for an OS timer.
+val batch by tasks.registering(JavaExec::class) {
+    description = "Runs the nightly batch once and exits (DEFERRED if the app holds the writer lease)."
+    group = "application"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass = "app.radiance.RadianceApplication"
+    workingDir = projectDir
+    args("batch", "nightly")
+    systemProperty("radiance.mode", "batch")
+    systemProperty("spring.profiles.active", providers.gradleProperty("profile").getOrElse("local"))
+    jvmArgs(nativeAccess)
+}
+
 // The bake-off (SPEC §5.10): ./gradlew llm-bakeoff --args='--purpose=render-thread --models=haiku,<candidate> --fixtures=50'
 tasks.register<JavaExec>("llm-bakeoff") {
     description = "Runs the same fixture packets through each candidate model; reports and a blind file in data/bakeoffs/."
