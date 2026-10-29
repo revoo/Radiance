@@ -12,6 +12,7 @@ import app.radiance.content.Vocab.StatusKind;
 import app.radiance.content.Vocab.Temperament;
 import app.radiance.graph.RelationshipRepository;
 import app.radiance.graph.RelationshipRow;
+import app.radiance.kernel.AirStatus;
 import app.radiance.kernel.Json;
 import app.radiance.memory.MemoryRepository;
 import app.radiance.persistence.Schema;
@@ -158,21 +159,13 @@ public final class ModelStore {
 
     var social = new SocialRepository(sql);
     for (var p : social.airedPostsSince(w.committedUntil() - ITEM_WINDOW)) {
-      var b = Brief.parse(p.briefJson());
-      var item = new Item(p.id(), Item.Type.POST, p.authorId(), null, null, null, p.createdAt(), p.airStatus(),
-          p.kind().name(), b.category(), b.defId(), b.stance(), b.topics(), b.controversy(), b.drama(), p.importance(),
-          p.arcId(), p.eventId(), p.headlineId(), p.audience() == app.radiance.social.PostRow.Audience.PUBLIC);
-      item.commentCount = p.commentCount();
-      Briefs.decorate(item, b);
+      var item = postItem(p);
       world.items.put(p.id(), item);
       if (p.headlineId() != null) world.fired.computeIfAbsent(p.authorId() + "|news:" + p.headlineId(), k -> new TreeSet<>())
           .add(p.createdAt());
     }
     for (var c : social.airedCommentsSince(w.committedUntil() - ITEM_WINDOW)) {
-      var b = Brief.parse(c.briefJson());
-      var item = new Item(c.id(), Item.Type.COMMENT, c.authorId(), c.postId(), c.parentId(), b.toward(), c.createdAt(),
-          c.airStatus(), c.parentId() == null ? "COMMENT" : "REPLY", b.category(), b.defId(), b.stance(), b.topics(),
-          b.controversy(), b.drama(), 1, null, null, null, false);
+      var item = commentItem(c);
       world.items.put(c.id(), item);
       var post = world.items.get(c.postId());
       if (post != null) post.commenters.add(c.authorId());
@@ -182,6 +175,49 @@ public final class ModelStore {
           Json.MAPPER.readValue(i.payloadJson(), new TypeReference<Map<String, Object>>() {}), i.causeEventId()));
     }
     return world;
+  }
+
+  static Item postItem(app.radiance.social.PostRow p) {
+    var b = Brief.parse(p.briefJson());
+    var item = new Item(p.id(), Item.Type.POST, p.authorId(), null, null, null, p.createdAt(), p.airStatus(),
+        p.kind().name(), b.category(), b.defId(), b.stance(), b.topics(), b.controversy(), b.drama(), p.importance(),
+        p.arcId(), p.eventId(), p.headlineId(), p.audience() == app.radiance.social.PostRow.Audience.PUBLIC);
+    item.commentCount = p.commentCount();
+    Briefs.decorate(item, b);
+    return item;
+  }
+
+  static Item commentItem(app.radiance.social.CommentRow c) {
+    var b = Brief.parse(c.briefJson());
+    return new Item(c.id(), Item.Type.COMMENT, c.authorId(), c.postId(), c.parentId(), b.toward(), c.createdAt(),
+        c.airStatus(), c.parentId() == null ? "COMMENT" : "REPLY", b.category(), b.defId(), b.stance(), b.topics(),
+        b.controversy(), b.drama(), 1, null, null, null, false);
+  }
+
+  /**
+   * An aired post or comment older than the in-memory window, loaded back into {@code world} (R can
+   * react to or comment on anything in his feed), with its post's commenters and reactors.
+   */
+  public Item fetch(SimWorld world, String id) {
+    var social = new SocialRepository(sql);
+    var post = social.post(id).filter(p -> p.airStatus() == AirStatus.AIRED);
+    if (post.isPresent()) {
+      var item = postItem(post.get());
+      item.reactionCounts.putAll(Json.MAPPER.readValue(post.get().reactionCountsJson(),
+          new TypeReference<Map<String, Integer>>() {}));
+      sql.query("SELECT DISTINCT author_id FROM comment WHERE post_id = ? AND air_status = 'AIRED'", List.of(id),
+          r -> r.str("author_id")).forEach(item.commenters::add);
+      sql.query("SELECT actor_id FROM reaction WHERE target_type = 'POST' AND target_id = ? AND air_status = 'AIRED'",
+          List.of(id), r -> r.str("actor_id")).forEach(item.reactors::add);
+      world.items.put(id, item);
+      return item;
+    }
+    var comment = social.comment(id).filter(c -> c.airStatus() == AirStatus.AIRED);
+    if (comment.isEmpty()) return null;
+    if (!world.items.containsKey(comment.get().postId())) fetch(world, comment.get().postId());
+    var item = commentItem(comment.get());
+    world.items.put(id, item);
+    return item;
   }
 
   private Person person(ActorRow a, PersonaRow p, Map<String, String> idByHandle) {

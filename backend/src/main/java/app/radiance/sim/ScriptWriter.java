@@ -11,6 +11,7 @@ import app.radiance.persistence.Sql;
 import app.radiance.persistence.UnitOfWork;
 import app.radiance.persistence.WriterLane;
 import app.radiance.sim.model.Intent;
+import app.radiance.sim.model.SimWorld;
 import app.radiance.social.SocialRepository;
 import app.radiance.story.EventRepository;
 import app.radiance.weather.WeatherBook;
@@ -68,7 +69,7 @@ public final class ScriptWriter {
     ContentLibrary lib = engine.lib();
     Knobs k = engine.knobs();
     var committed = engine.world();
-    var copy = committed.copy();
+    var copy = engine.locked(SimWorld::copy);
     var noCheck = new Airing.Ctx(lib, k, weather, false, Airing.Lookup.NONE);
     Airing.air(copy, pending().entries(), noCheck);
     if (slices.isEmpty()) return new Result(hash(sha()), 0, 0, 0, 0, 0, 0, copy.intents.size(), List.of(), 0);

@@ -8,14 +8,22 @@ import app.radiance.messenger.DmRepository;
 import app.radiance.persistence.Sql;
 import app.radiance.persistence.UnitOfWork;
 import app.radiance.persistence.WriterLane;
+import app.radiance.sim.model.Item;
 import app.radiance.sim.model.SimWorld;
 import app.radiance.social.NotificationRepository;
+import app.radiance.social.NotificationRow;
 import app.radiance.social.SocialRepository;
 import app.radiance.story.EventRepository;
 import app.radiance.weather.WeatherBook;
 import app.radiance.weather.WeatherRepository;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * The only way committed time moves (SPEC §5.1, P3): {@link #advanceTo} airs every scripted item due
@@ -24,9 +32,12 @@ import java.util.List;
  */
 public final class WorldEngine {
 
-  /** What one advance did. */
+  /**
+   * What one advance did. {@code airedKeys} are {@code TYPE:id} of everything that aired, in air order;
+   * {@code notes} are the notifications it created, for live play's stream.
+   */
   public record Report(int aired, int dropped, int memories, int notifications, List<String> dropReasons,
-      long rowsWritten) {}
+      long rowsWritten, List<String> airedKeys, List<String> droppedKeys, List<NotificationRow> notes) {}
 
   static final long HOUR = 3_600_000L;
 
@@ -36,6 +47,9 @@ public final class WorldEngine {
   private final Knobs knobs;
   private final ModelStore store;
   private SimWorld world;
+  // live play, the in-process batch and R's actions all touch the committed world: one at a time
+  private final ReentrantLock lock = new ReentrantLock();
+  private final List<Consumer<Report>> listeners = new CopyOnWriteArrayList<>();
 
   public WorldEngine(Sql sql, WriterLane lane, ContentLibrary lib, Knobs knobs) {
     this.sql = sql;
@@ -47,12 +61,66 @@ public final class WorldEngine {
 
   /** The committed world, loaded on first use (and again after {@link #reload}, e.g. a new lease). */
   public SimWorld world() {
-    if (world == null) world = store.load();
-    return world;
+    lock.lock();
+    try {
+      if (world == null) world = store.load();
+      return world;
+    } finally {
+      lock.unlock();
+    }
   }
 
   public void reload() {
-    world = null;
+    lock.lock();
+    try {
+      world = null;
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  /** Runs {@code f} on the committed world with nobody else airing or mutating it. */
+  public <T> T locked(Function<SimWorld, T> f) {
+    lock.lock();
+    try {
+      return f.apply(world());
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  /**
+   * Called after every advance that aired or dropped something, while the world is still locked: keep
+   * it quick, and never wait on another thread that needs the engine.
+   */
+  public void onAired(Consumer<Report> listener) {
+    listeners.add(listener);
+  }
+
+  /** A committed post or comment by id: in memory, or loaded back from the database. */
+  public Item item(String id) {
+    return locked(w -> {
+      var item = w.items.get(id);
+      return item != null ? item : store.fetch(w, id);
+    });
+  }
+
+  /**
+   * {@link #advanceTo}, unless someone else (an in-process batch's airing) holds the world for longer
+   * than {@code waitMs}: then nothing, and the caller reads what has aired so far.
+   */
+  public Optional<Report> tryAdvanceTo(long t, long waitMs) {
+    try {
+      if (!lock.tryLock(waitMs, TimeUnit.MILLISECONDS)) return Optional.empty();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return Optional.empty();
+    }
+    try {
+      return Optional.of(advanceTo(t));
+    } finally {
+      lock.unlock();
+    }
   }
 
   public Knobs knobs() {
@@ -70,11 +138,25 @@ public final class WorldEngine {
   }
 
   public Report advanceTo(long t) {
+    lock.lock();
+    try {
+      var r = advance(t);
+      if (!r.airedKeys().isEmpty() || !r.droppedKeys().isEmpty()) listeners.forEach(l -> l.accept(r));
+      return r;
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  private Report advance(long t) {
     var w = world();
-    if (t <= w.time) return new Report(0, 0, 0, 0, List.of(), 0);
+    if (t <= w.time) return new Report(0, 0, 0, 0, List.of(), 0, List.of(), List.of(), List.of());
     int aired = 0, dropped = 0, memories = 0, notes = 0;
     long rows = 0;
     var reasons = new ArrayList<String>();
+    var airedKeys = new ArrayList<String>();
+    var droppedKeys = new ArrayList<String>();
+    var created = new ArrayList<NotificationRow>();
     var weather = weather(w.time, t);
     while (w.time < t) {
       long next = Math.min(t, w.time - Math.floorMod(w.time, HOUR) + HOUR);
@@ -95,9 +177,11 @@ public final class WorldEngine {
       memories += out.memories.size();
       notes += out.notifications.size();
       reasons.addAll(out.dropReasons);
+      out.statuses.forEach((key, status) -> (status == AirStatus.AIRED ? airedKeys : droppedKeys).add(key));
+      created.addAll(out.notifications);
       trim(w);
     }
-    return new Report(aired, dropped, memories, notes, reasons, rows);
+    return new Report(aired, dropped, memories, notes, reasons, rows, airedKeys, droppedKeys, created);
   }
 
   private Script load(long until) {

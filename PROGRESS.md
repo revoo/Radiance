@@ -1,9 +1,23 @@
 # Progress
 
 ## Resume here
-- **M6 accepted by R (2026-10-28) and merged**: `main` fast-forwarded to `m6-nightly-batch`.
-- Next: **M7** (SPEC §12), on a new branch from `main`. **Don't start until R says go.**
+- Milestone: **M7 — Feed UI & live play**, branch `m7-live-play` (from `main` at fe5f8d7). R said go on
+  2026-10-28 and asked to stop after M7 (it ends at ⏸ REVIEW: R plays for 20 minutes and tunes `pacing.yaml`).
+- Current step: 3 (REST + security). Steps 1–2 done and committed.
 - Half-done: nothing.
+
+## M7 steps
+1. ✔ Live core: the `Pacer` (pure: response curves, token buckets, priority release, breathing room, hooks,
+   seeded timing); `WorldEngine` locking and aired ids; `UserActions` (R's writes; reflex and considered
+   responders); `Appraiser` (the `appraisal` route, cached by content hash, offline heuristics)
+2. ✔ `LivePlay`: sessions and heartbeats, the real-time loop (airing, Pacer releases, typing indicators,
+   hooks), live renders on virtual threads, SSE events, background backfill when no script covers now
+3. REST + security: JSON login with CSRF cookie and rate limiting; me, heartbeat, world, recap, profile,
+   feed, posts, comments, reactions, people, notifications, stream; `GET /api/director/pacer`
+4. The SPA: shell, login, onboarding, feed (Recent/Top), PostCard, comments, ReactionPicker, composer,
+   profile, notifications, recap card, new-posts pill, typing rows, backfill banner, `useRadianceStream`,
+   heartbeats, a basic pacing monitor; Vitest tests
+5. AC tests and an end-to-end check in the browser
 
 ## M6 steps (all ✔)
 1. Spring wiring: `SimConfig` (`Knobs` from `radiance.*`, `WorldEngine`, `ScriptWriter`); the config sections

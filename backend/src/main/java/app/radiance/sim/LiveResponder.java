@@ -18,7 +18,8 @@ import java.util.Set;
  * every resident who sees his post or comment updates how they see him — then the engagement model
  * picks who reacts, comments or replies, with R's salience and the attention caps. Responses are
  * written as scripted items (origin LIVE) a few seconds to minutes out, and air like everything else.
- * The Pacer (M7) will own their exact timing; here delays are lognormal.
+ * Delays are lognormal, past {@code horizon}: in live play the Pacer moves each response it releases up
+ * to its release time ({@code UserActions}), and whatever it doesn't release airs later as background.
  */
 public final class LiveResponder {
 
@@ -32,6 +33,15 @@ public final class LiveResponder {
 
   /** Residents' responses to R's post {@code post}, which has just aired at {@code t}. */
   public Script onPost(SimWorld w, Item post, Map<String, Double> features, int postsToday, long t) {
+    return onPost(w, post, features, postsToday, t, 0, Set.of());
+  }
+
+  /**
+   * As above, with every delay pushed past {@code horizon}, and no second reaction from residents in
+   * {@code reacted} (the reflex phase already queued theirs).
+   */
+  public Script onPost(SimWorld w, Item post, Map<String, Double> features, int postsToday, long t, long horizon,
+      Set<String> reacted) {
     var user = w.person(w.userId);
     var plan = new Plan(w, lib, k, new Slice(t, t + 3_600_000L, Fidelity.FULL),
         new Plan.Inputs(List.of(), null, Set.of(), Map.of(), ContentOrigin.LIVE), new java.util.HashMap<>());
@@ -55,16 +65,17 @@ public final class LiveResponder {
       double u = planner.utility(w, b, post, user, day, rng) - r.wSat() * Math.min(1, commenters / 8.0);
       boolean comment = !Planner.crowded(w, post, commenters)
           && rng.chance(Planner.sigmoid(r.steepness() * (u - r.thetaComment())));
-      boolean react = comment ? rng.chance(0.7) : rng.chance(Planner.sigmoid(r.steepness() * (u - r.thetaReact())));
+      boolean react = !reacted.contains(b.id)
+          && (comment ? rng.chance(0.7) : rng.chance(Planner.sigmoid(r.steepness() * (u - r.thetaReact()))));
       double aff = w.edge(b.id, user.id).affinity;
       Stance stance = comment ? Stances.comment(w, b, user, post, lib, k, day, rng) : null;
       if (react) {
-        long at = t + delay(rng, 90_000, 2 * 3_600_000L);
+        long at = t + horizon + delay(rng, 90_000, 2 * 3_600_000L);
         plan.reaction(at, ReactionRow.Target.POST, post.id, b.id, Stances.reaction(stance, b, post, aff, rng));
         planner.spend(b, day);
       }
       if (comment) {
-        long at = t + delay(rng, 8 * 60_000L, 3 * 3_600_000L);
+        long at = t + horizon + delay(rng, 8 * 60_000L, 3 * 3_600_000L);
         plan.comment("live:" + b.id + ":" + post.id, at, post.id, null, b.id, Planner.commentBrief(post, stance, user.id, null));
         planner.spend(b, day);
         commenters++;
@@ -78,6 +89,10 @@ public final class LiveResponder {
    * (answering R is always allowed), and a few others may react.
    */
   public Script onComment(SimWorld w, Item comment, Map<String, Double> features, long t) {
+    return onComment(w, comment, features, t, 0);
+  }
+
+  public Script onComment(SimWorld w, Item comment, Map<String, Double> features, long t, long horizon) {
     var user = w.person(w.userId);
     var plan = new Plan(w, lib, k, new Slice(t, t + 3_600_000L, Fidelity.FULL),
         new Plan.Inputs(List.of(), null, Set.of(), Map.of(), ContentOrigin.LIVE), new java.util.HashMap<>());
@@ -103,15 +118,15 @@ public final class LiveResponder {
         if (rng.chance(Math.min(0.85, p))) {
           var stance = Airing.CLASH.contains(comment.stance)
               ? (rng.chance(0.3) ? Stance.JOKE : Stance.DISAGREE) : Stances.comment(w, b, user, comment, lib, k, day, rng);
-          plan.comment("live-reply:" + b.id + ":" + comment.id, t + delay(rng, 6 * 60_000L, 2 * 3_600_000L), post.id,
+          plan.comment("live-reply:" + b.id + ":" + comment.id, t + horizon + delay(rng, 6 * 60_000L, 2 * 3_600_000L), post.id,
               comment.id, b.id, Planner.commentBrief(post, stance, user.id,
                   Airing.CLASH.contains(comment.stance) && Airing.CLASH.contains(stance.name()) ? "debate_exchange" : null));
         } else if (rng.chance(0.45)) {
-          plan.reaction(t + delay(rng, 60_000, 3_600_000L), ReactionRow.Target.COMMENT, comment.id, b.id,
+          plan.reaction(t + horizon + delay(rng, 60_000, 3_600_000L), ReactionRow.Target.COMMENT, comment.id, b.id,
               Stances.reaction(Stance.valueOf(comment.stance == null ? "SUPPORT" : comment.stance), b, post, aff, rng));
         }
       } else if (rng.chance(0.12 + Math.max(0, aff) / 500)) {
-        plan.reaction(t + delay(rng, 3 * 60_000L, 3_600_000L), ReactionRow.Target.COMMENT, comment.id, b.id,
+        plan.reaction(t + horizon + delay(rng, 3 * 60_000L, 3_600_000L), ReactionRow.Target.COMMENT, comment.id, b.id,
             Stances.reaction(Stance.valueOf(comment.stance == null ? "SUPPORT" : comment.stance), b, post, aff, rng));
       }
     }
