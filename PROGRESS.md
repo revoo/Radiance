@@ -6,7 +6,7 @@
 - Plan (each step ends green and committed; ✔ = done):
   1. ✔ Jobs: `JobRepository` and `JobRunner` (claim by priority and `run_after`, virtual threads, retries,
      park WAITING on a budget window and resume at its reset, idempotent via `ux_job_active`).
-  2. Narrative core: prompt templates (`render-thread`, `render-dm`, `linter-judge`, `compaction`,
+  2. ✔ Narrative core: prompt templates (`render-thread`, `render-dm`, `linter-judge`, `compaction`,
      `summary`), `ContextPacketBuilder` (prefix: world bible + cast directory; content: Today with
      today-so-far, people, canon, thread, briefs), memory retrieval scoring (§5.7), `RenderBatch`, and a
      FakeLlm render template so offline play shows text.
