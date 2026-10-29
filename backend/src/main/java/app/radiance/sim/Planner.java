@@ -62,7 +62,7 @@ final class Planner {
     this.k = k;
   }
 
-  Script plan(SimWorld w, Plan.Slice slice, Plan.Inputs in) {
+  Script plan(SimWorld w, Slice slice, Plan.Inputs in) {
     var p = new Plan(w, lib, k, slice, in, userShare);
     for (var r : w.residents()) Drift.advance(r, w.seed, k.moodHalfLifeHours(), slice.start());
     w.settleTension(slice.start(), k.tensionHalfLifeDays());

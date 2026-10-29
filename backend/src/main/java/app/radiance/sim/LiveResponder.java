@@ -33,7 +33,7 @@ public final class LiveResponder {
   /** Residents' responses to R's post {@code post}, which has just aired at {@code t}. */
   public Script onPost(SimWorld w, Item post, Map<String, Double> features, int postsToday, long t) {
     var user = w.person(w.userId);
-    var plan = new Plan(w, lib, k, new Plan.Slice(t, t + 3_600_000L, Fidelity.FULL),
+    var plan = new Plan(w, lib, k, new Slice(t, t + 3_600_000L, Fidelity.FULL),
         new Plan.Inputs(List.of(), null, Set.of(), Map.of(), ContentOrigin.LIVE), new java.util.HashMap<>());
     var planner = new Planner(lib, k);
     var r = lib.engagement();
@@ -79,7 +79,7 @@ public final class LiveResponder {
    */
   public Script onComment(SimWorld w, Item comment, Map<String, Double> features, long t) {
     var user = w.person(w.userId);
-    var plan = new Plan(w, lib, k, new Plan.Slice(t, t + 3_600_000L, Fidelity.FULL),
+    var plan = new Plan(w, lib, k, new Slice(t, t + 3_600_000L, Fidelity.FULL),
         new Plan.Inputs(List.of(), null, Set.of(), Map.of(), ContentOrigin.LIVE), new java.util.HashMap<>());
     var post = w.items.get(comment.postId);
     if (post == null) return plan.script;

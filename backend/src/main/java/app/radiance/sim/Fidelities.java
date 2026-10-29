@@ -35,16 +35,21 @@ public final class Fidelities {
   }
 
   /** {@code [from, to)} in slices of one fidelity, aligned to slice boundaries in UTC. */
-  static List<Plan.Slice> slices(long from, long to, Fidelity f) {
-    var out = new ArrayList<Plan.Slice>();
+  public static List<Slice> slices(long from, long to, Fidelity f) {
+    var out = new ArrayList<Slice>();
     long len = sliceLength(f);
     long t = from;
     while (t < to) {
       long end = Math.min(to, t - Math.floorMod(t, len) + len);
-      out.add(new Plan.Slice(t, end, f));
+      out.add(new Slice(t, end, f));
       t = end;
     }
     return out;
+  }
+
+  /** Structure only (idle more than {@code pause-rendering-after}): arcs and drift advance, nothing posts. */
+  public static List<Slice> structure(long from, long to) {
+    return slices(from, to, null);
   }
 
   /**
@@ -52,12 +57,12 @@ public final class Fidelities {
    * REDUCED up to {@code reduced-window}, SUMMARY up to {@code max-gap}, and one structure-only stretch
    * (the TIME_SKIP) beyond. Chronological, because state flows forward.
    */
-  public static List<Plan.Slice> backfill(long from, long now, Knobs k) {
+  public static List<Slice> backfill(long from, long now, Knobs k) {
     long full = now - (long) (k.backfillFullHours() * HOUR);
     long reduced = now - (long) (k.backfillReducedDays() * DAY);
     long summary = now - (long) (k.maxGapDays() * DAY);
-    var out = new ArrayList<Plan.Slice>();
-    if (from < summary) out.add(new Plan.Slice(from, summary, null));
+    var out = new ArrayList<Slice>();
+    if (from < summary) out.add(new Slice(from, summary, null));
     out.addAll(slices(Math.max(from, summary), Math.max(from, reduced), Fidelity.SUMMARY));
     out.addAll(slices(Math.max(from, reduced), Math.max(from, full), Fidelity.REDUCED));
     out.addAll(slices(Math.max(from, full), now, Fidelity.FULL));

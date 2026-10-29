@@ -6,7 +6,7 @@
 - Plan (each step ends green and committed; ✔ = done):
   1. ✔ Spring wiring: `Knobs` from `radiance.*` config (batch, backfill, storyteller, social, romance,
      drift, news), the `WorldEngine` and `ScriptWriter` beans, the config sections in `application.yml`.
-  2. `NightlyBatch` (§5.1): lease check (DEFERRED), headlines and weather, `advanceTo(now)` with a
+  2. ✔ `NightlyBatch` (§5.1): lease check (DEFERRED), headlines and weather, `advanceTo(now)` with a
      backfill of any gap first (TIME_SKIP beyond max-gap), fidelity from idle time, the next script to
      the next batch + slack, render jobs (parked ones leave the run PARTIAL), recap lines for every
      event of importance ≥ 6, maintenance, and a `batch_run` report with the script's plan hash.

@@ -63,7 +63,7 @@ public final class ScriptWriter {
     return write(Fidelities.slices(from, to, fidelity), headlines, weather, primeHours, origin);
   }
 
-  public Result write(List<Plan.Slice> slices, List<Headline> headlines, WeatherBook weather, Set<Integer> primeHours,
+  public Result write(List<Slice> slices, List<Headline> headlines, WeatherBook weather, Set<Integer> primeHours,
       ContentOrigin origin) {
     ContentLibrary lib = engine.lib();
     Knobs k = engine.knobs();
@@ -168,10 +168,32 @@ public final class ScriptWriter {
     var threads = new java.util.TreeMap<String, Long>();
     script.posts.forEach(p -> threads.merge(p.id(), p.createdAt(), Math::min));
     script.comments.forEach(c -> threads.merge(c.postId(), c.createdAt(), Math::min));
-    threads.forEach((post, t) -> jobs.enqueue(uow, app.radiance.jobs.JobKinds.RENDER_THREAD, post, priority, now, now, t));
+    // scripts render earliest first; backfills newest first (SPEC §5.10)
+    boolean newestFirst = origin == ContentOrigin.BACKFILL;
+    threads.forEach((post, t) -> jobs.enqueue(uow, app.radiance.jobs.JobKinds.RENDER_THREAD, post, priority, now, now,
+        newestFirst ? (1L << 47) - t : t));
     var dms = new java.util.TreeMap<String, Long>();
     script.dms.forEach(d -> dms.merge(d.threadId(), d.createdAt(), Math::min));
-    dms.forEach((thread, t) -> jobs.enqueue(uow, app.radiance.jobs.JobKinds.RENDER_DM, thread, priority, now, now, t));
+    dms.forEach((thread, t) -> jobs.enqueue(uow, app.radiance.jobs.JobKinds.RENDER_DM, thread, priority, now, now,
+        newestFirst ? (1L << 47) - t : t));
+  }
+
+  /**
+   * A hash of the script stored for {@code [from, to)}: ids, times, briefs and payloads, none of which
+   * rendering or airing change. A batch killed mid-render and run again reports the same hash.
+   */
+  public String storedHash(long from, long to) {
+    var d = sha();
+    var args = List.<Object>of(from, to);
+    for (var q : List.of(
+        "SELECT id || '|' || world_time || '|' || type || '|' || payload_json AS x FROM event WHERE world_time >= ? AND world_time < ? ORDER BY world_time, id",
+        "SELECT id || '|' || author_id || '|' || created_at || '|' || kind || '|' || COALESCE(brief_json, '') AS x FROM post WHERE origin <> 'USER' AND created_at >= ? AND created_at < ? ORDER BY created_at, id",
+        "SELECT id || '|' || post_id || '|' || author_id || '|' || created_at || '|' || COALESCE(brief_json, '') AS x FROM comment WHERE origin <> 'USER' AND created_at >= ? AND created_at < ? ORDER BY created_at, id",
+        "SELECT target_id || '|' || actor_id || '|' || kind || '|' || created_at AS x FROM reaction WHERE created_at >= ? AND created_at < ? ORDER BY created_at, target_id, actor_id",
+        "SELECT id || '|' || sender_id || '|' || created_at || '|' || COALESCE(brief_json, '') AS x FROM dm_message WHERE created_at >= ? AND created_at < ? ORDER BY created_at, id")) {
+      for (String row : sql.query(q, args, r -> r.str("x"))) d.update((row + '\n').getBytes(StandardCharsets.UTF_8));
+    }
+    return hash(d);
   }
 
   /** Everything scripted that hasn't aired yet, to apply to the planning copy first. */

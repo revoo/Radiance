@@ -34,13 +34,6 @@ final class Plan {
   record Inputs(List<Headline> headlines, WeatherBook weather, Set<Integer> primeHours, Map<String, Double> scales,
       ContentOrigin origin) {}
 
-  /** A slice of world time and the fidelity it's written at; a null fidelity is structure only. */
-  record Slice(long start, long end, Fidelity fidelity) {
-    double hours() {
-      return (end - start) / 3_600_000.0;
-    }
-  }
-
   final SimWorld w;
   final ContentLibrary lib;
   final Knobs k;
@@ -58,12 +51,12 @@ final class Plan {
     this.k = k;
     this.slice = slice;
     this.in = in;
-    this.rng = RandomSource.forSlice(w.seed, slice.start);
+    this.rng = RandomSource.forSlice(w.seed, slice.start());
     this.userInteractions = userInteractions;
   }
 
   boolean structureOnly() {
-    return slice.fidelity == null;
+    return slice.fidelity() == null;
   }
 
   String id(String kind, long t, String key) {
@@ -111,7 +104,7 @@ final class Plan {
   }
 
   Fidelity fidelity() {
-    return slice.fidelity == null ? Fidelity.SUMMARY : slice.fidelity;
+    return slice.fidelity() == null ? Fidelity.SUMMARY : slice.fidelity();
   }
 
   static Map<String, Object> extra(Object... kv) {
