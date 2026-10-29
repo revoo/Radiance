@@ -1,14 +1,11 @@
 # Progress
 
 ## Resume here
-- Milestone: **M4 — Simulation engine & the script (offline)**, branch `m4-simulation-engine` (from `main`
-  at d417fcc). **All steps done; stopped at ⏸ REVIEW** waiting for R. Don't merge into `main` until R
-  signs off, and **don't start M5** (R asked to pause there, 2026-10-28).
-- Review artifacts (seed 7, warm R, 30 days): `docs/review/m4/feel-report-seed7-warm.txt` and one day's
-  script (briefs only) `docs/review/m4/script-2026-10-30.txt`. Regenerate with
+- **M4 approved by R (2026-10-28) and merged**: `main` fast-forwarded to `m4-simulation-engine`.
+- Next: **M5 — Narrative rendering** (SPEC §12), on a new branch from `main`. **Don't start until R says
+  go** (R asked to pause before M5). M5 needs a model API key for live checks; offline work runs on FakeLlm.
+- Review artifacts kept in `docs/review/m4/`; rerun the harness with
   `./gradlew :backend:simulate --args='--days=30 --seed=7 --user=scripted:warm --dump-day=3 --out=data/sim-seed7'`.
-- After review: apply R's knob changes (`content/rules/*.yaml`, `Knobs`), re-run the harness and
-  `./gradlew check`, then fast-forward `main` once CI is green.
 - Half-done: nothing.
 
 ## M4 steps (all ✔)
@@ -35,7 +32,7 @@
 7. World bible with the Chicagoland section
 
 ## Done
-- **M4 — Simulation engine & the script (offline)** (2026-10-28), branch `m4-simulation-engine` — at ⏸ REVIEW:
+- **M4 — Simulation engine & the script (offline)** (2026-10-28), branch `m4-simulation-engine` — approved by R and merged:
   - AC (amended by decision 17): property tests green ✔ (random seeds × 30 days, auditor throwing,
     no spoilers checked after every advance, blacklist, attention, caps, invariant 11); feel-report
     bands met at default knobs on seed 42 in CI ✔ (seed 7: all but one borderline, see open questions);
@@ -202,11 +199,6 @@ Resolutions of spec issues raised at kickoff. Each gets an ADR when its mileston
   requests come in M7/M8. Render jobs are M5 (scripted rows stay `PLANNED`).
 
 ## Open questions for R
-- M4 REVIEW: read `docs/review/m4/feel-report-seed7-warm.txt` and `docs/review/m4/script-2026-10-30.txt`;
-  tune knobs before any tokens are spent. Points to weigh: Kendra (grouch) sits at a median meter of
-  exactly 0.0 on seed 7 (band wants < 0); resident-to-resident threads are thin (median 0 comments per
-  resident post) while R's posts are in band; flirting is rare (a handful a month); LIFE runs ~11% vs
-  15% on seed 7 because most LIFE is arc-driven and the def library is small.
 - Provider keys: which providers will you use? Put their keys in `.env` and run
   `./gradlew :backend:liveTest` (well under a cent at default models) to close M2's live ACs, including
   two unverified Anthropic details (Appendix C note).
