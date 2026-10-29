@@ -72,7 +72,9 @@ class LlmWiringTests {
       assertThat(haiku.capabilities().structuredOutput()).isEqualTo(LlmProperties.StructuredOutput.SCHEMA);
       assertThat(haiku.capabilities().promptCaching()).isEqualTo(LlmProperties.PromptCaching.EXPLICIT);
       assertThat(haiku.params()).containsEntry("effort", "low").containsEntry("thinking", "disabled");
-      assertThat(props.routes().get("genesis").fallback()).containsExactly("haiku");
+      // decision 18: Haiku on every route in V1; sonnet stays defined for the V2 bake-off
+      assertThat(props.routes().values()).allSatisfy(r -> assertThat(r.model()).isEqualTo("haiku"));
+      assertThat(props.models()).containsKey("sonnet");
       for (var p : Purpose.values()) assertThat(routes.targets(p)).containsExactly(RouteTable.FAKE);
     }
   }

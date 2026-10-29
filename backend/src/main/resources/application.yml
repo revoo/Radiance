@@ -95,8 +95,8 @@ radiance:
       linter-judge:      { model: haiku }
       compaction:        { model: haiku }
       summary:           { model: haiku }
-      recap:             { model: sonnet, fallback: [haiku] }
-      genesis:           { model: sonnet, fallback: [haiku] }
+      recap:             { model: haiku }               # decision 18: Haiku everywhere in V1; sonnet stays defined for the V2 bake-off
+      genesis:           { model: haiku }
     max-prompt-tokens: 24000           # hard cap; a route's smallest max-context applies too
     budgets: { daily-usd: 1.00, per-batch-usd: 0.30, monthly-usd: 10.00 }   # daily resets at midnight Central, monthly on the 1st
     store-prompts: true                # feeds the prompt inspector and the bake-off

@@ -1,13 +1,10 @@
 # Progress
 
 ## Resume here
-- Milestone: **M5 — Narrative rendering**, branch `m5-narrative` (from `main` at 011a9e7). **All steps
-  built offline; stopped at ⏸ REVIEW.** Don't merge into `main` until R signs off; don't start M6.
-- The REVIEW needs model keys: R reads ~50 rendered threads and a blind bake-off of at least two
-  providers' models. With keys in `.env`:
-  `./gradlew llm-bakeoff --args='--purpose=render-thread --models=haiku,<candidate> --fixtures=50'`
-  → `backend/data/bakeoffs/<time>/` (`report.md`, `side-by-side.md`, `key.json`, `outputs.json`).
-  Fixtures are saved once (`data/bakeoffs/fixtures-seed7-50.json`), so every model sees the same packets.
+- **M5 accepted by R on the offline results (2026-10-28) and merged**: `main` fast-forwarded to
+  `m5-narrative`. The live bake-off is skipped for V1 (decision 18).
+- Next: **M6 — Nightly batch (local)** (SPEC §12), on a new branch from `main`. **Don't start until R
+  says go.**
 - Half-done: nothing.
 
 ## M5 steps (all ✔)
@@ -50,7 +47,7 @@
 7. World bible with the Chicagoland section
 
 ## Done
-- **M5 — Narrative rendering** (2026-10-28), branch `m5-narrative` — at ⏸ REVIEW:
+- **M5 — Narrative rendering** (2026-10-28), branch `m5-narrative` — accepted by R on the offline results and merged:
   - AC, offline: zero unhandled constraint violations and zero blacklisted-theme mentions across 7
     scripted days of the constraint-heavy fixture, against a renderer that writes every violation on
     its first try ✔; a FULL day projects under $0.15 at haiku prices with one cached prefix and ≥ 80% of
@@ -189,6 +186,11 @@ Resolutions of spec issues raised at kickoff. Each gets an ADR when its mileston
     the feel-report bands, and determinism (same seed ⇒ same plan hash), since those make re-running
     and resuming the batch safe. The M7/M8 latency targets (first reaction ~6 s, first comment ~25 s,
     DM typing within 3 s) stay, because they're about how the app feels.
+18. **No live bake-off in V1 (R, 2026-10-28).** M5 is accepted on its offline results (the adversarial
+    constraint fixture, the projected meter, one cached prefix). Haiku is the default model for every
+    purpose, including `recap` and `genesis` (were Sonnet with a Haiku fallback); the `sonnet` alias
+    stays defined. R runs `./gradlew llm-bakeoff` and tunes per-purpose models in V2. The live checks of
+    M5's meter (≤ $0.15 per FULL day) and provider-reported cache hits wait until keys are in `.env`.
 
 ## Deviations from spec
 - TypeScript pinned to 6.0.x, not latest (7.x), for typescript-eslint compatibility (ADR 0009).
@@ -238,9 +240,6 @@ Resolutions of spec issues raised at kickoff. Each gets an ADR when its mileston
   after-batch hook and its clock; `JobKinds` names the job kinds.
 
 ## Open questions for R
-- **M5 REVIEW needs keys.** Which providers will you try? Put their keys in `.env`, run the bake-off
-  command in Resume here with `haiku` and at least one candidate (add the candidate alias under
-  `radiance.llm.models` first), then read `side-by-side.md` blind and pick the model for each purpose.
 - Provider keys: which providers will you use? Put their keys in `.env` and run
   `./gradlew :backend:liveTest` (well under a cent at default models) to close M2's live ACs, including
   two unverified Anthropic details (Appendix C note).
