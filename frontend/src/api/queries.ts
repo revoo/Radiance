@@ -6,7 +6,8 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { api } from "./client.ts";
+import { live } from "../live/store.ts";
+import { api, ApiError } from "./client.ts";
 import type {
   Comment,
   Me,
@@ -192,7 +193,12 @@ export function useCreatePost(me: Actor | null | undefined) {
           : data,
       );
     },
-    onError: (_e, _text, ctx) => {
+    onError: (e, _text, ctx) => {
+      live.toast({
+        id: `post-failed-${Date.now()}`,
+        text: e instanceof ApiError && e.status === 503 ? "The world is waking up. Try posting again in a few seconds." : "Your post didn't go through. Try again.",
+        postId: null,
+      });
       qc.setQueryData<InfiniteData<Page<Post>>>(keys.feed("recent"), (data) =>
         data
           ? { ...data, pages: data.pages.map((page) => ({ ...page, items: page.items.filter((p) => p.id !== ctx?.tempId) })) }

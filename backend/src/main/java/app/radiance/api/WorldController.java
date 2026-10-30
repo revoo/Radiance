@@ -7,6 +7,7 @@ import app.radiance.persistence.WriterLane;
 import app.radiance.world.WorldProperties;
 import java.security.Principal;
 import java.util.List;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /** Who R is, his session, the world, the recap, people and notifications (SPEC §7). */
+@ConditionalOnWebApplication
 @RestController
 @RequestMapping("/api")
 class WorldController {

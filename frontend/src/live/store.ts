@@ -73,3 +73,29 @@ export function useLive<T>(select: (s: LiveState) => T): T {
 export function worldNow(): number {
   return Date.now() + state.clockOffset;
 }
+
+// one shared ticker, so "Just now" becomes "1m" while R watches
+let tick = 0;
+const tickers = new Set<() => void>();
+let timer: ReturnType<typeof setInterval> | undefined;
+
+function subscribeTick(l: () => void) {
+  tickers.add(l);
+  timer ??= setInterval(() => {
+    tick += 1;
+    tickers.forEach((x) => x());
+  }, 30_000);
+  return () => {
+    tickers.delete(l);
+    if (tickers.size === 0 && timer !== undefined) {
+      clearInterval(timer);
+      timer = undefined;
+    }
+  };
+}
+
+/** World time now, re-rendering every 30 seconds. */
+export function useWorldNow(): number {
+  useSyncExternalStore(subscribeTick, () => tick);
+  return worldNow();
+}

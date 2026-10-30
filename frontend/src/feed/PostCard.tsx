@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 import { Link } from "react-router";
 import { useComments, useReact } from "../api/queries.ts";
 import type { Actor, Comment, Post } from "../api/types.ts";
-import { useLive, worldNow } from "../live/store.ts";
+import { useLive, useWorldNow } from "../live/store.ts";
 import { fullTime, relativeTime } from "../ui/format.ts";
 import { Avatar, Card, Name, RichText } from "../ui/kit.tsx";
 import { CommentBox, CommentItem } from "./Comments.tsx";
@@ -23,6 +23,7 @@ export function PostCard({ post, me, expanded = false }: { post: Post; me: Actor
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
   const input = useRef<HTMLTextAreaElement>(null);
   const react = useReact();
+  const now = useWorldNow();
   const comments = useComments(post.id, open);
   const liveTyping = useLive((s) => s.typing[post.id] ?? EMPTY);
   const typing = liveTyping.length ? liveTyping : post.typing;
@@ -45,7 +46,7 @@ export function PostCard({ post, me, expanded = false }: { post: Post; me: Actor
             <Name actor={post.author} />
             <div className="mt-0.5 flex items-center gap-1 text-xs text-muted">
               <Link to={temp ? "#" : `/posts/${post.id}`} className="hover:underline" title={fullTime(post.createdAt)}>
-                {temp ? "Posting…" : relativeTime(post.createdAt, worldNow())}
+                {temp ? "Posting…" : relativeTime(post.createdAt, now)}
               </Link>
               <span aria-hidden="true">·</span>
               {post.audience === "PUBLIC" ? (

@@ -156,7 +156,7 @@ export function ProfilePage({ me }: { me: Actor }) {
           <div aria-hidden="true" className="animate-glow absolute right-6 -top-10 size-52 rounded-full bg-black/10 blur-3xl [animation-delay:1s]" />
         </div>
         <div className="flex flex-col items-center px-4 pb-5 sm:flex-row sm:items-end sm:gap-4">
-          <div className="-mt-16 rounded-full bg-panel p-1.5 shadow-lift">
+          <div className="relative z-10 -mt-16 rounded-full bg-panel p-1.5 shadow-lift">
             <Avatar actor={p.actor} size="xl" ring={p.actor.you} link={false} />
           </div>
           <div className="mt-3 min-w-0 flex-1 text-center sm:text-left">

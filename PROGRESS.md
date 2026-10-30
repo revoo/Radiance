@@ -1,31 +1,33 @@
 # Progress
 
 ## Resume here
-- Milestone: **M7 — Feed UI & live play**, branch `m7-live-play` (from `main` at fe5f8d7). R said go on
-  2026-10-28 and asked to stop after M7 (it ends at ⏸ REVIEW: R plays for 20 minutes and tunes `pacing.yaml`).
-- Current step: 4 (the SPA). Steps 1–3 done and committed; all 194 backend tests pass.
-- Half-done (not committed, on disk only; they don't typecheck yet): `frontend/src/api/client.ts`,
-  `api/types.ts`, `api/queries.ts`, `live/store.ts`, `live/useRadianceStream.ts`, `live/useHeartbeat.ts`,
-  `ui/format.ts`. Next: fix the strict-null errors (`cd frontend && npx tsc -b`), then write the components
-  and pages (Layout, Login, Onboarding, Feed + Composer + PostCard + ReactionPicker + comments, Post page,
-  Profile, Notifications, Recap card, New-posts pill, Backfill banner, toasts, `/director/pacer`), wire
-  `App.tsx`, Vitest tests (PostCard, ReactionPicker, useRadianceStream, typing row), then step 5.
-- Observation for R's review: right after onboarding, a post of R's draws about 3 reactions and fewer
-  than one comment within the 5-minute burst. The harness medians (11 / 3) also count residents finding
-  the post in later scripts. Responders are the M4-tuned engagement model's call, not the Pacer's.
+- Milestone: **M7 — Feed UI & live play**, branch `m7-live-play`. **All steps done; ⏸ REVIEW**: R plays for
+  20 minutes and tunes `content/rules/pacing.yaml`. Don't merge into `main` or start M8 until R says so.
+- To play offline: `./gradlew genesis --args='--seed 7 --import' -Pprofile=offline` (once), then
+  `./gradlew bootRun --args='--spring.profiles.active=offline'` and `cd frontend && npm run dev`; open
+  http://localhost:5173 and log in with the built-in offline dev login. The pacing monitor is under
+  "Pacing monitor" in the left rail (`/director/pacer`).
+- Half-done: nothing.
+- Observations for R's review:
+  - Right after onboarding, a post of R's draws about 3 reactions and fewer than one comment inside the
+    5-minute burst (browser check: 3 reactions and 1 comment). The harness medians (11 / 3) also count
+    residents finding the post in later scripts. Who responds is the M4-tuned engagement model, not
+    the Pacer; `user-salience` and `theta_comment` are the knobs if live bursts should be bigger.
+  - Offline prose is FakeLlm's: short, generic lines. Real voices need provider keys (open question).
 
-## M7 steps
-1. ✔ Live core: the `Pacer` (pure: response curves, token buckets, priority release, breathing room, hooks,
-   seeded timing); `WorldEngine` locking and aired ids; `UserActions` (R's writes; reflex and considered
-   responders); `Appraiser` (the `appraisal` route, cached by content hash, offline heuristics)
-2. ✔ `LivePlay`: sessions and heartbeats, the real-time loop (airing, Pacer releases, typing indicators,
+## M7 steps (all ✔)
+1. Live core: the `Pacer` (pure: response curves, token buckets with a hard per-minute cap, priority
+   release, breathing room, hooks, seeded timing); `WorldEngine` locking and aired ids; `UserActions`
+   (R's writes; reflex and considered responders); `Appraiser` (the `appraisal` route, cached by content
+   hash, offline heuristics)
+2. `LivePlay`: sessions and heartbeats, the real-time loop (airing, Pacer releases, typing indicators,
    hooks), live renders on virtual threads, SSE events, background backfill when no script covers now
-3. ✔ REST + security: JSON login with CSRF cookie and rate limiting; me, heartbeat, world, recap, profile,
+3. REST + security: JSON login with CSRF cookie and rate limiting; me, heartbeat, world, recap, profile,
    feed, posts, comments, reactions, people, notifications, stream; `GET /api/director/pacer`
-4. The SPA: shell, login, onboarding, feed (Recent/Top), PostCard, comments, ReactionPicker, composer,
-   profile, notifications, recap card, new-posts pill, typing rows, backfill banner, `useRadianceStream`,
-   heartbeats, a basic pacing monitor; Vitest tests
-5. AC tests and an end-to-end check in the browser
+4. The SPA: shell, login, onboarding, feed (Recent/Top), PostCard, comments, ReactionPicker, composer
+   with @mentions, profile, friends, notifications, recap card, new-posts pill, typing rows, toasts,
+   backfill banner, live world clock, light/dark themes, `useRadianceStream`, heartbeats, pacing monitor
+5. AC tests (`PacerTests`, `LivePlayTests`, `ApiTests`, Vitest) and an end-to-end check in the browser
 
 ## M6 steps (all ✔)
 1. Spring wiring: `SimConfig` (`Knobs` from `radiance.*`, `WorldEngine`, `ScriptWriter`); the config sections
@@ -75,6 +77,15 @@
 7. World bible with the Chicagoland section
 
 ## Done
+- **M7 — Feed UI & live play** (2026-10-29), branch `m7-live-play`:
+  - AC: logging in shows a ready feed straight from the database (API test: first feed request well
+    under 1 s, no catch-up step) ✔; after R posts, the first reaction comes within 2–6 s and the first
+    comment within 8–25 s, tapering within about 5 minutes (`PacerTests` over 50 seeds, `LivePlayTests`
+    end to end; browser: 5.2 s and 15.6 s) ✔; never more than 6 comments or 4 notifications reach R in
+    any minute (hard per-minute caps on top of the token buckets) ✔; a late render shows "… is writing a
+    comment" until it lands, and a failed one just goes away ✔; with no script, the first request
+    starts a background backfill and the feed still loads ✔.
+  - 196 backend tests, 16 frontend tests; lint and build clean.
 - **M6 — Nightly batch (local)** (2026-10-28), branch `m6-nightly-batch`:
   - AC: a FULL night writes and renders in seconds offline and projects under $0.15 at haiku prices ✔;
     a second run the same night plans, renders and calls nothing ✔; a run killed mid-render is
@@ -285,6 +296,26 @@ Resolutions of spec issues raised at kickoff. Each gets an ADR when its mileston
   words (the renderer writes the rest).
 - M6: a batch resets jobs left RUNNING by a killed run before it renders: it holds the lease, so nobody
   else is running them. Backfill render jobs run newest first, scripts earliest first.
+
+- M7: no Playwright smoke test yet (SPEC §8): it would add a browser download to CI. The same path is
+  covered by `LivePlayTests` and `ApiTests` end to end, and was checked by hand in the browser. Proposed
+  for M8 or M9.
+- M7: the right rail has a live world clock and contacts; the weather chip and "talked about in
+  Chicagoland" wait for M10, presence dots and Messenger for M8, like-meters for M11, birthdays for later.
+- M7: hooks implement `comment_on_older_post` and `pull_scripted_post_forward`; the DM hook comes with
+  Messenger (M8).
+- M7: live responses are written as scripted items timed at least 12 minutes out; the Pacer moves each
+  one up to its release time. Whatever it never releases (R left, a restart) airs later as background,
+  so nothing depends on the Pacer's in-memory state.
+- M7: R's post or comment is written with a quick heuristic reading, so it shows at once; the
+  `appraisal` call's reading drives the considered phase a moment later. Offline, the heuristic is the
+  appraisal.
+- M7: a live render that fails is handed to the job queue at backfill priority, so the batch finishes it.
+- M7: writes while this process doesn't hold the writer lease (right after a restart) answer 503 with
+  Retry-After instead of 500; the SPA tells R to try again.
+- M7: the live-play controllers are web-only, so the one-shot modes (genesis, batch, bake-off) start
+  without them (`OneShotContextTests`).
+- M7: `.claude/launch.json` starts the offline backend and the Vite dev server for previews.
 
 ## Open questions for R
 - Provider keys: which providers will you use? Put their keys in `.env` and run

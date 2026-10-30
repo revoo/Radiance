@@ -28,7 +28,7 @@ export function Avatar({ actor, size = "md", ring = false, link = true }: {
     </span>
   );
   const body = ring ? (
-    <span className="ring-brand inline-flex shrink-0 rounded-full">
+    <span className="ring-brand inline-flex h-fit shrink-0 rounded-full">
       <span className="inline-flex rounded-full bg-panel p-[2px]">{face}</span>
     </span>
   ) : (
@@ -36,7 +36,7 @@ export function Avatar({ actor, size = "md", ring = false, link = true }: {
   );
   if (!link) return body;
   return (
-    <Link to={`/people/${actor.handle}`} aria-label={actor.name} className="inline-flex shrink-0 rounded-full">
+    <Link to={`/people/${actor.handle}`} aria-label={actor.name} className="inline-flex h-fit shrink-0 rounded-full">
       {body}
     </Link>
   );

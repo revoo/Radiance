@@ -7,6 +7,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,6 +18,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
  * {@code GET /api/stream} (SPEC §7): live play's events as server-sent events, one named event per
  * {@link LivePlay.LiveEvent}. A comment every 20 seconds keeps proxies from closing a quiet stream.
  */
+@ConditionalOnWebApplication
 @RestController
 class StreamHub {
 
@@ -74,6 +76,7 @@ class StreamHub {
   }
 
   @Component
+  @ConditionalOnWebApplication
   static final class Touch implements org.springframework.web.servlet.config.annotation.WebMvcConfigurer {
     private final LivePlay live;
 

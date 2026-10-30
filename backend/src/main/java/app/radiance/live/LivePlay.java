@@ -92,7 +92,7 @@ public final class LivePlay {
 
   // guarded by this
   private String sessionId;
-  private long sessionStart, lastBeat, lastAir = Long.MIN_VALUE, lastProgress = Long.MIN_VALUE;
+  private long sessionStart, lastBeat, lastAir, lastProgress;
   private Pacer pacer;
   private final Map<String, Slot> typing = new LinkedHashMap<>();
   private Thread loop;
@@ -445,7 +445,7 @@ public final class LivePlay {
     if (pacer.hookDue(wall)) hook(t, wall);
     long next = Math.min(pacer.nextWake(wall), lastAir + AIR_EVERY);
     if (!typing.isEmpty()) next = Math.min(next, wall + 500);
-    return Math.max(20, next - wall);
+    return Math.max(20, Math.min(1_000, next - wall));
   }
 
   /** Turns what aired into stream events, and its notifications into the Pacer's queue. */

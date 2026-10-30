@@ -2,7 +2,7 @@ import { SendHorizontal } from "lucide-react";
 import { useRef, useState } from "react";
 import { useCreateComment, useReact } from "../api/queries.ts";
 import type { Actor, Comment } from "../api/types.ts";
-import { worldNow } from "../live/store.ts";
+import { useWorldNow } from "../live/store.ts";
 import { fullTime, relativeTime } from "../ui/format.ts";
 import { Avatar, Name, RichText } from "../ui/kit.tsx";
 import { ReactionPicker } from "./ReactionPicker.tsx";
@@ -18,7 +18,7 @@ export function CommentItem({ comment, me, onReply, depth = 0 }: {
   depth?: number;
 }) {
   const react = useReact();
-  const now = worldNow();
+  const now = useWorldNow();
   const fresh = !comment.author.you && now - comment.createdAt < FRESH_MS && !comment.id.startsWith("temp-");
   return (
     <div className={depth ? "ml-11" : ""}>

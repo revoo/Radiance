@@ -257,6 +257,19 @@ class LivePlayTests {
         .orElseThrow()).isEqualTo("AIRED");
   }
 
+  @Test
+  void theLoopNeverSleepsPastItsNextTurn() {
+    var live = live(gateway(null));
+    live.touch();
+    // the first turns of a session: nothing has aired yet, nothing is due
+    for (int i = 0; i < 3; i++) {
+      assertThat(live.tick()).isBetween(20L, 1_000L);
+      db.clock.advance(Duration.ofMillis(300));
+    }
+    live.post("Is it just me or is the Blue Line extra chaotic this week?");
+    assertThat(live.tick()).isBetween(20L, 1_000L);
+  }
+
   static int maxPerMinute(List<Timed> xs) {
     var times = new ArrayList<Long>();
     xs.forEach(x -> times.add(x.at()));

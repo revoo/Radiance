@@ -1,6 +1,7 @@
 package app.radiance.director;
 
 import app.radiance.live.LivePlay;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
  * typing indicators on screen, and the Pacer's state — per-minute counts against the limits, breathing
  * room, the last hook, and each response burst's timings.
  */
+@ConditionalOnWebApplication
 @RestController
 class PacerController {
 

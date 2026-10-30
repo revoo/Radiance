@@ -75,7 +75,7 @@ export function Composer({ me }: { me: Actor }) {
 
   return (
     <Card className="relative p-4">
-      <div className="flex gap-3">
+      <div className="flex items-start gap-3">
         <Avatar actor={me} ring />
         <div className="relative min-w-0 flex-1">
           <textarea

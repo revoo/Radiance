@@ -4,6 +4,7 @@ import app.radiance.live.LivePlay;
 import app.radiance.persistence.Sql;
 import app.radiance.social.ReactionRow;
 import java.util.List;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /** R's feed, posts, comments and reactions (SPEC §7). R's own writes are aired before the response returns. */
+@ConditionalOnWebApplication
 @RestController
 @RequestMapping("/api")
 class FeedController {

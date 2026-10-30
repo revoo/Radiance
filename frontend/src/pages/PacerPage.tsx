@@ -67,7 +67,7 @@ export function PacerPage() {
             </Card>
           </div>
           <Card className="overflow-x-auto">
-            <table className="w-full min-w-[560px] text-left text-sm">
+            <table className="w-full min-w-[560px] whitespace-nowrap text-left text-sm">
               <thead className="border-b border-line text-xs uppercase tracking-wider text-muted">
                 <tr>
                   <th className="px-4 py-3">Burst</th>
