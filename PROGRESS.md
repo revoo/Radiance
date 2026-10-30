@@ -1,14 +1,13 @@
 # Progress
 
 ## Resume here
-- Milestone: **M7 — Feed UI & live play**, branch `m7-live-play`. **All steps done; ⏸ REVIEW**: R plays for
-  20 minutes and tunes `content/rules/pacing.yaml`. Don't merge into `main` or start M8 until R says so.
+- **M7 accepted by R (2026-10-29) and merged**: `main` fast-forwarded to `m7-live-play`.
+- Next: **M8 — Messenger** (SPEC §12), on a new branch from `main`. **Don't start until R says go.**
+- Half-done: nothing.
 - To play offline: `./gradlew genesis --args='--seed 7 --import' -Pprofile=offline` (once), then
   `./gradlew bootRun --args='--spring.profiles.active=offline'` and `cd frontend && npm run dev`; open
-  http://localhost:5173 and log in with the built-in offline dev login. The pacing monitor is under
-  "Pacing monitor" in the left rail (`/director/pacer`).
-- Half-done: nothing.
-- Observations for R's review:
+  http://localhost:5173 and log in with the built-in offline dev login.
+- Observations from M7 (open for tuning):
   - Right after onboarding, a post of R's draws about 3 reactions and fewer than one comment inside the
     5-minute burst (browser check: 3 reactions and 1 comment). The harness medians (11 / 3) also count
     residents finding the post in later scripts. Who responds is the M4-tuned engagement model, not
