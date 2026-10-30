@@ -1,9 +1,15 @@
 # Progress
 
 ## Resume here
-- Milestone: **M8 — Messenger**, branch `m8-messenger`. **All steps done.** M8 has no ⏸ REVIEW in SPEC §12,
-  but R asked to pause between milestones: wait for R before merging into `main` and before M9.
+- **M8 accepted by R (2026-10-29) and merged**: `main` fast-forwarded to `m8-messenger`.
+- Next: **M9 — Cloud & nightly schedule** (SPEC §12), on a new branch from `main`. **Don't start until R
+  says go.**
 - Half-done: nothing.
+- To play offline: `./gradlew genesis --args='--seed 7 --import' -Pprofile=offline` (once), then
+  `./gradlew bootRun --args='--spring.profiles.active=offline'` and `cd frontend && npm run dev`; open
+  http://localhost:5173 and log in with the built-in offline dev login.
+- Open for tuning (from M7): a post of R's right after onboarding draws ~3 reactions and under one comment
+  inside the 5-minute burst; `user-salience` and `theta_comment` are the knobs. Real voices need keys.
 
 ## M8 steps (all ✔)
 1. ✔ DM engine (`UserActions`): R's messages aired at once; the resident's reply planned by the engine
