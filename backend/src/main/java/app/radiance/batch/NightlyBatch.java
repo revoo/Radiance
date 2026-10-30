@@ -241,6 +241,7 @@ public final class NightlyBatch {
     new JobRunner(sql, lane, clock, 2)
         .on(JobKinds.REFLECT, j -> maintenance.reflect(j.refId()))
         .on(JobKinds.SUMMARY, j -> maintenance.summarize(j.refId()))
+        .on(JobKinds.DM_SUMMARY, j -> maintenance.summarizeThread(j.refId()))
         .drain();
 
     int rendered = results.stream().mapToInt(Renderer.Result::rendered).sum();

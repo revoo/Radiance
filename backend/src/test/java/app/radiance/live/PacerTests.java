@@ -152,6 +152,18 @@ class PacerTests {
     assertThat(run(a, T0, T0 + 600_000).keySet()).isEqualTo(run(b, T0, T0 + 600_000).keySet());
   }
 
+  @Test
+  void dmTimingFollowsPacingYaml() {
+    var p = pacer(12);
+    for (int i = 0; i < 200; i++) {
+      assertThat(p.dmTypingStart()).isBetween(1_000L, 3_000L);
+      assertThat(p.dmBurstGap()).isBetween(2_000L, 5_000L);
+    }
+    assertThat(p.dmTypingDelay(0)).isZero();
+    assertThat(p.dmTypingDelay(50)).isEqualTo(1_500);
+    assertThat(p.dmTypingDelay(10_000)).as("capped").isEqualTo(6_000);
+  }
+
   static int maxInAnyMinute(List<Long> times) {
     int max = 0;
     for (int i = 0; i < times.size(); i++) {

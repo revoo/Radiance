@@ -69,3 +69,10 @@ export function whoReacted(total: number, recent: string[], mine: boolean): stri
   if (rest <= 0) return shown.join(" and ");
   return `${shown.join(", ")} and ${rest} other${rest > 1 ? "s" : ""}`;
 }
+
+/** One to three emoji and nothing else: Messenger shows those big, without a bubble. */
+export function emojiOnly(text: string): boolean {
+  const t = text.trim();
+  if (!t || t.length > 12) return false;
+  return /^(\p{Extended_Pictographic}|\p{Emoji_Component}|\u200d|\ufe0f|\s)+$/u.test(t) && !/^[\d#*\s]+$/.test(t);
+}

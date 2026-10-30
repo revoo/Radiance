@@ -1,18 +1,23 @@
 # Progress
 
 ## Resume here
-- **M7 accepted by R (2026-10-29) and merged**: `main` fast-forwarded to `m7-live-play`.
-- Next: **M8 — Messenger** (SPEC §12), on a new branch from `main`. **Don't start until R says go.**
+- Milestone: **M8 — Messenger**, branch `m8-messenger` (from `main` at d7611f1). R said go on 2026-10-29.
+- Current step: 7 (browser check, then CI). Steps 1–6 done and committed.
 - Half-done: nothing.
-- To play offline: `./gradlew genesis --args='--seed 7 --import' -Pprofile=offline` (once), then
-  `./gradlew bootRun --args='--spring.profiles.active=offline'` and `cd frontend && npm run dev`; open
-  http://localhost:5173 and log in with the built-in offline dev login.
-- Observations from M7 (open for tuning):
-  - Right after onboarding, a post of R's draws about 3 reactions and fewer than one comment inside the
-    5-minute burst (browser check: 3 reactions and 1 comment). The harness medians (11 / 3) also count
-    residents finding the post in later scripts. Who responds is the M4-tuned engagement model, not
-    the Pacer; `user-salience` and `theta_comment` are the knobs if live bursts should be bigger.
-  - Offline prose is FakeLlm's: short, generic lines. Real voices need provider keys (open question).
+
+## M8 steps
+1. ✔ DM engine (`UserActions`): R's messages aired at once; the resident's reply planned by the engine
+   (tone by like-meter, cold shoulder, bursts of 1–3, wrapping up); Seen; resident-started DMs
+2. ✔ `LivePlay` Messenger: typing dots 1–3 s after R's message (with Seen), replies landing once rendered
+   plus ~30 ms a character (≤ 6 s), burst gaps, a crush checking in early in each session, DM hooks
+3. ✔ Thread summaries past 60 messages (`DM_SUMMARY`, migration 0004); packets carry the last 30 messages
+   and the summary; "what they're doing right now" in packets
+4. ✔ API: `/api/dm/threads` (list, open, messages, send, read); SSE `dm.message`, `dm.seen`, DM typing
+5. ✔ Messenger UI: chats and conversation, typing bubble, Seen, emoji-only messages, new-message picker,
+   Message button on profiles, unread badges, bottom tabs per SPEC §8
+6. ✔ Tests: AC (`MessengerTests`), real loop on the wall clock, regression (thread summaries survive new
+   scripts), API, Pacer DM timing, Vitest for Messenger, the stream and profiles
+7. Browser check, PROGRESS, CI; stop (M8 has no ⏸ REVIEW, but R asked to pause between milestones)
 
 ## M7 steps (all ✔)
 1. Live core: the `Pacer` (pure: response curves, token buckets with a hard per-minute cap, priority

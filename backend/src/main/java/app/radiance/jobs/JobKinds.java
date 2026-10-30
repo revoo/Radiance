@@ -13,6 +13,8 @@ public final class JobKinds {
   public static final String REFLECT = "REFLECT";
   /** Refresh how one person sees another: ref = {@code from|to}. */
   public static final String SUMMARY = "SUMMARY";
+  /** Summarize a DM thread's older messages: ref = thread id. */
+  public static final String DM_SUMMARY = "DM_SUMMARY";
 
   /** Lower runs first (SPEC §5.10): script, then backfill, then background work. */
   public static final int SCRIPT = 10;

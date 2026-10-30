@@ -73,6 +73,7 @@ radiance:
     impression-sensitivity: 1.0
     crush-propensity: 1.0
     dm-initiation-rate: 1.0
+    cold-shoulder-rate: 1.0            # scales curt replies and "Seen" from residents who dislike you
     affinity-half-life: 21d
   romance:                             # live-tunable
     temptation: 1.0

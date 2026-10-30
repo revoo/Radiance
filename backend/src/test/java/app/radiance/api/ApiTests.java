@@ -178,4 +178,36 @@ class ApiTests {
     assertThat(result.getResponse().getContentType()).startsWith("text/event-stream");
     assertThat(result.getResponse().getContentAsString()).contains("event:hello");
   }
+
+  @Test
+  @Order(7)
+  void messengerOpensSendsListsAndReads() throws Exception {
+    var friends = Json.tree(mvc.perform(get("/api/people").param("filter", "friends").with(R)).andReturn().getResponse()
+        .getContentAsString());
+    String handle = friends.get(0).get("handle").asString();
+    var opened = Json.tree(mvc.perform(post("/api/dm/threads").with(R).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"handle\":\"" + handle + "\"}"))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.with.handle").value(handle))
+        .andReturn().getResponse().getContentAsString());
+    String thread = opened.get("id").asString();
+    // the same thread the second time
+    mvc.perform(post("/api/dm/threads").with(R).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+        .content("{\"handle\":\"" + handle + "\"}")).andExpect(jsonPath("$.id").value(thread));
+
+    mvc.perform(post("/api/dm/threads/" + thread + "/messages").with(R).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"text\":\"hey, coffee this week?\"}"))
+        .andExpect(status().isCreated()).andExpect(jsonPath("$.you").value(true));
+    mvc.perform(get("/api/dm/threads/" + thread + "/messages").with(R)).andExpect(status().isOk())
+        .andExpect(jsonPath("$.messages[0].body").value("hey, coffee this week?"))
+        .andExpect(jsonPath("$.thread.with.handle").value(handle));
+    mvc.perform(get("/api/dm/threads").with(R)).andExpect(status().isOk())
+        .andExpect(jsonPath("$[?(@.id == '" + thread + "')]").exists());
+    mvc.perform(post("/api/dm/threads/" + thread + "/read").with(R).with(csrf())).andExpect(status().isNoContent());
+
+    mvc.perform(post("/api/dm/threads/" + thread + "/messages").with(R).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+        .content("{\"text\":\"   \"}")).andExpect(status().isBadRequest());
+    mvc.perform(get("/api/dm/threads/not-a-thread/messages").with(R)).andExpect(status().isNotFound());
+    mvc.perform(post("/api/dm/threads").with(R).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+        .content("{\"handle\":\"nobody.here\"}")).andExpect(status().isNotFound());
+  }
 }

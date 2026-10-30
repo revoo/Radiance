@@ -10,6 +10,9 @@ import { live } from "../live/store.ts";
 import { api, ApiError } from "./client.ts";
 import type {
   Comment,
+  DmConversation,
+  DmMessage,
+  DmThread,
   Me,
   Notifications,
   Onboard,
@@ -40,6 +43,8 @@ export const keys = {
   personPosts: (handle: string) => ["person-posts", handle] as const,
   profile: ["profile"] as const,
   pacer: ["pacer"] as const,
+  threads: ["dm-threads"] as const,
+  conversation: (id: string) => ["dm", id] as const,
 };
 
 export function useMe() {
@@ -315,5 +320,74 @@ export function useMarkNotificationsRead() {
   return useMutation({
     mutationFn: () => api<void>("/api/notifications/read", { method: "POST" }),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.notifications }),
+  });
+}
+
+// -------------------------------------------------------------------------------------------- Messenger
+
+export function useThreads() {
+  return useQuery({ queryKey: keys.threads, queryFn: () => api<DmThread[]>("/api/dm/threads") });
+}
+
+export function useConversation(threadId: string) {
+  return useQuery({
+    queryKey: keys.conversation(threadId),
+    queryFn: () => api<DmConversation>(`/api/dm/threads/${threadId}/messages`),
+    enabled: Boolean(threadId),
+  });
+}
+
+/** Opens (or finds) the thread with a resident. */
+export function useOpenThread() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (handle: string) => api<DmThread>("/api/dm/threads", { json: { handle } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.threads }),
+  });
+}
+
+/** R's message: in the conversation at once, then the server's copy. */
+export function useSendDm(threadId: string, me: Actor | null | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (text: string) => api<DmMessage>(`/api/dm/threads/${threadId}/messages`, { json: { text } }),
+    onMutate: async (text) => {
+      await qc.cancelQueries({ queryKey: keys.conversation(threadId) });
+      const temp: DmMessage = {
+        id: `temp-${Date.now()}`,
+        threadId,
+        senderId: me?.id ?? "you",
+        you: true,
+        body: text,
+        createdAt: Date.now(),
+        readAt: null,
+      };
+      qc.setQueryData<DmConversation>(keys.conversation(threadId), (c) => (c ? { ...c, messages: [...c.messages, temp] } : c));
+      return { tempId: temp.id };
+    },
+    onSuccess: (msg, _text, ctx) => {
+      qc.setQueryData<DmConversation>(keys.conversation(threadId), (c) =>
+        c ? { ...c, messages: c.messages.map((m) => (m.id === ctx?.tempId ? msg : m)) } : c,
+      );
+    },
+    onError: (e, _text, ctx) => {
+      qc.setQueryData<DmConversation>(keys.conversation(threadId), (c) =>
+        c ? { ...c, messages: c.messages.filter((m) => m.id !== ctx?.tempId) } : c,
+      );
+      live.toast({
+        id: `dm-failed-${Date.now()}`,
+        text: e instanceof ApiError && e.status === 503 ? "The world is waking up. Try again in a few seconds." : "Your message didn't send. Try again.",
+        postId: null,
+      });
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.threads }),
+  });
+}
+
+export function useReadThread() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (threadId: string) => api<void>(`/api/dm/threads/${threadId}/read`, { method: "POST" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.threads }),
   });
 }

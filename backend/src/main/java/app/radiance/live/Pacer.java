@@ -50,9 +50,10 @@ public final class Pacer {
 
   private final RandomSource rng;
   private final Map<String, Double> weights;
-  private final long[] reflexFirst, reflexSpacing, commentFirst, addresseeFirst, breathingPause;
+  private final long[] reflexFirst, reflexSpacing, commentFirst, addresseeFirst, breathingPause, dmTypingStarts, dmBurstGap;
   private final double gapGrowth, dramaTail;
-  private final long commentTail, reactionHold, breathingWithin, quietGap, hookInterval, typingGiveUp;
+  private final long commentTail, reactionHold, breathingWithin, quietGap, hookInterval, typingGiveUp, dmMaxTyping;
+  private final int dmMsPerChar;
   private final int maxPileOn, breathingAfter;
   private final Gate comments, reactions, notifications;
   private final boolean groupReactions;
@@ -92,6 +93,11 @@ public final class Pacer {
     this.quietGap = ms(rules.hooks().quietGap());
     this.hookInterval = ms(rules.hooks().minInterval());
     this.typingGiveUp = ms(rules.typing().giveUpAfter());
+    var dm = rules.dm();
+    this.dmTypingStarts = range(dm.typingStarts());
+    this.dmBurstGap = range(dm.burstGap());
+    this.dmMsPerChar = dm.msPerChar();
+    this.dmMaxTyping = ms(dm.maxTypingDelay());
   }
 
   // ------------------------------------------------------------------------------------------ planning
@@ -255,6 +261,26 @@ public final class Pacer {
   public void hooked(long now) {
     lastHook = now;
     lastSeen = now;
+  }
+
+  // ----------------------------------------------------------------------------------------------- DMs
+
+  /**
+   * Messenger timing (SPEC §5.11, A.6 {@code dm}): typing dots start this long after R's message lands.
+   * DMs aren't rate-limited like comments: anyone R talks to answers within seconds.
+   */
+  public long dmTypingStart() {
+    return draw(dmTypingStarts);
+  }
+
+  /** How long a reply of {@code chars} characters is "typed" after it's written: ~30 ms a character, capped. */
+  public long dmTypingDelay(int chars) {
+    return Math.min(dmMaxTyping, (long) Math.max(0, chars) * dmMsPerChar);
+  }
+
+  /** The pause before the next message of a burst ("wait" … "actually"). */
+  public long dmBurstGap() {
+    return draw(dmBurstGap);
   }
 
   // -------------------------------------------------------------------------------------------- timing

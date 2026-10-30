@@ -105,7 +105,7 @@ public final class ScriptWriter {
       social.saveComments(uow, script.comments);
       social.saveReactions(uow, script.reactions);
       var dmRepo = new DmRepository(sql);
-      dmRepo.saveThreads(uow, script.threads);
+      dmRepo.ensureThreads(uow, script.threads);
       dmRepo.saveMessages(uow, script.dms);
       if (slice.fidelity() != null) renderJobs(uow, script, origin);
       uow.add("UPDATE world SET scripted_until = ? WHERE id = ? AND scripted_until < ?", slice.end(), Schema.WORLD_ID,

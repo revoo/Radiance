@@ -85,6 +85,7 @@ public final class LivePlay {
   private final String networkName;
   private final boolean softening;
   private final long idleTimeout;
+  private final double coldShoulderRate;
   private final List<Consumer<LiveEvent>> listeners = new CopyOnWriteArrayList<>();
   private final ConcurrentLinkedQueue<WorldEngine.Report> aired = new ConcurrentLinkedQueue<>();
   private final LinkedBlockingQueue<Boolean> wake = new LinkedBlockingQueue<>();
@@ -95,6 +96,9 @@ public final class LivePlay {
   private long sessionStart, lastBeat, lastAir, lastProgress;
   private Pacer pacer;
   private final Map<String, Slot> typing = new LinkedHashMap<>();
+  private final List<DmSlot> dmSlots = new ArrayList<>();
+  private long crushAt = Long.MAX_VALUE;
+  private RandomSource sessionRng;
   private Thread loop;
   private boolean manual;
   private volatile boolean stopped;
@@ -102,6 +106,13 @@ public final class LivePlay {
   public LivePlay(Sql sql, WriterLane lane, WorldEngine engine, UserActions actions, Appraiser appraiser,
       LlmGateway gateway, WallClock clock, LeaseHolder lease, Backfill backfill, String networkName, boolean softening,
       Duration idleTimeout) {
+    this(sql, lane, engine, actions, appraiser, gateway, clock, lease, backfill, networkName, softening, idleTimeout, 1.0);
+  }
+
+  public LivePlay(Sql sql, WriterLane lane, WorldEngine engine, UserActions actions, Appraiser appraiser,
+      LlmGateway gateway, WallClock clock, LeaseHolder lease, Backfill backfill, String networkName, boolean softening,
+      Duration idleTimeout, double coldShoulderRate) {
+    this.coldShoulderRate = coldShoulderRate;
     this.sql = sql;
     this.lane = lane;
     this.engine = engine;
@@ -193,7 +204,11 @@ public final class LivePlay {
     sessionStart = wall;
     long seed = engine.locked(w -> w.seed);
     pacer = new Pacer(lib.pacing(), RandomSource.seeded(seed).derive("pacer:" + sessionId));
+    sessionRng = RandomSource.seeded(seed).derive("session:" + sessionId);
     typing.clear();
+    dmSlots.clear();
+    // a resident with a crush on R finds a reason to message him early in his session (SPEC §12 M8)
+    crushAt = wall + 2 * 60_000L + (long) (sessionRng.nextDouble() * 18 * 60_000L);
     String id = sessionId;
     lane.run(() -> sql.commit(new UnitOfWork().add("INSERT INTO session_log (id, started_at, ended_at) VALUES (?, ?, ?)",
         id, wall, wall)));
@@ -276,6 +291,57 @@ public final class LivePlay {
   public void unreact(ReactionRow.Target type, String targetId) {
     touch();
     actions.unreact(type, targetId);
+  }
+
+  // -------------------------------------------------------------------------------------- Messenger
+
+  /** The thread between R and a resident, found or started. */
+  public String openThread(String residentId) {
+    touch();
+    return actions.thread(residentId);
+  }
+
+  /**
+   * R sends a DM (SPEC §5.11): saved and shown at once. The resident reads it (Seen) and starts typing
+   * within seconds; the reply lands as soon as it's rendered plus a short typing delay, sometimes as a
+   * burst. Someone who can't stand him may just leave it on Seen.
+   */
+  public Optional<String> dm(String threadId, String text) {
+    touch();
+    var quick = Appraiser.reading(Appraiser.heuristic(text, true));
+    long t = now(), wall = clock.nowMs();
+    var id = actions.dm(threadId, text, quick, t);
+    if (id.isEmpty()) return id;
+    Thread.ofVirtual().name("live-dm").start(() -> {
+      try {
+        var reading = appraiser.read(text, "a direct message");
+        lane.run(() -> sql.commit(new UnitOfWork().add("UPDATE dm_message SET appraisal_json = ? WHERE id = ?",
+            reading.appraisalJson(), id.get())));
+        var reply = actions.dmReply(threadId, id.get(), coldShoulderRate, t);
+        if (reply.leftOnSeen()) {
+          emit("dm.seen", Map.of("threadId", threadId, "at", t));
+          return;
+        }
+        actions.save(reply.script());
+        queueDms(reply.script(), wall, true);
+      } catch (RuntimeException e) {
+        log.warn("Live DM reply failed for thread {}", threadId, e);
+      }
+    });
+    return id;
+  }
+
+  /** R has read a thread: the resident's messages get their Seen. */
+  public void readThread(String threadId) {
+    touch();
+    String user = engine.locked(w -> w.userId);
+    actions.markRead(threadId, user, now());
+  }
+
+  /** Typing dots in a thread right now. */
+  public synchronized List<Typing> typingIn(String threadId) {
+    return dmSlots.stream().filter(x -> x.typing && x.threadId.equals(threadId))
+        .map(x -> new Typing(x.key, threadId, x.actorId, x.name, x.typingAt)).toList();
   }
 
   /** Typing indicators on {@code postId} right now, for a post view loaded mid-indicator. */
@@ -419,6 +485,11 @@ public final class LivePlay {
       }
     }
     if (!ready.isEmpty()) actions.release(ready, t);
+    dmTurn(t, wall);
+    if (wall >= crushAt) {
+      crushAt = Long.MAX_VALUE;
+      crushCheckIn(t, wall);
+    }
 
     publishAired(wall);
 
@@ -444,7 +515,8 @@ public final class LivePlay {
 
     if (pacer.hookDue(wall)) hook(t, wall);
     long next = Math.min(pacer.nextWake(wall), lastAir + AIR_EVERY);
-    if (!typing.isEmpty()) next = Math.min(next, wall + 500);
+    if (!typing.isEmpty() || !dmSlots.isEmpty()) next = Math.min(next, wall + 250);
+    if (crushAt != Long.MAX_VALUE) next = Math.min(next, crushAt);
     return Math.max(20, Math.min(1_000, next - wall));
   }
 
@@ -468,6 +540,9 @@ public final class LivePlay {
             if (!author.equals(userId) && visible(author, userId)) newPosts++;
           }
           case "COMMENT" -> commentIds.add(id);
+          case "DM" -> sql.queryOne("SELECT thread_id, sender_id FROM dm_message WHERE id = ? AND render_status = 'RENDERED'",
+                  List.of(id), x -> new String[] {x.str("thread_id"), x.str("sender_id")})
+              .ifPresent(m -> emit("dm.message", Map.of("id", id, "threadId", m[0], "senderId", m[1])));
           case "REACTION" -> {
             var k = id.split(":", 3);
             emit("reaction.changed", Map.of("targetType", k[0], "targetId", k[1], "actorId", k[2]));
@@ -493,6 +568,8 @@ public final class LivePlay {
   private void hook(long t, long wall) {
     pacer.hooked(wall);
     var kinds = lib.pacing().hooks().kinds();
+    // half the time, try a DM from someone with a reason first
+    if (kinds.contains("dm_from_motivated_resident") && sessionRng.chance(0.5) && dmHook(t, wall, false)) return;
     if (kinds.contains("comment_on_older_post")) {
       var script = actions.hook(t);
       if (script.size() > 0) {
@@ -503,7 +580,138 @@ public final class LivePlay {
         return;
       }
     }
+    if (kinds.contains("dm_from_motivated_resident") && dmHook(t, wall, false)) return;
     if (kinds.contains("pull_scripted_post_forward")) actions.pullForward(t, Durations.parse("60m").toMillis());
+  }
+
+  /**
+   * Queues a planned burst of DMs: the first starts typing after the Pacer's 1–3 s (or at once, for a
+   * resident who starts the conversation), each later one after the burst gap once the one before it
+   * has landed. Renders start now.
+   */
+  private void queueDms(Script script, long wall, boolean reply) {
+    if (script.dms.isEmpty()) return;
+    synchronized (this) {
+      if (pacer == null) return;
+      DmSlot prev = null;
+      for (var m : script.dms) {
+        var slot = new DmSlot("DM:" + m.id(), m.id(), m.threadId(), m.senderId(), name(m.senderId()), reply);
+        if (prev == null) slot.typingAt = wall + (reply ? pacer.dmTypingStart() : 0);
+        else slot.after = prev;
+        dmSlots.add(slot);
+        prev = slot;
+      }
+    }
+    wake.offer(true);
+    script.dms.stream().map(m -> m.threadId()).distinct().forEach(this::renderDms);
+  }
+
+  /** One loop turn for DMs: typing dots, Seen, and messages landing when their typing is done. */
+  private void dmTurn(long t, long wall) {
+    if (dmSlots.isEmpty()) return;
+    var landed = new ArrayList<DmSlot>();
+    for (var it = dmSlots.iterator(); it.hasNext(); ) {
+      var slot = it.next();
+      if (slot.after != null && !slot.after.done) continue;
+      if (slot.after != null && slot.typingAt == Long.MAX_VALUE) slot.typingAt = slot.after.landedAt + pacer.dmBurstGap();
+      if (wall < slot.typingAt) continue;
+      if (!slot.typing) {
+        slot.typing = true;
+        if (slot.reply && slot.after == null) {
+          // they've read it: Seen shows as their typing starts
+          actions.markRead(slot.threadId, slot.actorId, t);
+          emit("dm.seen", Map.of("threadId", slot.threadId, "at", t));
+        }
+        emit("typing.started", Map.of("threadId", slot.threadId, "actorId", slot.actorId, "name", slot.name, "key", slot.key,
+            "kind", "dm"));
+      }
+      var row = sql.queryOne("SELECT render_status, air_status, body FROM dm_message WHERE id = ?", List.of(slot.id),
+          x -> new String[] {x.str("render_status"), x.str("air_status"), x.str("body")}).orElse(null);
+      boolean failed = row == null || row[1].equals("DROPPED") || row[0].equals("DROPPED") || row[0].equals("FAILED");
+      if (failed || (!row[0].equals("RENDERED") && wall - slot.typingAt > pacer.typingGiveUp())) {
+        // the render failed or gave up: the dots just go away
+        emit("typing.stopped", Map.of("threadId", slot.threadId, "actorId", slot.actorId, "key", slot.key));
+        slot.done = true;
+        slot.landedAt = wall;
+        it.remove();
+        continue;
+      }
+      if (!row[0].equals("RENDERED")) continue;
+      if (slot.landAt == Long.MAX_VALUE) slot.landAt = wall + pacer.dmTypingDelay(row[2] == null ? 0 : row[2].length());
+      if (wall < slot.landAt) continue;
+      landed.add(slot);
+      slot.done = true;
+      slot.landedAt = wall;
+      it.remove();
+    }
+    if (landed.isEmpty()) return;
+    actions.release(landed.stream().map(x -> x.key).toList(), t);
+    for (var slot : landed) {
+      emit("typing.stopped", Map.of("threadId", slot.threadId, "actorId", slot.actorId, "key", slot.key));
+    }
+  }
+
+  /** The crush who checks in early in R's session: once a session, if anyone has a crush on him. */
+  private void crushCheckIn(long t, long wall) {
+    if (!sessionRng.chance(Math.min(1, engine.knobs().dmInitiationRate()))) return;
+    dmHook(t, wall, true);
+  }
+
+  /** A DM from someone with a reason to write; false if nobody has one right now. */
+  private boolean dmHook(long t, long wall, boolean crushOnly) {
+    var who = actions.motivatedToDm(t, crushOnly);
+    if (who.isEmpty()) return false;
+    String resident = who.getFirst();
+    boolean crush = engine.locked(w -> {
+      var e = w.edgeOrNull(resident, w.userId);
+      return e != null && e.hasTag("crush");
+    });
+    String def = crush ? "dm_user_crush_checkin"
+        : List.of("dm_user_gossip", "dm_user_advice", "dm_user_vent").get(sessionRng.nextInt(3));
+    var script = actions.dmFrom(resident, def, t);
+    if (script.dms.isEmpty()) return false;
+    actions.save(script);
+    queueDms(script, wall, false);
+    pacer.seen(wall);
+    return true;
+  }
+
+  /** Renders the live DMs in a thread now, one render per thread at a time. */
+  private void renderDms(String threadId) {
+    Thread.ofVirtual().name("live-render-dm").start(() -> {
+      var lock = renderLocks.computeIfAbsent("dm:" + threadId, k -> new ReentrantLock());
+      lock.lock();
+      try {
+        new Renderer(sql, lane, lib, gateway, engine.world(), networkName, softening, Priority.LIVE).renderDms(threadId);
+      } catch (RuntimeException e) {
+        log.warn("Live DM render failed for thread {}: {}", threadId, e.toString());
+        long wallNow = clock.nowMs();
+        var uow = new UnitOfWork();
+        new JobRepository(sql).enqueue(uow, JobKinds.RENDER_DM, threadId, JobKinds.BACKFILL, wallNow, wallNow, wallNow);
+        lane.run(() -> sql.commit(uow));
+      } finally {
+        lock.unlock();
+        wake.offer(true);
+      }
+    });
+  }
+
+  /** A DM on its way to R: typing, then landing. */
+  private static final class DmSlot {
+    final String key, id, threadId, actorId, name;
+    final boolean reply;
+    DmSlot after;
+    long typingAt = Long.MAX_VALUE, landAt = Long.MAX_VALUE, landedAt;
+    boolean typing, done;
+
+    DmSlot(String key, String id, String threadId, String actorId, String name, boolean reply) {
+      this.key = key;
+      this.id = id;
+      this.threadId = threadId;
+      this.actorId = actorId;
+      this.name = name;
+      this.reply = reply;
+    }
   }
 
   private void end() {
@@ -513,9 +721,14 @@ public final class LivePlay {
     for (var slot : typing.values()) {
       if (slot.announced) emit("typing.stopped", Map.of("postId", slot.postId, "actorId", slot.actorId, "key", slot.key));
     }
+    for (var slot : dmSlots) {
+      if (slot.typing) emit("typing.stopped", Map.of("threadId", slot.threadId, "actorId", slot.actorId, "key", slot.key));
+    }
     sessionId = null;
     pacer = null;
     typing.clear();
+    dmSlots.clear();
+    crushAt = Long.MAX_VALUE;
   }
 
   // ---------------------------------------------------------------------------------------- reads

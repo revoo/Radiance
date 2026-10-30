@@ -1,7 +1,7 @@
-import { Activity, Bell, House, LogOut, Monitor, Moon, Sun, Users, X } from "lucide-react";
+import { Activity, Bell, House, LogOut, MessageCircle, Monitor, Moon, Sun, Users, X } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
-import { Link, NavLink, useNavigate } from "react-router";
-import { useLogout, useNotifications, usePeople, useWorld } from "../api/queries.ts";
+import { Link, NavLink, useLocation, useNavigate } from "react-router";
+import { useLogout, useNotifications, usePeople, useThreads, useWorld } from "../api/queries.ts";
 import type { Actor } from "../api/types.ts";
 import { live, useLive, worldNow } from "../live/store.ts";
 import { Avatar, Card } from "../ui/kit.tsx";
@@ -57,11 +57,16 @@ function ThemeButton() {
   );
 }
 
+/** Unread DMs across R's chats, for the Messages badge. */
+function useUnreadDms(): number {
+  return (useThreads().data ?? []).reduce((n, t) => n + t.unread, 0);
+}
+
 function NavIcon({ to, label, icon, badge }: { to: string; label: string; icon: ReactNode; badge?: number }) {
   return (
     <NavLink
       to={to}
-      end
+      end={to === "/"}
       aria-label={label}
       className={({ isActive }) =>
         `relative flex h-12 w-16 items-center justify-center rounded-xl transition md:w-24 ${
@@ -123,6 +128,10 @@ function AccountMenu({ me }: { me: Actor }) {
             </span>
           </Link>
           <div className="my-1 border-t border-line" />
+          <Link role="menuitem" to="/friends" onClick={() => setOpen(false)} className={item}>
+            <span className="flex size-8 items-center justify-center rounded-full bg-panel-2"><Users className="size-4" /></span>
+            Friends
+          </Link>
           <Link role="menuitem" to="/director/pacer" onClick={() => setOpen(false)} className={item}>
             <span className="flex size-8 items-center justify-center rounded-full bg-panel-2"><Activity className="size-4" /></span>
             Pacing monitor
@@ -144,6 +153,7 @@ function AccountMenu({ me }: { me: Actor }) {
 
 function TopBar({ me, network }: { me: Actor; network: string }) {
   const unread = useNotifications().data?.unread ?? 0;
+  const dms = useUnreadDms();
   return (
     <header className="fixed inset-x-0 top-0 z-40 h-16 border-b border-line bg-panel/85 backdrop-blur-xl">
       <div className="mx-auto flex h-full max-w-[1320px] items-center justify-between gap-3 px-4">
@@ -153,6 +163,7 @@ function TopBar({ me, network }: { me: Actor; network: string }) {
         <nav aria-label="Main" className="hidden items-center gap-1 sm:flex">
           <NavIcon to="/" label="Feed" icon={<House className="size-6" />} />
           <NavIcon to="/friends" label="Friends" icon={<Users className="size-6" />} />
+          <NavIcon to="/messages" label="Messages" icon={<MessageCircle className="size-6" />} badge={dms} />
           <NavIcon to="/notifications" label="Notifications" icon={<Bell className="size-6" />} badge={unread} />
         </nav>
         <div className="flex items-center gap-1">
@@ -166,6 +177,7 @@ function TopBar({ me, network }: { me: Actor; network: string }) {
 
 function BottomTabs({ me }: { me: Actor }) {
   const unread = useNotifications().data?.unread ?? 0;
+  const dms = useUnreadDms();
   const tab = ({ isActive }: { isActive: boolean }) =>
     `relative flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-semibold ${isActive ? "text-accent" : "text-muted"}`;
   return (
@@ -173,8 +185,13 @@ function BottomTabs({ me }: { me: Actor }) {
       <NavLink to="/" end className={tab}>
         <House className="size-6" aria-hidden="true" /> Feed
       </NavLink>
-      <NavLink to="/friends" className={tab}>
-        <Users className="size-6" aria-hidden="true" /> Friends
+      <NavLink to="/messages" className={tab}>
+        <MessageCircle className="size-6" aria-hidden="true" /> Messages
+        {dms > 0 && (
+          <span className="absolute right-[calc(50%-22px)] top-1 min-w-4 rounded-full bg-accent px-1 text-[10px] leading-4 text-white">
+            {dms}
+          </span>
+        )}
       </NavLink>
       <NavLink to="/notifications" className={tab}>
         <Bell className="size-6" aria-hidden="true" /> Alerts
@@ -221,6 +238,11 @@ function LeftRail({ me }: { me: Actor }) {
         to="/friends"
         icon={<span className="flex size-8 items-center justify-center rounded-full bg-[#1971c2] text-white"><Users className="size-4" /></span>}
         label="Friends"
+      />
+      <Shortcut
+        to="/messages"
+        icon={<span className="flex size-8 items-center justify-center rounded-full bg-[#2f9e44] text-white"><MessageCircle className="size-4" /></span>}
+        label="Messages"
       />
       <Shortcut
         to="/notifications"
@@ -309,7 +331,8 @@ function Toasts() {
             className="min-w-0 text-left text-sm font-medium"
             onClick={() => {
               live.dismiss(t.id);
-              if (t.postId) navigate(`/posts/${t.postId}`);
+              if (t.to) navigate(t.to);
+              else if (t.postId) navigate(`/posts/${t.postId}`);
             }}
           >
             {t.text}
@@ -344,16 +367,17 @@ function BackfillBanner() {
 }
 
 export function Layout({ me, network, children }: { me: Actor; network: string; children: ReactNode }) {
+  const wide = useLocation().pathname.startsWith("/messages");
   return (
     <div className="min-h-screen pb-20 pt-16 sm:pb-8">
       <TopBar me={me} network={network} />
       <div className="mx-auto flex max-w-[1320px] gap-6 px-3 pt-4 sm:px-4">
         <LeftRail me={me} />
-        <main className="mx-auto w-full min-w-0 max-w-[640px] flex-1 space-y-4">
+        <main className={`mx-auto w-full min-w-0 flex-1 space-y-4 ${wide ? "max-w-[980px]" : "max-w-[640px]"}`}>
           <BackfillBanner />
           {children}
         </main>
-        <RightRail />
+        {!wide && <RightRail />}
       </div>
       <BottomTabs me={me} />
       <Toasts />

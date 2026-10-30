@@ -54,7 +54,9 @@ abstract class SqlContractTests {
     var db = leased();
     var runner = MigrationRunner.fromClasspath(db.sql, db.admin, db.clock);
     assertThat(runner.migrate()).isEmpty();
-    assertThat(db.count("schema_migrations")).isEqualTo(3);
+    // every shipped migration is recorded once (counted, not hard-coded, so a new one doesn't break this)
+    assertThat(db.count("schema_migrations")).isEqualTo(MigrationRunner.load(MigrationRunner.DEFAULT_LOCATION).size());
+    assertThat(db.count("schema_migrations")).isGreaterThanOrEqualTo(4);
   }
 
   @Test

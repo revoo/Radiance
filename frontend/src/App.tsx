@@ -7,6 +7,7 @@ import { useRadianceStream } from "./live/useRadianceStream.ts";
 import { FeedPage } from "./pages/FeedPage.tsx";
 import { FriendsPage } from "./pages/FriendsPage.tsx";
 import { LoginPage } from "./pages/LoginPage.tsx";
+import { MessengerPage } from "./pages/MessengerPage.tsx";
 import { NotificationsPage } from "./pages/NotificationsPage.tsx";
 import { OnboardingPage } from "./pages/OnboardingPage.tsx";
 import { PacerPage } from "./pages/PacerPage.tsx";
@@ -65,6 +66,8 @@ export default function App() {
         <Route path="/people/:handle" element={<ProfilePage me={actor} />} />
         <Route path="/friends" element={<FriendsPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
+        <Route path="/messages" element={<MessengerPage me={actor} />} />
+        <Route path="/messages/:threadId" element={<MessengerPage me={actor} />} />
         <Route path="/director/pacer" element={<PacerPage />} />
         <Route path="*" element={<FeedPage me={actor} />} />
       </Routes>

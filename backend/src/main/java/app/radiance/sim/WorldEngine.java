@@ -229,7 +229,14 @@ public final class WorldEngine {
               + " AND c.air_status = 'AIRED' AND c.render_status = 'RENDERED') WHERE id = (SELECT post_id FROM comment"
               + " WHERE id = ?)", id);
         }
-        case DM -> uow.add("UPDATE dm_message SET air_status = ? WHERE id = ?", status, id);
+        case DM -> {
+          uow.add("UPDATE dm_message SET air_status = ? WHERE id = ?", status, id);
+          // the thread list sorts by its latest aired message
+          if (e.getValue() == AirStatus.AIRED) {
+            uow.add("UPDATE dm_thread SET last_message_at = (SELECT created_at FROM dm_message WHERE id = ?)"
+                + " WHERE id = (SELECT thread_id FROM dm_message WHERE id = ?)", id, id);
+          }
+        }
         case REACTION -> {
           var k = id.split(":", 3);
           uow.add("UPDATE reaction SET air_status = ? WHERE target_type = ? AND target_id = ? AND actor_id = ?", status,

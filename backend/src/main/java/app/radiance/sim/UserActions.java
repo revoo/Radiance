@@ -9,9 +9,12 @@ import app.radiance.kernel.Json;
 import app.radiance.kernel.RandomSource;
 import app.radiance.kernel.RenderStatus;
 import app.radiance.kernel.Ulid;
+import app.radiance.messenger.DmRepository;
+import app.radiance.messenger.DmRow;
 import app.radiance.persistence.Sql;
 import app.radiance.persistence.UnitOfWork;
 import app.radiance.persistence.WriterLane;
+import app.radiance.sim.model.Edge;
 import app.radiance.sim.model.Item;
 import app.radiance.sim.model.SimWorld;
 import app.radiance.social.CommentRow;
@@ -255,6 +258,9 @@ public final class UserActions {
     var social = new SocialRepository(sql);
     social.saveComments(uow, s.comments);
     social.saveReactions(uow, s.reactions);
+    var dms = new DmRepository(sql);
+    dms.ensureThreads(uow, s.threads);
+    dms.saveMessages(uow, s.dms);
     lane.run(() -> sql.commit(uow));
   }
 
@@ -267,7 +273,9 @@ public final class UserActions {
       long t = Math.max(now, w.time + 1);
       var uow = new UnitOfWork();
       for (String key : keys) {
-        if (key.startsWith("COMMENT:")) {
+        if (key.startsWith("DM:")) {
+          uow.add("UPDATE dm_message SET created_at = ? WHERE id = ? AND air_status = 'SCRIPTED'", t, key.substring(3));
+        } else if (key.startsWith("COMMENT:")) {
           uow.add("UPDATE comment SET created_at = ? WHERE id = ? AND air_status = 'SCRIPTED'", t, key.substring(8));
         } else if (key.startsWith("REACTION:")) {
           var k = key.substring(9).split(":", 3);
@@ -290,6 +298,149 @@ public final class UserActions {
           + " AND air_status = 'SCRIPTED'", k[0], k[1], k[2]);
     }
     if (uow.size() > 0) lane.run(() -> sql.commit(uow));
+  }
+
+  // ---------------------------------------------------------------------------------------- Messenger
+
+  /** How a resident answers R's DM (SPEC §5.11): the planned messages, or left on Seen. */
+  public record DmReply(Script script, boolean leftOnSeen, String tone) {}
+
+  /** The thread between R and a resident, found or started (the same id a script would give it). */
+  public String thread(String residentId) {
+    return engine.locked(w -> {
+      var existing = new DmRepository(sql).between(w.userId, residentId);
+      if (existing.isPresent()) return existing.get().id();
+      String a = w.userId.compareTo(residentId) < 0 ? w.userId : residentId;
+      String b = a.equals(w.userId) ? residentId : w.userId;
+      String id = Ulid.next(0, RandomSource.seeded(w.seed).derive("thread:" + Edge.pair(a, b)));
+      var row = new DmRow.Thread(id, a, b, null, null);
+      lane.run(() -> sql.commit(new DmRepository(sql).ensureThreads(new UnitOfWork(), List.of(row))));
+      return id;
+    });
+  }
+
+  /** R's message, aired at once. Empty if the thread isn't one of his. */
+  public Optional<String> dm(String threadId, String text, Reading r, long now) {
+    return engine.locked(w -> {
+      var thread = new DmRepository(sql).thread(threadId).orElse(null);
+      if (thread == null || !(w.userId.equals(thread.aId()) || w.userId.equals(thread.bId()))) return Optional.<String>empty();
+      String other = w.userId.equals(thread.aId()) ? thread.bId() : thread.aId();
+      long t = Math.max(now, w.time + 1);
+      double flirt = r.features().getOrDefault("flirtiness", 0.0);
+      double edge = r.features().getOrDefault("edginess", 0.0);
+      String interaction = flirt > 0.5 ? "dm_flirt"
+          : edge > 0.6 && r.features().getOrDefault("warmth", 0.5) < 0.3 ? "dm_curt" : "dm_warm";
+      var brief = new Brief(null, "DM", null, r.stance(), other, interaction, r.topics(), r.controversy(), 0, Map.of());
+      String id = Ulid.next(t, RandomSource.seeded(w.seed).derive("r-dm:" + t + ":" + threadId + ":" + text));
+      var row = new DmRow.Message(id, threadId, w.userId, t, AirStatus.SCRIPTED, text, RenderStatus.RENDERED, brief.json(),
+          r.appraisalJson(), null);
+      lane.run(() -> sql.commit(new DmRepository(sql).saveMessages(new UnitOfWork(), List.of(row))));
+      engine.advanceTo(t);
+      return Optional.of(id);
+    });
+  }
+
+  /**
+   * How the resident answers R's latest message (SPEC §5.11). Cold shoulder, not silence: residents
+   * who dislike R answer curtly, and only a hostile one (like-meter at -50 or below) may leave him on
+   * Seen. Otherwise one to three texts, flirtier or warmer as the relationship and their faithfulness
+   * allow, wrapping up when they've been at it a while. The engine decides all of it; the renderer
+   * only writes the words.
+   */
+  public DmReply dmReply(String threadId, String messageId, double coldShoulderRate, long now) {
+    return engine.locked(w -> {
+      var thread = new DmRepository(sql).thread(threadId).orElse(null);
+      var plan = plan(w, now);
+      if (thread == null) return new DmReply(plan.script, false, "none");
+      String other = w.userId.equals(thread.aId()) ? thread.bId() : thread.aId();
+      var b = w.people.get(other);
+      if (b == null) return new DmReply(plan.script, false, "none");
+      var e = w.edge(other, w.userId);
+      var rng = RandomSource.forActor(w.seed, other, now).derive("dm-reply:" + messageId);
+      if (e.affinity <= -50 && rng.chance(Math.min(1, 0.6 * coldShoulderRate))) {
+        markRead(threadId, other, now);
+        var rule = engine.lib().relationships().interactions().get("dm_left_on_seen");
+        if (rule != null) {
+          Airing.move(w, w.userId, other, rule.target(), false, now,
+              new Airing.Ctx(engine.lib(), engine.knobs(), null, false, Airing.Lookup.NONE));
+        }
+        return new DmReply(plan.script, true, "seen");
+      }
+      boolean curt = e.affinity < 0 && rng.chance(Math.min(1, (0.5 + Math.abs(e.affinity) / 100) * coldShoulderRate));
+      var said = w.items.get(messageId);
+      String day = w.day(now);
+      Stance stance = said == null ? Stance.SUPPORT
+          : Stances.comment(w, b, w.person(w.userId), said, engine.lib(), engine.knobs(), day, rng);
+      if (stance == Stance.REACT_ONLY || stance == Stance.META) stance = Stance.SUPPORT;
+      if (curt && (stance == Stance.FLIRT || stance == Stance.HYPE || stance == Stance.CONGRATS)) stance = Stance.SUPPORT;
+      String interaction = curt ? "dm_curt" : stance == Stance.FLIRT ? "dm_flirt" : "dm_warm";
+      int count = curt ? 1 : 1 + (rng.chance(0.4) ? 1 : 0) + (e.affinity > 30 && rng.chance(0.2) ? 1 : 0);
+      long recent = sql.queryOne("SELECT COUNT(*) AS n FROM dm_message WHERE thread_id = ? AND sender_id = ?"
+          + " AND created_at > ?", List.of(threadId, w.userId, now - 30 * 60_000L), x -> x.lng("n")).orElse(0L);
+      boolean wrapUp = recent >= 8 || ("WORK".equals(b.location) && rng.chance(0.15));
+      for (int i = 0; i < count; i++) {
+        boolean last = i == count - 1;
+        String text = i == 0
+            ? (curt ? "answer R's message curtly: short, cool, minimal effort, one line" : "answer R's last message")
+            : "a quick follow-up text in the same burst";
+        if (last && wrapUp) text += "; then wrap the conversation up their way (gtg, ttyl, busy)";
+        var extra = new java.util.LinkedHashMap<String, Object>();
+        extra.put("tone", curt ? "curt" : "normal");
+        extra.put("burst", i + 1);
+        if (last && wrapUp) extra.put("endConversation", true);
+        var brief = new Brief(null, "DM", text, stance.name(), w.userId, interaction, said == null ? List.of() : said.topics,
+            0, 0, extra);
+        plan.dm("dm-reply:" + messageId + ":" + i, now + HORIZON + i * 1_000L, other, w.userId, brief);
+      }
+      return new DmReply(plan.script, false, curt ? "curt" : "normal");
+    });
+  }
+
+  /**
+   * A resident starts a conversation with R (a DM_USER def, SPEC §5.11): as a hook while he's online,
+   * or the crush who checks in early in his session.
+   */
+  public Script dmFrom(String residentId, String defId, long now) {
+    return engine.locked(w -> {
+      var plan = plan(w, now);
+      var def = engine.lib().events().get(defId);
+      if (def == null || !w.people.containsKey(residentId)) return plan.script;
+      String text = def.output() != null && def.output().brief() != null ? def.output().brief() : "starts a conversation with R";
+      String interaction = defId.contains("crush") ? "dm_flirt" : defId.contains("complaint") ? "dm_curt" : "dm_warm";
+      var brief = new Brief(def.id(), "DM_USER", text, defId.contains("crush") ? "FLIRT" : null, w.userId, interaction,
+          List.of(), 0, 0, Map.of());
+      plan.dm("dm-from:" + defId + ":" + residentId, now + HORIZON, residentId, w.userId, brief);
+      return plan.script;
+    });
+  }
+
+  /**
+   * Residents with a reason to message R now, best reason first: a crush, then fans, close friends and
+   * the nosiest. None who messaged him in the last day.
+   */
+  public List<String> motivatedToDm(long now, boolean crushOnly) {
+    return engine.locked(w -> {
+      var out = new java.util.ArrayList<Map.Entry<String, Double>>();
+      for (var b : w.residents()) {
+        var e = w.edgeOrNull(b.id, w.userId);
+        if (e == null) continue;
+        double why = e.hasTag("crush") ? 3 : crushOnly ? 0 : e.hasTag("fan") ? 2
+            : e.kind == RelationshipRow.Kind.CLOSE_FRIEND ? 1.5 : b.trait("nosiness") > 70 && e.affinity > 20 ? 1 : 0;
+        if (why == 0) continue;
+        long lately = sql.queryOne("SELECT COUNT(*) AS n FROM dm_message m JOIN dm_thread t ON t.id = m.thread_id"
+            + " WHERE m.sender_id = ? AND m.created_at > ? AND (t.a_id = ? OR t.b_id = ?)",
+            List.of(b.id, now - 86_400_000L, w.userId, w.userId), x -> x.lng("n")).orElse(0L);
+        if (lately == 0) out.add(Map.entry(b.id, why + e.affinity / 1000));
+      }
+      out.sort(Map.Entry.<String, Double>comparingByValue().reversed().thenComparing(Map.Entry.comparingByKey()));
+      return out.stream().map(Map.Entry::getKey).toList();
+    });
+  }
+
+  /** {@code reader} has read the thread: every aired message to them gets a Seen. */
+  public void markRead(String threadId, String reader, long t) {
+    lane.run(() -> sql.commit(new UnitOfWork().add("UPDATE dm_message SET read_at = ? WHERE thread_id = ? AND sender_id <> ?"
+        + " AND air_status = 'AIRED' AND read_at IS NULL", t, threadId, reader)));
   }
 
   // ------------------------------------------------------------------------------------------ helpers

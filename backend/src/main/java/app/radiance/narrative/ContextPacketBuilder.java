@@ -160,6 +160,9 @@ public final class ContextPacketBuilder {
     return new Packet(prefix(), content, briefs, targets);
   }
 
+  /** DM history in a render packet; older messages are in the thread summary. */
+  static final int HISTORY = 30;
+
   /** RENDER_DM: the scripted messages in one thread, with the conversation so far. */
   public Packet dms(String threadId, PromptBudget budget) {
     var dms = new DmRepository(sql).messages(threadId);
@@ -169,10 +172,18 @@ public final class ContextPacketBuilder {
     var targets = new LinkedHashMap<String, Target>();
     var convo = new StringBuilder();
     long t = dms.isEmpty() ? world.time : dms.getFirst().createdAt();
+    // the last 30 messages, with older ones summarized (SPEC §5.11)
+    var written = dms.stream().filter(m -> m.body() != null).toList();
+    var recent = new java.util.HashSet<>(written.subList(Math.max(0, written.size() - HISTORY), written.size()));
+    if (thread.summary() != null && written.size() > HISTORY) {
+      convo.append("(earlier: ").append(thread.summary()).append(")\n");
+    }
     for (var m : dms) {
       if (m.body() != null) {
-        convo.append(handle(m.senderId())).append(": ").append(m.body()).append('\n');
+        if (recent.contains(m)) convo.append(handle(m.senderId())).append(": ").append(m.body()).append('\n');
+        t = m.createdAt();
       } else if (!m.airStatus().name().equals("DROPPED")) {
+        t = Math.max(t, m.createdAt());
         var b = Brief.parse(m.briefJson());
         briefs.add(new Brief(b.defId(), b.category(), b.text(), b.stance(), b.toward(), b.interaction(), b.topics(),
             b.controversy(), b.drama(), extraWith(b.extra(), "briefId", m.id(), "kind", "DM", "author", handle(m.senderId()))));
@@ -291,7 +302,7 @@ public final class ContextPacketBuilder {
     list(sb, "Never", v.path("neverDoes"));
     list(sb, "Sample posts", v.path("samplePosts"));
     list(sb, "Sample comments", v.path("sampleComments"));
-    sb.append("Right now: ").append(mood(p)).append(".\n");
+    sb.append("Right now: ").append(mood(p)).append(doing(p, t)).append(".\n");
     var constraints = constraintLines(p, t);
     if (!constraints.isEmpty()) sb.append("Constraints: ").append(String.join(" ", constraints)).append('\n');
     var arcs = new ArrayList<String>();
@@ -332,6 +343,18 @@ public final class ContextPacketBuilder {
     arr.forEach(x -> items.add(x.asString()));
     sb.append(label).append(": ").append(label.startsWith("Sample") ? items.stream().map(x -> "“" + x + "”")
         .collect(Collectors.joining(" ")) : String.join(", ", items)).append('\n');
+  }
+
+  /** What they're doing, which colors a DM reply instead of delaying it (SPEC §5.11). */
+  private String doing(Person p, long t) {
+    if (p.location == null) return "";
+    int hour = Instant.ofEpochMilli(t).atZone(world.zone).getHour();
+    String where = p.location.startsWith("TRAVELING") ? "traveling" : switch (p.location) {
+      case "WORK" -> "at work";
+      case "OUT" -> "out and about";
+      default -> hour >= 23 || hour < 6 ? "at home, about to sleep" : "at home";
+    };
+    return ", " + where;
   }
 
   private static String mood(Person p) {

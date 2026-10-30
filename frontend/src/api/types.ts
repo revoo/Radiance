@@ -159,3 +159,18 @@ export type PacerMonitor = {
     }[];
   } | null;
 };
+
+/** A direct message. On R's own message, `readAt` is the resident's Seen. */
+export type DmMessage = {
+  id: string;
+  threadId: string;
+  senderId: string;
+  you: boolean;
+  body: string;
+  createdAt: number;
+  readAt: number | null;
+};
+
+export type DmThread = { id: string; with: Actor; lastMessage: DmMessage | null; unread: number; typing: boolean };
+
+export type DmConversation = { thread: DmThread; messages: DmMessage[]; typing: Typing[] };

@@ -1,7 +1,7 @@
-import { Briefcase, Cake, Heart, House, MapPin, Pencil, Search, UserRoundCheck } from "lucide-react";
+import { Briefcase, Cake, Heart, House, MapPin, MessageCircle, Pencil, Search, UserRoundCheck } from "lucide-react";
 import { useState } from "react";
-import { Link, useParams } from "react-router";
-import { usePerson, usePersonPosts, useUpdateProfile } from "../api/queries.ts";
+import { Link, useNavigate, useParams } from "react-router";
+import { useOpenThread, usePerson, usePersonPosts, useUpdateProfile } from "../api/queries.ts";
 import type { Actor, Person } from "../api/types.ts";
 import { PostCard } from "../feed/PostCard.tsx";
 import { colorFor } from "../ui/format.ts";
@@ -126,6 +126,8 @@ export function ProfilePage({ me }: { me: Actor }) {
   const person = usePerson(handle);
   const posts = usePersonPosts(handle);
   const [editing, setEditing] = useState(false);
+  const openThread = useOpenThread();
+  const navigate = useNavigate();
 
   if (person.isPending) {
     return (
@@ -164,6 +166,14 @@ export function ProfilePage({ me }: { me: Actor }) {
             <p className="text-sm text-muted">@{p.actor.handle}</p>
           </div>
           <div className="mt-3 flex gap-2">
+            {!p.actor.you && (
+              <Button
+                busy={openThread.isPending}
+                onClick={() => openThread.mutate(p.actor.handle, { onSuccess: (t) => navigate(`/messages/${t.id}`) })}
+              >
+                <MessageCircle className="size-4" /> Message
+              </Button>
+            )}
             {p.actor.you ? (
               <Button variant="soft" onClick={() => setEditing(true)}>
                 <Pencil className="size-4" /> Edit profile

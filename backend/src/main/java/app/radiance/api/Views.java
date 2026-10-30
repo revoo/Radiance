@@ -41,4 +41,11 @@ final class Views {
       String snippet, long createdAt, boolean read) {}
 
   record Notifications(List<Notification> items, int unread) {}
+
+  /** {@code readAt} on R's own message is the resident's Seen. */
+  record DmMessage(String id, String threadId, String senderId, boolean you, String body, long createdAt, Long readAt) {}
+
+  record DmThread(String id, Actor with, DmMessage lastMessage, int unread, boolean typing) {}
+
+  record DmConversation(DmThread thread, List<DmMessage> messages, List<Typing> typing) {}
 }

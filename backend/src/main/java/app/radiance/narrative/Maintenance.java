@@ -13,6 +13,7 @@ import app.radiance.llm.Priority;
 import app.radiance.llm.Purpose;
 import app.radiance.memory.MemoryRepository;
 import app.radiance.memory.MemoryRow;
+import app.radiance.messenger.DmRepository;
 import app.radiance.persistence.Sql;
 import app.radiance.persistence.UnitOfWork;
 import app.radiance.persistence.WriterLane;
@@ -37,6 +38,10 @@ public final class Maintenance {
   static final int COMPACT_OVER = 40;
   static final long COMPACT_AGE = 7 * DAY;
   static final double MATERIAL = 15;
+  /** DM threads longer than this get their older messages summarized (SPEC §5.11). */
+  static final int DM_SUMMARIZE_OVER = 60;
+  /** Packets show this many recent messages; the summary covers the rest. */
+  static final int DM_RECENT = 30;
 
   private final Sql sql;
   private final WriterLane lane;
@@ -75,8 +80,55 @@ public final class Maintenance {
         n++;
       }
     }
+    for (var t : sql.query("SELECT t.id AS id, t.summarized_count AS done, COUNT(m.id) AS n FROM dm_thread t"
+        + " JOIN dm_message m ON m.thread_id = t.id AND m.body IS NOT NULL GROUP BY t.id, t.summarized_count", List.of(),
+        r -> new Object[] {r.str("id"), r.lng("done"), r.lng("n")})) {
+      if (dmSummaryDue((long) t[2], (long) t[1])) {
+        jobs.enqueue(uow, JobKinds.DM_SUMMARY, (String) t[0], JobKinds.BACKGROUND, wallNow, wallNow);
+        n++;
+      }
+    }
     if (!uow.isEmpty()) lane.run(() -> sql.commit(uow));
     return n;
+  }
+
+  /**
+   * A thread of {@code written} messages needs a (new) summary once it's longer than 60 and at least 30
+   * messages outside the packet's recent window aren't in the summary yet.
+   */
+  public static boolean dmSummaryDue(long written, long summarized) {
+    return written > DM_SUMMARIZE_OVER && written - DM_RECENT - summarized >= DM_RECENT;
+  }
+
+  /** DM_SUMMARY: the earlier summary plus the messages that scrolled out of the recent window, in a few sentences. */
+  public void summarizeThread(String threadId) {
+    var thread = new DmRepository(sql).thread(threadId).orElse(null);
+    if (thread == null) return;
+    var written = new DmRepository(sql).messages(threadId).stream().filter(m -> m.body() != null).toList();
+    long done = sql.queryOne("SELECT summarized_count FROM dm_thread WHERE id = ?", List.of(threadId),
+        r -> r.lng("summarized_count")).orElse(0L);
+    if (!dmSummaryDue(written.size(), done)) return;
+    int upTo = written.size() - DM_RECENT;
+    var text = new StringBuilder();
+    for (var m : written.subList((int) done, upTo)) {
+      var who = world.people.get(m.senderId());
+      text.append(who == null ? "?" : who.name).append(": ").append(m.body()).append('\n');
+    }
+    var a = world.people.get(thread.aId());
+    var b = world.people.get(thread.bId());
+    String prompt = lib.prompt("dm-summary").replace("{{network_name}}", networkName)
+        .replace("{{a}}", a == null ? "?" : a.name).replace("{{b}}", b == null ? "?" : b.name)
+        .replace("{{earlier}}", thread.summary() == null ? "(none yet)" : thread.summary())
+        .replace("{{messages}}", text.toString().strip());
+    var r = gateway.call(new LlmRequest<>(Purpose.SUMMARY, List.of(), List.of(new Part.Text(prompt)), RelationSummary.class,
+        400, Duration.ofSeconds(60), Priority.BACKGROUND));
+    if (!r.ok() || r.value().summary() == null || r.value().summary().isBlank()) {
+      throw new IllegalStateException("thread summary failed: " + r.outcome());
+    }
+    String summary = words(r.value().summary(), 160);
+    var uow = new DmRepository(sql).summarize(new UnitOfWork(), threadId, summary);
+    uow.add("UPDATE dm_thread SET summarized_count = ? WHERE id = ?", upTo, threadId);
+    lane.run(() -> sql.commit(uow));
   }
 
   boolean summaryDue(Edge e) {

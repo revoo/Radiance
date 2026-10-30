@@ -44,14 +44,30 @@ export function applyEvent(qc: QueryClient, name: string, d: Data, refresh = ref
       if (d.targetType === "POST") void refresh(qc, d.targetId as string);
       else void qc.invalidateQueries({ queryKey: ["comments"] });
       break;
-    case "typing.started":
-      live.typingStarted(d.postId as string, { key: d.key as string, actorId: d.actorId as string, name: d.name as string });
+    case "typing.started": {
+      const where = d.threadId ? `dm:${d.threadId as string}` : (d.postId as string);
+      live.typingStarted(where, { key: d.key as string, actorId: d.actorId as string, name: d.name as string });
+      if (d.threadId) void qc.invalidateQueries({ queryKey: keys.threads });
       break;
+    }
     case "typing.stopped":
-      live.typingStopped(d.postId as string, d.key as string);
+      live.typingStopped(d.threadId ? `dm:${d.threadId as string}` : (d.postId as string), d.key as string);
+      break;
+    case "dm.message":
+      void qc.invalidateQueries({ queryKey: keys.conversation(d.threadId as string) });
+      void qc.invalidateQueries({ queryKey: keys.threads });
+      break;
+    case "dm.seen":
+      void qc.invalidateQueries({ queryKey: keys.conversation(d.threadId as string) });
       break;
     case "notification.created": {
       void qc.invalidateQueries({ queryKey: keys.notifications });
+      if (d.kind === "DM") {
+        // R is already reading a conversation: its messages show there, not as a toast
+        if (live.get().openThread) break;
+        live.toast({ id: `${Date.now()}-${Math.random()}`, text: describe(d), postId: null, to: "/messages" });
+        break;
+      }
       const postId = d.refType === "POST" ? (d.refId as string) : null;
       live.toast({ id: `${Date.now()}-${Math.random()}`, text: describe(d), postId });
       break;
@@ -73,6 +89,8 @@ const EVENTS = [
   "typing.stopped",
   "notification.created",
   "backfill.progress",
+  "dm.message",
+  "dm.seen",
 ];
 
 /** Subscribes to {@code /api/stream} while signed in; EventSource reconnects on its own. */

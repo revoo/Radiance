@@ -36,7 +36,8 @@ class LiveConfig {
   LivePlay livePlay(Sql sql, WriterLane lane, WorldEngine engine, UserActions actions, Appraiser appraiser,
       LlmGateway gateway, WallClock clock, LeaseHolder lease, NightlyBatch batch, WorldProperties world,
       @Value("${radiance.content.softening-check:true}") boolean softening,
-      @Value("${radiance.session.idle-timeout:10m}") Duration idleTimeout) {
+      @Value("${radiance.session.idle-timeout:10m}") Duration idleTimeout,
+      @Value("${radiance.social.cold-shoulder-rate:1.0}") double coldShoulderRate) {
     var backfill = new LivePlay.Backfill() {
       @Override
       public boolean running() {
@@ -49,6 +50,6 @@ class LiveConfig {
       }
     };
     return new LivePlay(sql, lane, engine, actions, appraiser, gateway, clock, lease, backfill, world.networkName(),
-        softening, idleTimeout);
+        softening, idleTimeout, coldShoulderRate);
   }
 }

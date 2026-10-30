@@ -9,6 +9,7 @@ import app.radiance.persistence.Table;
 import app.radiance.persistence.UnitOfWork;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 public final class DmRepository {
 
@@ -67,6 +68,31 @@ public final class DmRepository {
 
   public UnitOfWork saveThreads(UnitOfWork uow, Collection<DmRow.Thread> rows) {
     return THREADS.upsert(uow, rows);
+  }
+
+  /**
+   * Threads a script or live play starts: inserted if missing, never overwritten, so an existing
+   * thread keeps its summary.
+   */
+  public UnitOfWork ensureThreads(UnitOfWork uow, Collection<DmRow.Thread> rows) {
+    for (var t : rows) {
+      uow.add("INSERT INTO dm_thread (id, a_id, b_id) VALUES (?, ?, ?) ON CONFLICT (id) DO NOTHING", t.id(), t.aId(), t.bId());
+    }
+    return uow;
+  }
+
+  public Optional<DmRow.Thread> thread(String id) {
+    return THREADS.where(sql, "id = ?", id).stream().findFirst();
+  }
+
+  /** The thread between two actors, whichever order they're given in. */
+  public Optional<DmRow.Thread> between(String x, String y) {
+    String a = x.compareTo(y) < 0 ? x : y, b = a.equals(x) ? y : x;
+    return THREADS.where(sql, "a_id = ? AND b_id = ?", a, b).stream().findFirst();
+  }
+
+  public UnitOfWork summarize(UnitOfWork uow, String threadId, String summary) {
+    return uow.add("UPDATE dm_thread SET summary = ? WHERE id = ?", summary, threadId);
   }
 
   public UnitOfWork saveMessages(UnitOfWork uow, Collection<DmRow.Message> rows) {

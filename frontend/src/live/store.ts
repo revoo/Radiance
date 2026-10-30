@@ -2,20 +2,23 @@ import { useSyncExternalStore } from "react";
 
 export type TypingEntry = { key: string; actorId: string; name: string };
 
-export type Toast = { id: string; text: string; postId: string | null };
+/** A toast; clicking it opens the post, or `to` when it's somewhere else (a DM thread). */
+export type Toast = { id: string; text: string; postId: string | null; to?: string };
 
 export type LiveState = {
   /** Posts that aired since the feed was loaded, waiting behind the "N new posts" pill. */
   newPosts: number;
-  /** Typing indicators by post: "Sarah is writing a comment…". */
+  /** Typing indicators by post id ("Sarah is writing a comment…"), and by "dm:" + thread id for Messenger. */
   typing: Record<string, TypingEntry[]>;
   toasts: Toast[];
   backfilling: boolean;
+  /** The DM thread on screen, so its messages don't also pop up as toasts. */
+  openThread: string | null;
   /** World time minus this browser's clock, from the last heartbeat. */
   clockOffset: number;
 };
 
-let state: LiveState = { newPosts: 0, typing: {}, toasts: [], backfilling: false, clockOffset: 0 };
+let state: LiveState = { newPosts: 0, typing: {}, toasts: [], backfilling: false, openThread: null, clockOffset: 0 };
 const listeners = new Set<() => void>();
 
 function set(next: Partial<LiveState>) {
@@ -56,11 +59,14 @@ export const live = {
   setBackfilling(b: boolean) {
     if (b !== state.backfilling) set({ backfilling: b });
   },
+  setOpenThread(id: string | null) {
+    if (id !== state.openThread) set({ openThread: id });
+  },
   setClockOffset(ms: number) {
     set({ clockOffset: ms });
   },
   reset() {
-    state = { newPosts: 0, typing: {}, toasts: [], backfilling: false, clockOffset: 0 };
+    state = { newPosts: 0, typing: {}, toasts: [], backfilling: false, openThread: null, clockOffset: 0 };
     listeners.forEach((l) => l());
   },
 };
