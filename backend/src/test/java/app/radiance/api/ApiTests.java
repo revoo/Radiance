@@ -170,4 +170,12 @@ class ApiTests {
         .content("{\"bio\": \"Runner, coder, deep-dish skeptic.\"}"))
         .andExpect(status().isOk()).andExpect(jsonPath("$.bio").value("Runner, coder, deep-dish skeptic."));
   }
+
+  @Test
+  @Order(6)
+  void theStreamSaysHelloAsServerSentEvents() throws Exception {
+    var result = mvc.perform(get("/api/stream").with(R)).andExpect(status().isOk()).andReturn();
+    assertThat(result.getResponse().getContentType()).startsWith("text/event-stream");
+    assertThat(result.getResponse().getContentAsString()).contains("event:hello");
+  }
 }

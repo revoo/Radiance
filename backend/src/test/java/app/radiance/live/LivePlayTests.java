@@ -270,6 +270,71 @@ class LivePlayTests {
     assertThat(live.tick()).isBetween(20L, 1_000L);
   }
 
+  /**
+   * Responses the Pacer never released (R left mid-burst, or the app restarted) still air, later, as
+   * background: nothing depends on the Pacer's memory.
+   */
+  @Test
+  void responsesThePacerNeverReleasedStillAirLater() {
+    var live = live(gateway(null));
+    live.touch();
+    for (String text : POSTS) live.post(text);
+    long waiting = db.sql.queryOne("SELECT COUNT(*) AS n FROM reaction WHERE air_status = 'SCRIPTED' AND target_id IN"
+        + " (SELECT id FROM post WHERE origin = 'USER')", List.of(), r -> r.lng("n")).orElseThrow();
+    assertThat(waiting).as("responses were planned").isPositive();
+    // no loop turns at all; hours later, the script airs them on its own
+    db.clock.advance(Duration.ofHours(4));
+    engine.advanceTo(db.clock.nowMs());
+    long aired = db.sql.queryOne("SELECT COUNT(*) AS n FROM reaction WHERE air_status = 'AIRED' AND target_id IN"
+        + " (SELECT id FROM post WHERE origin = 'USER')", List.of(), r -> r.lng("n")).orElseThrow();
+    assertThat(aired).isPositive();
+  }
+
+  /**
+   * The real loop thread on the real clock (not the hand-driven ticks above, which once hid a loop that
+   * slept forever): a resident's reaction reaches R within seconds of his post.
+   */
+  @Test
+  void theRealLoopReleasesResponsesOnTheWallClock() throws Exception {
+    var gateway = gateway(null);
+    var actions = new UserActions(db.sql, db.lane, engine);
+    var backfill = new LivePlay.Backfill() {
+      @Override
+      public boolean running() {
+        return false;
+      }
+
+      @Override
+      public void start() {}
+    };
+    var live = new LivePlay(db.sql, db.lane, engine, actions, new Appraiser(gateway, Duration.ofSeconds(5)), gateway,
+        app.radiance.kernel.WallClock.system(), db.holder, backfill, "Radiance", true, Duration.ofMinutes(10));
+    var reactions = new java.util.concurrent.LinkedBlockingQueue<LivePlay.LiveEvent>();
+    live.addListener(e -> {
+      if (e.name().equals("reaction.changed")) reactions.add(e);
+    });
+    try {
+      live.touch();
+      String userId = engine.world().userId;
+      LivePlay.LiveEvent got = null;
+      for (String text : POSTS.subList(0, 3)) {
+        long t0 = System.currentTimeMillis();
+        String id = live.post(text);
+        while (got == null && System.currentTimeMillis() - t0 < 9_000) {
+          var e = reactions.poll(500, TimeUnit.MILLISECONDS);
+          if (e != null && id.equals(e.data().get("targetId")) && !userId.equals(e.data().get("actorId"))) got = e;
+        }
+        if (got != null) {
+          assertThat(System.currentTimeMillis() - t0).as("first reaction, real time").isLessThanOrEqualTo(7_000);
+          break;
+        }
+      }
+      assertThat(got).as("a resident reacted to one of R's posts, released by the loop thread").isNotNull();
+    } finally {
+      live.stop();
+    }
+  }
+
   static int maxPerMinute(List<Timed> xs) {
     var times = new ArrayList<Long>();
     xs.forEach(x -> times.add(x.at()));

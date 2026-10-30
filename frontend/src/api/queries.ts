@@ -284,7 +284,12 @@ export function useLogout() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => api<void>("/api/auth/logout", { method: "POST" }),
-    onSuccess: () => qc.clear(),
+    // even if the session was already gone: forget everything, then ask who R is again (a 401 → login)
+    onSettled: async () => {
+      live.reset();
+      qc.removeQueries({ predicate: (q) => q.queryKey[0] !== keys.me[0] });
+      await qc.resetQueries({ queryKey: keys.me });
+    },
   });
 }
 

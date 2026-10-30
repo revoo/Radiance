@@ -85,7 +85,12 @@
     any minute (hard per-minute caps on top of the token buckets) ✔; a late render shows "… is writing a
     comment" until it lands, and a failed one just goes away ✔; with no script, the first request
     starts a background backfill and the feed still loads ✔.
-  - 196 backend tests, 16 frontend tests; lint and build clean.
+  - 201 backend tests, 43 frontend tests; lint and build clean.
+  - Fixes from R's first play (2026-10-29), each with a regression test that fails without it: logging
+    out returned to the feed (the client never re-asked who R is; logout now lives in an account menu
+    that also works on phones); comment and reply reaction badges covered short text (they now hang off
+    the bubble's edge). Added real-path tests: the SPA's login/CSRF/logout flow on a real server
+    (`SpaSessionTests`), the real loop thread on the wall clock, unreleased responses airing later.
 - **M6 — Nightly batch (local)** (2026-10-28), branch `m6-nightly-batch`:
   - AC: a FULL night writes and renders in seconds offline and projects under $0.15 at haiku prices ✔;
     a second run the same night plans, renders and calls nothing ✔; a run killed mid-render is

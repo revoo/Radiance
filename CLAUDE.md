@@ -39,5 +39,11 @@ Source of truth: SPEC.md. Status: PROGRESS.md. Decisions: docs/adr/.
 ## Workflow
 - Milestones are in SPEC §12. After each: tests green, PROGRESS.md updated, commit. Stop at ⏸ REVIEW.
 - If the spec contradicts reality, stop and report with evidence.
+- Testing priorities (R, regressions are a known fragile point), on top of the tests the work needs:
+  1. every bug fix ships with a regression test that fails without the fix;
+  2. some tests run the real path — the real loop thread, the real security chain on a real server,
+     the real startup modes — not only hand-driven shortcuts, which hid most of M7's bugs;
+  3. each milestone's AC lines (SPEC §12) become tests;
+  4. pure logic with tricky rules (the Pacer, the math, formatters) is tested thoroughly.
 - Your own token budget runs out: commit at every green step and keep PROGRESS.md's Resume here block
   current. A new session reads CLAUDE.md, PROGRESS.md and `git log -5` first, then resumes.

@@ -84,10 +84,66 @@ function NavIcon({ to, label, icon, badge }: { to: string; label: string; icon: 
   );
 }
 
-function TopBar({ me, network }: { me: Actor; network: string }) {
-  const unread = useNotifications().data?.unread ?? 0;
+/** The avatar in the top bar opens R's menu: his profile, the pacing monitor, and logging out. */
+function AccountMenu({ me }: { me: Actor }) {
+  const [open, setOpen] = useState(false);
   const logout = useLogout();
   const navigate = useNavigate();
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: KeyboardEvent | MouseEvent) => {
+      if (e instanceof KeyboardEvent ? e.key === "Escape" : !(e.target as Element).closest("[data-account-menu]")) setOpen(false);
+    };
+    document.addEventListener("keydown", close);
+    document.addEventListener("mousedown", close);
+    return () => {
+      document.removeEventListener("keydown", close);
+      document.removeEventListener("mousedown", close);
+    };
+  }, [open]);
+  const item = "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[15px] font-semibold transition hover:bg-panel-2";
+  return (
+    <div className="relative" data-account-menu>
+      <button
+        aria-label="Your account"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className="flex rounded-full transition active:scale-95"
+      >
+        <Avatar actor={me} size="sm" ring link={false} />
+      </button>
+      {open && (
+        <div role="menu" aria-label="Your account" className="animate-rise absolute right-0 top-full mt-2 w-64 rounded-2xl border border-line bg-panel p-2 shadow-lift">
+          <Link role="menuitem" to={`/people/${me.handle}`} onClick={() => setOpen(false)} className={item}>
+            <Avatar actor={me} size="md" link={false} />
+            <span className="min-w-0">
+              <span className="block truncate">{me.name}</span>
+              <span className="block text-xs font-medium text-muted">See your profile</span>
+            </span>
+          </Link>
+          <div className="my-1 border-t border-line" />
+          <Link role="menuitem" to="/director/pacer" onClick={() => setOpen(false)} className={item}>
+            <span className="flex size-8 items-center justify-center rounded-full bg-panel-2"><Activity className="size-4" /></span>
+            Pacing monitor
+          </Link>
+          <button
+            role="menuitem"
+            disabled={logout.isPending}
+            onClick={() => logout.mutate(undefined, { onSettled: () => navigate("/") })}
+            className={item}
+          >
+            <span className="flex size-8 items-center justify-center rounded-full bg-panel-2"><LogOut className="size-4" /></span>
+            {logout.isPending ? "Logging out…" : "Log out"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TopBar({ me, network }: { me: Actor; network: string }) {
+  const unread = useNotifications().data?.unread ?? 0;
   return (
     <header className="fixed inset-x-0 top-0 z-40 h-16 border-b border-line bg-panel/85 backdrop-blur-xl">
       <div className="mx-auto flex h-full max-w-[1320px] items-center justify-between gap-3 px-4">
@@ -101,15 +157,7 @@ function TopBar({ me, network }: { me: Actor; network: string }) {
         </nav>
         <div className="flex items-center gap-1">
           <ThemeButton />
-          <button
-            aria-label="Log out"
-            title="Log out"
-            onClick={() => logout.mutate(undefined, { onSuccess: () => navigate("/") })}
-            className="hidden rounded-full p-2.5 text-muted transition hover:bg-panel-2 hover:text-ink sm:block"
-          >
-            <LogOut className="size-5" />
-          </button>
-          <Avatar actor={me} size="sm" ring />
+          <AccountMenu me={me} />
         </div>
       </div>
     </header>

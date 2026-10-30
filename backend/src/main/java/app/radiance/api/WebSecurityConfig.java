@@ -21,7 +21,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
-import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -70,7 +70,7 @@ class WebSecurityConfig {
                     .anyRequest()
                     .authenticated())
         .csrf(csrf -> csrf.spa())
-        .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
+        .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
         .addFilterBefore(limiter, UsernamePasswordAuthenticationFilter.class)
         .formLogin(form -> form.loginProcessingUrl("/api/auth/login")
             .successHandler((req, res, auth) -> {
