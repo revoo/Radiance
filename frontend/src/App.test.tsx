@@ -1,37 +1,38 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
+import { screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import App from "./App.tsx";
-
-function renderApp() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <MemoryRouter>
-        <App />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  );
-}
+import { ME, mockFetch, post, renderWith } from "./test/render.tsx";
 
 describe("App", () => {
-  it("shows the backend health it reads through the proxy", async () => {
-    const fetchMock = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValue(new Response(JSON.stringify({ status: "UP" }), { status: 200 }));
-
-    renderApp();
-
-    expect(await screen.findByText("UP")).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledWith("/actuator/health", expect.anything());
+  it("asks R to log in when there's no session", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(mockFetch({ "GET /api/me": new Response("", { status: 401 }) }).fn);
+    renderWith(<App />);
+    expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Username")).toBeInTheDocument();
   });
 
-  it("says when the backend is unreachable", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("", { status: 502 }));
+  it("starts onboarding once the world exists but R doesn't", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      mockFetch({ "GET /api/me": { username: "r", worldReady: true, onboarded: false, actor: null, networkName: "Radiance" } }).fn,
+    );
+    renderWith(<App />);
+    expect(await screen.findByRole("heading", { name: "Who are you?" })).toBeInTheDocument();
+  });
 
-    renderApp();
-
-    expect(await screen.findByText("unreachable")).toBeInTheDocument();
+  it("shows the feed straight away for an onboarded R", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      mockFetch({
+        "GET /api/me": { username: "r", worldReady: true, onboarded: true, actor: ME, networkName: "Radiance" },
+        "GET /api/feed": { items: [post()], nextCursor: null },
+        "GET /api/world/recap": { since: null, lines: [] },
+        "GET /api/world": { name: "Chicagoland", networkName: "Radiance", timezone: "America/Chicago", worldTime: Date.now(), committedUntil: 0, scriptedUntil: 0, paused: false, backfilling: false },
+        "GET /api/people": [],
+        "GET /api/notifications": { items: [], unread: 0 },
+        "POST /api/session/heartbeat": { worldTime: Date.now(), scriptedUntil: 0, backfilling: false, sessionActive: true },
+      }).fn,
+    );
+    renderWith(<App />);
+    expect(await screen.findByRole("article", { name: "Post by Sarah Kim" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Write a post")).toHaveAttribute("placeholder", "What's on your mind, Sam?");
   });
 });

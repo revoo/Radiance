@@ -1,36 +1,73 @@
-import { useQuery } from "@tanstack/react-query";
 import { Sun } from "lucide-react";
 import { Route, Routes } from "react-router";
-import { fetchHealth } from "./api/health.ts";
+import { ApiError } from "./api/client.ts";
+import { useMe } from "./api/queries.ts";
+import { useHeartbeat } from "./live/useHeartbeat.ts";
+import { useRadianceStream } from "./live/useRadianceStream.ts";
+import { FeedPage } from "./pages/FeedPage.tsx";
+import { FriendsPage } from "./pages/FriendsPage.tsx";
+import { LoginPage } from "./pages/LoginPage.tsx";
+import { NotificationsPage } from "./pages/NotificationsPage.tsx";
+import { OnboardingPage } from "./pages/OnboardingPage.tsx";
+import { PacerPage } from "./pages/PacerPage.tsx";
+import { PostPage } from "./pages/PostPage.tsx";
+import { ProfilePage } from "./pages/ProfilePage.tsx";
+import { Layout, Logo } from "./shell/Layout.tsx";
+import { Empty } from "./ui/kit.tsx";
 
-function BackendStatus() {
-  const health = useQuery({ queryKey: ["health"], queryFn: fetchHealth, retry: false });
-  const label = health.isPending ? "checking…" : health.isError ? "unreachable" : health.data.status;
+function Splash() {
   return (
-    <p className="text-sm text-muted">
-      Backend: <span data-testid="backend-status" className="font-semibold text-ink">{label}</span>
-    </p>
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4">
+      <div className="animate-pop">
+        <Logo />
+      </div>
+      <span className="size-6 animate-spin rounded-full border-2 border-accent border-r-transparent" aria-label="Loading" />
+    </div>
   );
 }
 
-function Home() {
-  return (
-    <main className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center gap-4 px-4">
-      <div className="flex items-center gap-2 text-accent">
-        <Sun aria-hidden="true" className="size-8" />
-        <h1 className="text-3xl font-bold">Radiance</h1>
-      </div>
-      <div className="rounded-lg bg-panel px-6 py-4 shadow-sm">
-        <BackendStatus />
-      </div>
-    </main>
-  );
-}
-
+/**
+ * Who R is decides what he sees: the login, onboarding (or a note to run genesis), or the network.
+ * Signed in and onboarded, the stream and heartbeats keep the session live.
+ */
 export default function App() {
+  const me = useMe();
+  const ready = Boolean(me.data?.onboarded && me.data.actor);
+  useRadianceStream(ready);
+  useHeartbeat(ready);
+
+  if (me.isPending) return <Splash />;
+  if (me.error instanceof ApiError && me.error.status === 401) return <LoginPage />;
+  if (me.isError || !me.data) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Empty icon={<Sun className="size-6" />} title="Radiance is unreachable">Start the backend, then refresh this page.</Empty>
+      </div>
+    );
+  }
+  const data = me.data;
+  if (!data.worldReady) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-4">
+        <Empty icon={<Sun className="size-6" />} title="The world hasn't been created yet">
+          Run genesis first: <code className="rounded bg-panel-2 px-1.5 py-0.5">./gradlew genesis --args='--seed 7 --import'</code>
+        </Empty>
+      </div>
+    );
+  }
+  if (!data.onboarded || !data.actor) return <OnboardingPage network={data.networkName} />;
+  const actor = data.actor;
   return (
-    <Routes>
-      <Route path="*" element={<Home />} />
-    </Routes>
+    <Layout me={actor} network={data.networkName}>
+      <Routes>
+        <Route path="/" element={<FeedPage me={actor} />} />
+        <Route path="/posts/:id" element={<PostPage me={actor} />} />
+        <Route path="/people/:handle" element={<ProfilePage me={actor} />} />
+        <Route path="/friends" element={<FriendsPage />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
+        <Route path="/director/pacer" element={<PacerPage />} />
+        <Route path="*" element={<FeedPage me={actor} />} />
+      </Routes>
+    </Layout>
   );
 }
