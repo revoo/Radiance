@@ -297,10 +297,14 @@ final class Reads {
 
   // --------------------------------------------------------------------------------- notifications
 
-  /** R's notifications, newest first; reactions on the same thing are one entry ("Sarah and 3 others"). */
+  /**
+   * R's notifications, newest first; reactions on the same thing are one entry ("Sarah and 3 others").
+   * DMs show in Messenger instead.
+   */
   Views.Notifications notifications(int limit) {
+    // DMs have their own badge and list in Messenger, not the bell
     var rows = sql.query("SELECT id, kind, actor_id, ref_type, ref_id, created_at, read_at FROM notification"
-        + " ORDER BY created_at DESC LIMIT ?", List.of(limit * 3), r -> new Object[] {r.str("id"), r.str("kind"),
+        + " WHERE kind <> 'DM' ORDER BY created_at DESC LIMIT ?", List.of(limit * 3), r -> new Object[] {r.str("id"), r.str("kind"),
             r.str("actor_id"), r.str("ref_type"), r.str("ref_id"), r.lng("created_at"), r.lngOrNull("read_at")});
     var out = new ArrayList<Views.Notification>();
     var grouped = new LinkedHashMap<String, List<Object[]>>();
@@ -334,7 +338,8 @@ final class Reads {
       out.add(new Views.Notification((String) first[0], (String) first[1], actorIds.stream().map(this::actor).toList(),
           refType, refId, postId, snippet, (long) first[5], read));
     }
-    int unread = sql.queryOne("SELECT COUNT(*) AS n FROM notification WHERE read_at IS NULL", List.of(), r -> r.lng("n"))
+    int unread = sql.queryOne("SELECT COUNT(*) AS n FROM notification WHERE read_at IS NULL AND kind <> 'DM'", List.of(),
+        r -> r.lng("n"))
         .orElse(0L).intValue();
     return new Views.Notifications(out, unread);
   }

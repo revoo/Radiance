@@ -42,6 +42,7 @@ class ApiTests {
   @Autowired MockMvc mvc;
   @Autowired GenesisService genesis;
   @Autowired Sql sql;
+  @Autowired app.radiance.persistence.WriterLane writer;
 
   static final RequestPostProcessor R = user("dev");
 
@@ -209,5 +210,16 @@ class ApiTests {
     mvc.perform(get("/api/dm/threads/not-a-thread/messages").with(R)).andExpect(status().isNotFound());
     mvc.perform(post("/api/dm/threads").with(R).with(csrf()).contentType(MediaType.APPLICATION_JSON)
         .content("{\"handle\":\"nobody.here\"}")).andExpect(status().isNotFound());
+  }
+
+  @Test
+  @Order(8)
+  void dmsAreNotInTheBell() throws Exception {
+    mvc.perform(post("/api/notifications/read").with(R).with(csrf())).andExpect(status().isNoContent());
+    String someone = sql.queryOne("SELECT id FROM actor WHERE kind = 'BOT' LIMIT 1", List.of(), r -> r.str("id")).orElseThrow();
+    writer.run(() -> sql.commit(new app.radiance.persistence.UnitOfWork().add("INSERT INTO notification (id, kind, actor_id,"
+        + " ref_type, ref_id, created_at) VALUES ('n-dm-1', 'DM', ?, 'DM', 'm-1', 1)", someone)));
+    mvc.perform(get("/api/notifications").with(R)).andExpect(jsonPath("$.unread").value(0))
+        .andExpect(jsonPath("$.items[?(@.kind == 'DM')]").isEmpty());
   }
 }

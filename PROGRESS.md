@@ -1,11 +1,11 @@
 # Progress
 
 ## Resume here
-- Milestone: **M8 — Messenger**, branch `m8-messenger` (from `main` at d7611f1). R said go on 2026-10-29.
-- Current step: 7 (browser check, then CI). Steps 1–6 done and committed.
+- Milestone: **M8 — Messenger**, branch `m8-messenger`. **All steps done.** M8 has no ⏸ REVIEW in SPEC §12,
+  but R asked to pause between milestones: wait for R before merging into `main` and before M9.
 - Half-done: nothing.
 
-## M8 steps
+## M8 steps (all ✔)
 1. ✔ DM engine (`UserActions`): R's messages aired at once; the resident's reply planned by the engine
    (tone by like-meter, cold shoulder, bursts of 1–3, wrapping up); Seen; resident-started DMs
 2. ✔ `LivePlay` Messenger: typing dots 1–3 s after R's message (with Seen), replies landing once rendered
@@ -17,7 +17,7 @@
    Message button on profiles, unread badges, bottom tabs per SPEC §8
 6. ✔ Tests: AC (`MessengerTests`), real loop on the wall clock, regression (thread summaries survive new
    scripts), API, Pacer DM timing, Vitest for Messenger, the stream and profiles
-7. Browser check, PROGRESS, CI; stop (M8 has no ⏸ REVIEW, but R asked to pause between milestones)
+7. ✔ Browser check, PROGRESS, CI
 
 ## M7 steps (all ✔)
 1. Live core: the `Pacer` (pure: response curves, token buckets with a hard per-minute cap, priority
@@ -81,6 +81,15 @@
 7. World bible with the Chicagoland section
 
 ## Done
+- **M8 — Messenger** (2026-10-29), branch `m8-messenger`:
+  - AC: a DM to any resident shows typing within 3 s and a reply within about 10 s (`MessengerTests`
+    over all 30 residents; browser: typing and Seen at 1.5 s, reply at 2.0 s offline) ✔; a resident with
+    a negative like-meter answers curtly, and only one at −50 or below leaves R on Seen, which shows
+    right away ✔; a resident with a `crush` tag on R messages him within the first 30 minutes of a
+    session at default knobs ✔.
+  - Also: thread summaries past 60 messages; the real loop answers DMs on the wall clock; a regression
+    test through the real `ScriptWriter` for thread summaries being wiped.
+  - 212 backend tests, 52 frontend tests; lint and build clean.
 - **M7 — Feed UI & live play** (2026-10-29), branch `m7-live-play`:
   - AC: logging in shows a ready feed straight from the database (API test: first feed request well
     under 1 s, no catch-up step) ✔; after R posts, the first reaction comes within 2–6 s and the first
@@ -325,6 +334,16 @@ Resolutions of spec issues raised at kickoff. Each gets an ADR when its mileston
 - M7: the live-play controllers are web-only, so the one-shot modes (genesis, batch, bake-off) start
   without them (`OneShotContextTests`).
 - M7: `.claude/launch.json` starts the offline backend and the Vite dev server for previews.
+
+- M8: the engine, not the model, decides when a resident wraps a conversation up ("gtg"): the brief
+  asks for it (P1, the LLM narrates and never plans), instead of an `endConversation` output flag.
+- M8: DMs are left out of the bell; Messenger has its own unread badge. Bottom tabs follow SPEC §8
+  (Feed, Messages, Notifications, Profile); Friends moved to the account menu and the left rail.
+- M8: the crush check-in comes once a session, 2–20 minutes in, when anyone has a `crush` tag on R (at
+  `dm-initiation-rate` odds); the quiet-gap hook can also be a DM from a crush, fan, close friend or gossip.
+- M8: `cold-shoulder-rate` (SPEC §9) is in `application.yml` and scales both curt replies and Seen.
+- M8: offline (FakeLlm), a burst's messages can repeat the same line; real models write each one.
+- M8: the migration-count test now counts the shipped files instead of hard-coding a number.
 
 ## Open questions for R
 - Provider keys: which providers will you use? Put their keys in `.env` and run
