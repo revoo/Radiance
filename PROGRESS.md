@@ -7,17 +7,18 @@
 - Half-done: nothing.
 - The live world is a test world, and R will nuke it: acceptance testing comes later, with real LLM keys, on a
   fresh world (`docs/ops/hosting.md`, "Real prose"). The declarative `hosting` repo is deferred until R asks.
-- Waiting on R: the R2 keys (backups stay on the server, loudly, until then); a more permanent server (R is on the
-  Linode free trial, and R2 must work before the move; the $5/month target waits for that purchase).
-- Proven 2026-11-02: the nightly batch and the backup ran on the server with R's computer off. Still to prove: a
-  real R2 upload and restore once the keys are in, and real prose in the batch (both runs so far used FakeLlm).
+- Waiting on R: a more permanent server (R is on the Linode free trial; the $5/month target waits for that purchase).
+- Proven 2026-11-02: the nightly batch and the backup ran on the server with R's computer off. R2 works: a real
+  upload, then a restore from R2 into a throwaway folder matched the snapshot in all 32 tables (2,460 rows), except
+  the `world` row, where restore clears the lease on purpose. Still to prove: the scheduled 08:30 UTC upload, and real
+  prose in the batch (all runs so far used FakeLlm).
 - Fixed and live (d108cfe): the 09:00 run scripted only 2 hours, leaving the rest to the 11:00 run, because the
   window ended at the next cron of either kind. It now ends at the next night's first run plus the slack. To confirm
   on the server: on 2026-11-03, `batch_run` should show 09:00 planning a full day and 11:00 planning 0.
 - Open, from reading the code, not reproduced: `BatchScheduler.overdue()` doesn't count FAILED runs, so a failing
   batch looks like it retries every minute. R was told; add a retry delay before real keys go in.
-- Server rule from R (2026-11-02): changes allowed while there's no production load, carefully; don't duplicate
-  what's there. One shared Caddy routes to all app containers: graceful reloads only, no second Caddy.
+- Server rule from R (2026-11-02): do what's needed while there's no production load; don't duplicate what's there.
+  One shared Caddy routes to all app containers: no second Caddy, but restarting it is fine.
 - To play offline: `./gradlew genesis --args='--seed 7 --import' -Pprofile=offline` (once), then
   `./gradlew bootRun --args='--spring.profiles.active=offline'` and `cd frontend && npm run dev`.
 - Open for tuning (from M7): a post of R's right after onboarding draws ~3 reactions and under one comment
