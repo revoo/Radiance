@@ -54,12 +54,13 @@ assert list(r["networks"]) == ["default"], r["networks"]
 assert list(c["services"]["caddy"]["networks"]) == ["default"], "caddy and radiance must share a network"
 assert c["networks"]["default"]["name"] == "hosting_default", c["networks"]
 env = r["environment"]
-assert env["RADIANCE_PASSWORD_BCRYPT"] == hash_, "the bcrypt hash was mangled: " + str(env["RADIANCE_PASSWORD_BCRYPT"])
+# config escapes $ as $$ in what it prints, so its output parses back to the same value
+assert env["RADIANCE_PASSWORD_BCRYPT"].replace("$$", "$") == hash_, "the bcrypt hash was mangled: " + str(env["RADIANCE_PASSWORD_BCRYPT"])
 assert env["SPRING_PROFILES_ACTIVE"] == "prod"
 assert "-Xmx" in env["JAVA_TOOL_OPTIONS"]
 assert r["mem_limit"], "no memory cap"
 v = r["volumes"][0]
-assert v["source"].endswith("/radiance/data") and v["target"] == "/app/data", v
+assert v["source"].replace("\\", "/").endswith("/radiance/data") and v["target"] == "/app/data", v
 assert r["logging"]["options"]["max-size"]
 print("compose layout OK")
 ' "$HASH" "$HOSTING" <<<"$config"
