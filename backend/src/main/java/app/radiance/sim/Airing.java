@@ -480,6 +480,10 @@ public final class Airing {
   static void move(SimWorld w, String viewer, String other, Deltas d, boolean arcEvent, long t, Ctx ctx) {
     var v = w.person(viewer);
     var e = w.edge(viewer, other);
+    // attraction only ever runs between a man and a woman (SPEC §6.2), whoever a flirt is aimed at
+    if (d.attraction() != 0 && v.gender == w.person(other).gender) {
+      d = new Deltas(d.affinity(), d.trust(), 0, d.familiarity(), d.respect());
+    }
     Meters.settle(e, v, ctx.lib().relationships(), ctx.knobs().affinityHalfLifeDays(), t);
     Drift.advance(v, w.seed, ctx.knobs().moodHalfLifeHours(), t);
     Meters.apply(e, d, v, ctx.lib().temperament(), arcEvent, t);

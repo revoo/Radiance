@@ -14,6 +14,8 @@ public enum Persona {
       Map.of(Stance.JOKE, 0.7, Stance.SUPPORT, 0.2, Stance.QUESTION, 0.1)),
   PRETENTIOUS(1.5, 0.3, 5, 0.3, features(0.15, 0.2, 0.7, 0.9, 0.7, 0.1, 0.4, 0.2, 0.6, 0.7, 0.05),
       Map.of(Stance.ADVICE, 0.4, Stance.DISAGREE, 0.3, Stance.QUESTION, 0.2, Stance.SELF_PIVOT, 0.1)),
+  FLIRTY(1.2, 0.5, 6, 0.6, features(0.5, 0.7, 0.3, 0.05, 0.1, 0.2, 0.7, 0.2, 0.05, 0.5, 0.9),
+      Map.of(Stance.FLIRT, 0.7, Stance.SUPPORT, 0.2, Stance.JOKE, 0.1)),
   QUIET(0.15, 0.5, 1, 0.2, features(0.3, 0.6, 0.4, 0.05, 0.05, 0.3, 0.6, 0.05, 0.05, 0.4, 0.05),
       Map.of(Stance.SUPPORT, 0.8, Stance.JOKE, 0.2)),
   COMBATIVE(1.2, 0.2, 8, 0.5, features(0.3, 0.1, 0.5, 0.4, 0.3, 0.05, 0.2, 0.85, 0.5, 0.5, 0.05),

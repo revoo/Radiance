@@ -1,4 +1,4 @@
-import { TrendingDown, TrendingUp } from "lucide-react";
+import { HeartHandshake, TrendingDown, TrendingUp } from "lucide-react";
 import { Link } from "react-router";
 import { useRelationships } from "../api/queries.ts";
 import type { Relationship } from "../api/types.ts";
@@ -56,7 +56,7 @@ export function RelationshipsPage() {
         <p className="mt-1 text-sm text-muted">How everyone in Chicagoland feels about you.</p>
       </div>
       {list.isPending && <Skeleton className="h-96" />}
-      {list.data?.length === 0 && <Empty title="Nobody yet" />}
+      {list.data?.length === 0 && <Empty icon={<HeartHandshake className="size-8" />} title="Nobody yet" />}
       {list.data && list.data.length > 0 && (
         <Card className="p-2">
           <ul>

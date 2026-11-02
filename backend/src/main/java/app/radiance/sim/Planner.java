@@ -665,8 +665,7 @@ final class Planner {
       stance = rng.chance(0.25 + x.trait("humor") / 400) ? Stance.JOKE
           : aff < -30 && rng.chance(0.4 * k.edge()) ? Stance.HOSTILE : Stance.DISAGREE;
     } else if (incoming == Stance.FLIRT) {
-      double ladder = Stances.flirt(x, from, e == null ? 0 : e.attraction, e == null ? 0 : e.chemistry, k);
-      stance = ladder > -1.5 && rng.chance(sigmoid(ladder + 1)) ? Stance.FLIRT : Stance.JOKE;
+      stance = Stances.answerToFlirt(x, from, e == null ? 0 : e.attraction, e == null ? 0 : e.chemistry, k, rng);
     } else {
       stance = Stances.comment(w, x, from, post, lib, k, day, rng);
     }

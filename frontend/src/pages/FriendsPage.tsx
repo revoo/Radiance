@@ -1,8 +1,8 @@
 import { Briefcase, MapPin, Users } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
-import { usePeople } from "../api/queries.ts";
-import { Avatar, Card, Empty, Segmented, Skeleton } from "../ui/kit.tsx";
+import { useAnswerFriendRequest, useFriendRequests, usePeople } from "../api/queries.ts";
+import { Avatar, Button, Card, Empty, Segmented, Skeleton } from "../ui/kit.tsx";
 
 type Filter = "friends" | "suggested" | "all";
 
@@ -12,6 +12,7 @@ export function FriendsPage() {
   const people = usePeople(filter);
   return (
     <>
+      <FriendRequests />
       <div className="flex flex-wrap items-center justify-between gap-3 px-1">
         <h1 className="text-2xl font-extrabold tracking-tight">People</h1>
         <Segmented
@@ -65,5 +66,33 @@ export function FriendsPage() {
         ))}
       </div>
     </>
+  );
+}
+
+/** Residents waiting for R's answer. */
+function FriendRequests() {
+  const requests = useFriendRequests().data ?? [];
+  const answer = useAnswerFriendRequest();
+  if (requests.length === 0) return null;
+  return (
+    <Card className="p-4">
+      <h2 className="pb-3 text-lg font-bold">Friend requests</h2>
+      <ul className="space-y-3">
+        {requests.map((r) => (
+          <li key={r.id} className="flex items-center gap-3">
+            <Avatar actor={r.from} />
+            <Link to={`/people/${r.from.handle}`} className="min-w-0 flex-1 truncate font-semibold hover:underline">
+              {r.from.name}
+            </Link>
+            <Button onClick={() => answer.mutate({ id: r.id, accept: true })} busy={answer.isPending}>
+              Accept
+            </Button>
+            <Button variant="soft" onClick={() => answer.mutate({ id: r.id, accept: false })}>
+              Decline
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </Card>
   );
 }

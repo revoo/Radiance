@@ -16,6 +16,10 @@ function describe(d: Data): string {
       return `${who} commented on your post`;
     case "REPLY":
       return `${who} replied to your comment`;
+    case "FRIEND_REQUEST":
+      return `${who} sent you a friend request`;
+    case "FRIEND_ACCEPT":
+      return `${who} accepted your friend request`;
     case "MENTION":
       return `${who} mentioned you`;
     case "DM":
@@ -31,6 +35,12 @@ function describe(d: Data): string {
  */
 export function applyEvent(qc: QueryClient, name: string, d: Data, refresh = refreshPost) {
   switch (name) {
+    case "friend.changed":
+      void qc.invalidateQueries({ queryKey: ["person"] });
+      void qc.invalidateQueries({ queryKey: ["people"] });
+      void qc.invalidateQueries({ queryKey: keys.relationships });
+      void qc.invalidateQueries({ queryKey: keys.notifications });
+      break;
     case "meter.changed":
       if (d.pulse) live.pulse(d.actorId as string, d.delta as number);
       void qc.invalidateQueries({ queryKey: keys.relationships });
@@ -97,6 +107,7 @@ const EVENTS = [
   "dm.message",
   "dm.seen",
   "meter.changed",
+  "friend.changed",
 ];
 
 /** Subscribes to {@code /api/stream} while signed in; EventSource reconnects on its own. */

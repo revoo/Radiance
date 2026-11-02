@@ -1,7 +1,15 @@
-import { Briefcase, Cake, Heart, House, MapPin, MessageCircle, Pencil, Search, UserRoundCheck } from "lucide-react";
+import { Briefcase, Cake, Heart, House, MapPin, MessageCircle, Pencil, Search, UserRoundCheck, UserRoundPlus } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { useMe, useOpenThread, usePerson, usePersonPosts, useUpdateProfile } from "../api/queries.ts";
+import {
+  useAnswerFriendRequest,
+  useMe,
+  useOpenThread,
+  usePerson,
+  usePersonPosts,
+  useSendFriendRequest,
+  useUpdateProfile,
+} from "../api/queries.ts";
 import { LikeMeter } from "../ui/LikeMeter.tsx";
 import type { Actor, Person } from "../api/types.ts";
 import { PostCard } from "../feed/PostCard.tsx";
@@ -126,6 +134,8 @@ export function ProfilePage({ me }: { me: Actor }) {
   const { handle = "" } = useParams();
   const person = usePerson(handle);
   const likeMeters = useMe().data?.likeMeters !== false;
+  const sendRequest = useSendFriendRequest();
+  const answer = useAnswerFriendRequest();
   const posts = usePersonPosts(handle);
   const [editing, setEditing] = useState(false);
   const openThread = useOpenThread();
@@ -184,6 +194,21 @@ export function ProfilePage({ me }: { me: Actor }) {
             {p.actor.you ? (
               <Button variant="soft" onClick={() => setEditing(true)}>
                 <Pencil className="size-4" /> Edit profile
+              </Button>
+            ) : !p.friend && p.request === "RECEIVED" && p.requestId ? (
+              <>
+                <Button onClick={() => answer.mutate({ id: p.requestId!, accept: true })} busy={answer.isPending}>
+                  <UserRoundCheck className="size-4" /> Accept
+                </Button>
+                <Button variant="soft" onClick={() => answer.mutate({ id: p.requestId!, accept: false })}>
+                  Decline
+                </Button>
+              </>
+            ) : !p.friend && p.request === "SENT" ? (
+              <span className="inline-flex items-center rounded-xl bg-panel-2 px-3.5 py-2 text-sm font-semibold text-muted">Request sent</span>
+            ) : !p.friend ? (
+              <Button variant="soft" onClick={() => sendRequest.mutate(p.actor.handle)} busy={sendRequest.isPending}>
+                <UserRoundPlus className="size-4" /> Add friend
               </Button>
             ) : p.friend ? (
               <span className="inline-flex items-center gap-1.5 rounded-xl bg-accent-soft px-3.5 py-2 text-sm font-bold text-accent">

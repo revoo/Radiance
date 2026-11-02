@@ -184,6 +184,13 @@ final class Reads {
         reactions.getOrDefault(r[0], Views.Reactions.NONE), replies);
   }
 
+  /** Residents waiting for R's answer. */
+  List<Views.FriendRequest> friendRequests() {
+    if (userId == null) return List.of();
+    return sql.query("SELECT id, from_id, created_at FROM friend_request WHERE to_id = ? AND status = 'PENDING' ORDER BY created_at DESC",
+        List.of(userId), r -> new Views.FriendRequest(r.str("id"), actor(r.str("from_id")), r.lng("created_at")));
+  }
+
   private Integer meter(String residentId) {
     if (userId == null || residentId.equals(userId)) return null;
     return sql.queryOne("SELECT affinity FROM relationship WHERE from_id = ? AND to_id = ?", List.of(residentId, userId),
@@ -341,9 +348,14 @@ final class Reads {
         : sql.queryOne("SELECT kind FROM relationship WHERE from_id = ? AND to_id = ?", List.of(userId, id.get()),
             r -> r.str("kind")).orElse(null);
     int mutual = (int) theirFriends.stream().filter(mine::contains).count();
+    String[] pending = userId == null || id.get().equals(userId) ? null
+        : sql.queryOne("SELECT id, from_id FROM friend_request WHERE status = 'PENDING' AND ((from_id = ? AND to_id = ?) OR (from_id = ? AND to_id = ?))",
+            List.of(userId, id.get(), id.get(), userId),
+            r -> new String[] {r.str("id"), r.str("from_id").equals(userId) ? "SENT" : "RECEIVED"}).orElse(null);
     String birthday = row[4] == null || row[4].length() < 10 ? null : row[4].substring(5);
     return Optional.of(new Views.Person(actor(id.get()), row[0], row[1], row[2], row[3], birthday, kind,
-        mine.contains(id.get()), mutual, theirFriends.stream().map(this::actor).toList(), meter(id.get())));
+        mine.contains(id.get()), mutual, theirFriends.stream().map(this::actor).toList(), meter(id.get()),
+        pending == null ? null : pending[0], pending == null ? null : pending[1]));
   }
 
   // --------------------------------------------------------------------------------- notifications

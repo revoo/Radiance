@@ -374,4 +374,65 @@ class LivePlayTests {
     long stored = engine.locked(w -> Math.round(w.edge((String) last.get("actorId"), w.userId).affinity));
     assertThat((Long) last.get("value")).as("the last value sent is today's meter, or close behind it").isCloseTo(stored, org.assertj.core.data.Offset.offset(20L));
   }
+
+  /**
+   * SPEC §12 M11: a deliberately pretentious comment on a thread draws differentiated responses across residents, on
+   * the Pacer's timing, not all at once.
+   */
+  @Test
+  void aPretentiousCommentDrawsDifferentResponsesFromDifferentResidentsOverTime() throws Exception {
+    var live = live(gateway(null));
+    live.touch();
+    live.tick();
+    // a fixture thread: a resident's post, with three others already in the comments
+    String thread = "fixture-thread";
+    var byHandle = engine.world().byHandle();
+    long t0 = db.clock.nowMs();
+    String[] commenters = {"deepa.kulkarni", "marko.jovanovic", "amra.hodzic"};
+    var brief = new app.radiance.sim.Brief(null, "DAILY", null, null, null, null, List.of("food"), 0.2, 0, java.util.Map.of());
+    var post = new app.radiance.social.PostRow(thread, byHandle.get("kristen.wagner").id, t0 + 1_000, app.radiance.social.PostRow.Kind.STATUS,
+        app.radiance.social.PostRow.Audience.PUBLIC, app.radiance.kernel.ContentOrigin.SCRIPT, app.radiance.kernel.AirStatus.SCRIPTED,
+        "Tried a new recipe tonight.", app.radiance.kernel.RenderStatus.RENDERED, brief.json(), null, null, null, null, null, 3,
+        app.radiance.kernel.Fidelity.FULL, "{}", 0);
+    var rows = new java.util.ArrayList<app.radiance.social.CommentRow>();
+    for (int i = 0; i < commenters.length; i++) {
+      rows.add(new app.radiance.social.CommentRow("fixture-c" + i, thread, null, byHandle.get(commenters[i]).id, t0 + 2_000 + i,
+          app.radiance.kernel.ContentOrigin.SCRIPT, app.radiance.kernel.AirStatus.SCRIPTED, "Looks great!", null,
+          app.radiance.kernel.RenderStatus.RENDERED, new app.radiance.sim.Brief(null, "DAILY", null, "SUPPORT", byHandle.get("kristen.wagner").id,
+              "supportive_comment", List.of("food"), 0.2, 0, java.util.Map.of()).json(), null, "{}"));
+    }
+    var social = new app.radiance.social.SocialRepository(db.sql);
+    var uow = new app.radiance.persistence.UnitOfWork();
+    social.savePosts(uow, List.of(post));
+    social.saveComments(uow, rows);
+    db.commit(uow);
+    db.clock.advance(Duration.ofSeconds(10));
+    engine.advanceTo(db.clock.nowMs());
+    var people = db.sql.query("SELECT DISTINCT author_id FROM comment WHERE post_id = ? AND air_status = 'AIRED'", List.of(thread), r -> r.str("author_id"));
+    var before = engine.locked(w -> {
+      var m = new java.util.HashMap<String, Double>();
+      for (var b : w.residents()) m.put(b.id, w.edge(b.id, w.userId).affinity);
+      return m;
+    });
+    long posted = db.clock.nowMs();
+
+    live.comment(thread, null, "Actually, one might argue this is objectively derivative; the nuance is rather lost on most people, per se.");
+    play(live, Duration.ofMinutes(30));
+
+    var after = engine.locked(w -> {
+      var m = new java.util.HashMap<String, Double>();
+      for (var b : w.residents()) m.put(b.id, w.edge(b.id, w.userId).affinity);
+      return m;
+    });
+    var moves = people.stream().filter(before::containsKey).map(id -> after.get(id) - before.get(id)).toList();
+    assertThat(moves).as("those in the thread").isNotEmpty();
+    assertThat(moves.stream().map(x -> Math.round(x * 100)).distinct().count()).as("residents take it differently: %s", moves).isGreaterThan(1);
+
+    var responses = events.stream().filter(t -> t.at() >= posted)
+        .filter(t -> t.e().name().equals("reaction.changed") || t.e().name().equals("comment.aired")).toList();
+    if (responses.size() > 1) {
+      assertThat(responses.getLast().at() - responses.getFirst().at()).as("spread out by the Pacer").isPositive();
+    }
+    assertThat(responses.stream().allMatch(t -> t.at() - posted >= 0)).isTrue();
+  }
 }

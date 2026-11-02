@@ -10,6 +10,7 @@ import { live } from "../live/store.ts";
 import { api, ApiError } from "./client.ts";
 import type {
   Comment,
+  FriendRequest,
   Rail,
   Relationship,
   DmConversation,
@@ -52,6 +53,34 @@ export const keys = {
 
 export function useMe() {
   return useQuery({ queryKey: keys.me, queryFn: () => api<Me>("/api/me"), retry: false, staleTime: 60_000 });
+}
+
+export function useFriendRequests() {
+  return useQuery({ queryKey: ["friend-requests"], queryFn: () => api<FriendRequest[]>("/api/friend-requests") });
+}
+
+function refreshFriends(qc: QueryClient) {
+  void qc.invalidateQueries({ queryKey: ["friend-requests"] });
+  void qc.invalidateQueries({ queryKey: ["person"] });
+  void qc.invalidateQueries({ queryKey: ["people"] });
+  void qc.invalidateQueries({ queryKey: ["relationships"] });
+}
+
+export function useSendFriendRequest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (handle: string) => api<void>(`/api/people/${handle}/friend-request`, { method: "POST" }),
+    onSettled: () => refreshFriends(qc),
+  });
+}
+
+export function useAnswerFriendRequest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, accept }: { id: string; accept: boolean }) =>
+      api<void>(`/api/friend-requests/${id}/${accept ? "accept" : "decline"}`, { method: "POST" }),
+    onSettled: () => refreshFriends(qc),
+  });
 }
 
 export function useRelationships() {

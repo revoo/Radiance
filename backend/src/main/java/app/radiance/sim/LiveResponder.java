@@ -117,10 +117,13 @@ public final class LiveResponder {
         // R answering a comment on his own post usually closes the exchange; on theirs, it opens one
         boolean onHisPost = post.authorId.equals(user.id);
         double p = (onHisPost ? 0.08 : 0.25) + 0.3 * Math.max(0, aff) / 100
-            + (Airing.CLASH.contains(comment.stance) ? 0.25 : 0) + ("QUESTION".equals(comment.stance) ? 0.3 : 0);
+            + (Airing.CLASH.contains(comment.stance) ? 0.25 : 0)
+            + ("QUESTION".equals(comment.stance) || "FLIRT".equals(comment.stance) ? 0.3 : 0);
         if (rng.chance(Math.min(0.85, p))) {
-          var stance = Airing.CLASH.contains(comment.stance)
-              ? (rng.chance(0.3) ? Stance.JOKE : Stance.DISAGREE) : Stances.comment(w, b, user, comment, lib, k, day, rng);
+          var edge = w.edge(b.id, user.id);
+          var stance = Airing.CLASH.contains(comment.stance) ? (rng.chance(0.3) ? Stance.JOKE : Stance.DISAGREE)
+              : "FLIRT".equals(comment.stance) ? Stances.answerToFlirt(b, user, edge.attraction, edge.chemistry, k, rng)
+              : Stances.comment(w, b, user, comment, lib, k, day, rng);
           plan.comment("live-reply:" + b.id + ":" + comment.id, t + horizon + delay(rng, 6 * 60_000L, 2 * 3_600_000L), post.id,
               comment.id, b.id, Planner.commentBrief(post, stance, user.id,
                   Airing.CLASH.contains(comment.stance) && Airing.CLASH.contains(stance.name()) ? "debate_exchange" : null));

@@ -85,6 +85,12 @@ private static final double OPPOSED_PULL = 3.5;
     return Math.max(-1, Math.min(1, mine * i.lean * 2.5));
   }
 
+  /** The answer to a flirt: play along, or laugh it off (SPEC §5.2). */
+  static Stance answerToFlirt(Person x, Person from, double attraction, double chemistry, Knobs k, RandomSource rng) {
+    double ladder = flirt(x, from, attraction, chemistry, k);
+    return ladder > -1.5 && rng.chance(1 / (1 + Math.exp(-(ladder + 1)))) ? Stance.FLIRT : Stance.JOKE;
+  }
+
   /** The faithfulness ladder (SPEC §5.2), scaled by {@code romance.temptation}. */
   static double flirt(Person b, Person a, double attraction, double chemistry, Knobs k) {
     if (b.gender == a.gender) return NEVER;

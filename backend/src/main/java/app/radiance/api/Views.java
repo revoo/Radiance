@@ -45,7 +45,11 @@ final class Views {
   record Recap(Long since, List<RecapLine> lines) {}
 
   record Person(Actor actor, String bio, String employer, String hometown, String relationshipStatus, String birthday,
-      String relationship, boolean friend, int mutualFriends, List<Actor> friends, Integer meter) {}
+      String relationship, boolean friend, int mutualFriends, List<Actor> friends, Integer meter, String requestId,
+      String request) {}
+
+  /** A resident asking R to be friends. */
+  record FriendRequest(String id, Actor from, long createdAt) {}
 
   /** A resident's like-meter for R, with its change over the last 7 days (null until there's a snapshot). */
   record Relationship(Actor actor, int meter, Integer trend, String kind, boolean friend) {}

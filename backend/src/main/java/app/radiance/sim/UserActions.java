@@ -47,6 +47,11 @@ public final class UserActions {
   public record Reading(Map<String, Double> features, List<String> topics, double controversy, String stance,
       String appraisalJson) {}
 
+  /** Below this meter, a resident leaves R's request pending. */
+  private static final double ACCEPTS_FROM_METER = 0;
+  private static final double ASKS_FROM_METER = 25;
+  private static final double ASKS_FROM_FAMILIARITY = 40;
+
   private final Sql sql;
   private final WriterLane lane;
   private final WorldEngine engine;
@@ -199,6 +204,89 @@ public final class UserActions {
       var comment = item(w, commentId);
       return comment == null ? new Script() : responder.onComment(w, comment, r.features(), now, HORIZON);
     });
+  }
+
+  /** R asks a resident. Empty when they're friends already, a request is waiting, or it's nobody. */
+  public Optional<String> friendRequest(String residentId, long now) {
+    return engine.locked(w -> {
+      if (w.userId == null || residentId.equals(w.userId) || !w.people.containsKey(residentId)) return Optional.<String>empty();
+      if (w.edge(w.userId, residentId).connected || requestBetween(w.userId, residentId)) return Optional.<String>empty();
+      return Optional.of(saveRequest(w, w.userId, residentId, now));
+    });
+  }
+
+  /** The resident's answer to R's request: yes if they care for him; otherwise it just stays pending. */
+  public Optional<String> decideFriendRequest(String id, long now) {
+    return engine.locked(w -> {
+      var from = sql.queryOne("SELECT from_id, to_id FROM friend_request WHERE id = ? AND status = 'PENDING'", List.of(id),
+          r -> new String[] {r.str("from_id"), r.str("to_id")}).orElse(null);
+      if (from == null || !from[0].equals(w.userId) || w.edge(from[1], w.userId).affinity < ACCEPTS_FROM_METER) return Optional.<String>empty();
+      resolve(w, id, from[1], "ACCEPTED", now);
+      var uow = new UnitOfWork();
+      new app.radiance.social.NotificationRepository(sql).save(uow, List.of(Airing.note(w, "FRIEND_ACCEPT", from[1], "ACTOR", from[1], Math.max(now, w.time))));
+      lane.run(() -> sql.commit(uow));
+      return Optional.of(from[1]);
+    });
+  }
+
+  /** R answers a resident's request. False if there's no such request waiting for him. */
+  public boolean answerFriendRequest(String id, boolean accept, long now) {
+    return engine.locked(w -> {
+      var from = sql.queryOne("SELECT from_id FROM friend_request WHERE id = ? AND to_id = ? AND status = 'PENDING'", List.of(id, w.userId),
+          r -> r.str("from_id")).orElse(null);
+      if (from == null) return false;
+      if (accept) {
+        resolve(w, id, from, "ACCEPTED", now);
+      } else {
+        lane.run(() -> sql.commit(new UnitOfWork().add("UPDATE friend_request SET status = 'DECLINED', resolved_at = ? WHERE id = ?", now, id)));
+      }
+      return true;
+    });
+  }
+
+  /** Residents who know and like R and aren't friends yet ask him, at most {@code max} at a time (SPEC §5.9). */
+  public List<String> residentFriendRequests(int max, long now) {
+    return engine.locked(w -> {
+      var out = new java.util.ArrayList<String>();
+      if (w.userId == null) return out;
+      for (var b : w.residents()) {
+        if (out.size() >= max) break;
+        var e = w.edgeOrNull(b.id, w.userId);
+        if (e == null || e.connected || e.familiarity < ASKS_FROM_FAMILIARITY || e.affinity < ASKS_FROM_METER) continue;
+        if (requestBetween(b.id, w.userId)) continue;
+        String id = saveRequest(w, b.id, w.userId, now);
+        var uow = new UnitOfWork();
+        new app.radiance.social.NotificationRepository(sql).save(uow, List.of(Airing.note(w, "FRIEND_REQUEST", b.id, "ACTOR", b.id, Math.max(now, w.time))));
+        lane.run(() -> sql.commit(uow));
+        out.add(id);
+      }
+      return out;
+    });
+  }
+
+  private boolean requestBetween(String a, String b) {
+    return sql.queryOne("SELECT COUNT(*) AS n FROM friend_request WHERE (from_id = ? AND to_id = ?) OR (from_id = ? AND to_id = ?)",
+        List.of(a, b, b, a), r -> r.lng("n")).orElse(0L) > 0;
+  }
+
+  private String saveRequest(SimWorld w, String from, String to, long now) {
+    String id = Ulid.next(now, RandomSource.seeded(w.seed).derive("friend-request:" + from + ":" + to));
+    lane.run(() -> sql.commit(new UnitOfWork().add("INSERT INTO friend_request (id, from_id, to_id, created_at, status) VALUES (?, ?, ?, ?, 'PENDING')",
+        id, from, to, now)));
+    return id;
+  }
+
+  private void resolve(SimWorld w, String id, String residentId, String status, long now) {
+    var there = w.edge(residentId, w.userId);
+    var back = w.edge(w.userId, residentId);
+    there.connected = true;
+    back.connected = true;
+    there.dirty = true;
+    back.dirty = true;
+    lane.run(() -> sql.commit(new UnitOfWork()
+        .add("UPDATE friend_request SET status = ?, resolved_at = ? WHERE id = ?", status, now, id)
+        .add("UPDATE relationship SET connected = 1 WHERE (from_id = ? AND to_id = ?) OR (from_id = ? AND to_id = ?)",
+            residentId, w.userId, w.userId, residentId)));
   }
 
   /** Takes on news that broke since the batch, by residents who are online now (SPEC §5.12). */

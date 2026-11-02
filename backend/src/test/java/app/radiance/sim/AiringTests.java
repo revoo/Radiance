@@ -211,6 +211,21 @@ class AiringTests {
     assertThat(commentStatus("c5")).isEqualTo(AirStatus.DROPPED);
   }
 
+  /** Regression: the flirt rule added attraction whoever it was aimed at, breaking the roster's hard rule (CLAUDE.md). */
+  @Test
+  void flirtingWithSomeoneOfTheSameGenderMovesNoAttraction() {
+    String deepa = id("deepa.kulkarni"), kristen = id("kristen.wagner");
+    var w = engine.world();
+    assertThat(w.person(deepa).gender).isEqualTo(w.person(kristen).gender);
+    save(List.of(), List.of(post("p9", kristen, T + 10 * MIN, null, Brief.NONE)),
+        List.of(comment("c9", "p9", null, deepa, T + 15 * MIN,
+            new Brief(null, null, null, "FLIRT", kristen, "flirt_comment", List.of(), 0, 0, Map.of()))), List.of());
+    engine.advanceTo(T + 20 * MIN);
+    assertThat(commentStatus("c9")).isEqualTo(AirStatus.AIRED);
+    assertThat(w.edge(kristen, deepa).attraction).isZero();
+    assertThat(w.edge(deepa, kristen).attraction).isZero();
+  }
+
   /** SPEC §12 M10: a forecast snow day that never comes drops its scripted snow posts at airing. */
   @Test
   void aSnowDayThatNeverCameDropsItsPostsAndOneThatCameAirs() {

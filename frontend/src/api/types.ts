@@ -92,7 +92,11 @@ export type RecapLine = {
 
 export type Recap = { since: number | null; lines: RecapLine[] };
 
+export type FriendRequest = { id: string; from: Actor; createdAt: number };
+
 export type Person = {
+  requestId?: string | null;
+  request?: "SENT" | "RECEIVED" | null;
   meter?: number | null;
   actor: Actor;
   bio: string | null;

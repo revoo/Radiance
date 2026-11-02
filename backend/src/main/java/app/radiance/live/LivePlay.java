@@ -57,6 +57,7 @@ public final class LivePlay {
   private WeatherSources weatherSources;
   private HeadlineFeeds headlineFeeds;
   private long lastRefresh;
+  private final Map<String, Long> friendDecisions = new java.util.HashMap<>();
   /** R's meters when last published, to spot what moved. */
   private Map<String, Long> meters = Map.of();
   private final Map<String, Long> meterMovedAt = new java.util.HashMap<>();
@@ -84,6 +85,8 @@ public final class LivePlay {
 
   private static final Logger log = LoggerFactory.getLogger(LivePlay.class);
   private static final long AIR_EVERY = 10_000;
+  private static final long DECIDE_AFTER_MIN = 3_000;
+  private static final long DECIDE_AFTER_SPREAD = 9_000;
   /** News and weather during a session (SPEC §5.12); the first turn of a session past this counts as login's. */
   static final long REFRESH_EVERY = 3_600_000L;
   /** How long a moved meter waits for a response to land before it goes out without a pulse. */
@@ -157,6 +160,33 @@ public final class LivePlay {
     return this;
   }
 
+  /** R asks a resident to be friends; they answer within seconds, while he's online (SPEC §5.9). */
+  public Optional<String> requestFriend(String residentId) {
+    touch();
+    var id = actions.friendRequest(residentId, now());
+    id.ifPresent(x -> {
+      synchronized (this) {
+        friendDecisions.put(x, clock.nowMs() + DECIDE_AFTER_MIN + (long) (Math.random() * DECIDE_AFTER_SPREAD));
+      }
+    });
+    return id;
+  }
+
+  public boolean answerFriendRequest(String id, boolean accept) {
+    touch();
+    return actions.answerFriendRequest(id, accept, now());
+  }
+
+  private void decideFriends(long wall) {
+    for (var it = friendDecisions.entrySet().iterator(); it.hasNext(); ) {
+      var e = it.next();
+      if (e.getValue() > wall) continue;
+      it.remove();
+      actions.decideFriendRequest(e.getKey(), now())
+          .ifPresent(actor -> emit("friend.changed", Map.of("actorId", actor, "accepted", true)));
+    }
+  }
+
   /** Turns on hourly news and weather during sessions. */
   public LivePlay withNews(WeatherSources weatherSources, HeadlineFeeds headlineFeeds) {
     this.weatherSources = weatherSources;
@@ -193,6 +223,7 @@ public final class LivePlay {
         r -> r.isNull("s") ? 0L : r.lng("s")).orElse(0L);
     var broke = new HeadlineRepository(sql).publishedBetween(Math.max(batch, t - BROKE_WITHIN), t + 1);
     if (broke.isEmpty()) return;
+    actions.residentFriendRequests(1, t);
     var script = actions.takes(broke, MAX_TAKES_PER_REFRESH, t);
     actions.save(script);
     script.posts.forEach(p -> render(p.id()));
@@ -262,6 +293,9 @@ public final class LivePlay {
   private void start(long wall) {
     sessionId = Ulid.next(wall, RandomSource.seeded(System.nanoTime()).derive("session"));
     sessionStart = wall;
+    // a request left pending gets another look each session: they may like him by now
+    sql.query("SELECT id FROM friend_request WHERE status = 'PENDING' AND from_id = (SELECT id FROM actor WHERE kind <> 'BOT' LIMIT 1)",
+        List.of(), r -> r.str("id")).forEach(x -> friendDecisions.put(x, wall + DECIDE_AFTER_MIN));
     meters = currentMeters();
     meterMovedAt.clear();
     long seed = engine.locked(w -> w.seed);
@@ -512,6 +546,7 @@ public final class LivePlay {
     if (!lease.isHeld()) return 1_000;
     long t = now();
 
+    decideFriends(wall);
     if (headlineFeeds != null && wall - lastRefresh >= REFRESH_EVERY) {
       lastRefresh = wall;
       refresh(wall);
