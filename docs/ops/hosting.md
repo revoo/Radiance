@@ -47,7 +47,7 @@ Already done on this server; these steps are for rebuilding it. Step 1 overwrite
 2. **Fill in the secrets.** On the server:
 
    ```bash
-   cd /opt/hosting/radiance && chmod 600 .env && mkdir -p data
+   cd /opt/hosting/radiance && chmod 600 .env && mkdir -p -m 700 data
    ```
 
    Put the username in `.env`, and copy `deploy/set-password.sh` beside it to set the password (see
