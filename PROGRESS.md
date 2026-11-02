@@ -1,12 +1,8 @@
 # Progress
 
 ## Resume here
-- **M9 accepted by R (2026-11-02) and merged**: `main` fast-forwarded to `m9-hosting`. Live at
-  https://radiance.enigmatica.app, on image `:main`.
-- **M10 built on `m10-news`, waiting for R's review and merge.** Not merged, not deployed. Don't start M11 until R
-  says go.
-  - What's in it is listed under "M10 steps" below. Prod reads real feeds and real weather (`radiance.news.source`,
-    `radiance.weather.source`); everything else defaults to fixtures and fake weather, and never calls out.
+- **M10 merged and live (2026-11-02)**: `main` at 6095374, deployed to https://radiance.enigmatica.app with real feeds and
+  real weather. R gave standing approval to merge when CI is green.
   - AC not fully proven, for R to know:
     - Debates: one every two days holds on average (25 in a simulated month), but seed 42 of fixture news leaves one
       empty two-day window. `NewsAcceptanceTests` allows that one, which is looser than the AC. Recheck on real news.
@@ -14,6 +10,16 @@
       only be measured once this is deployed. Real classification hasn't run without an LLM key: offline it's a fake.
   - Flaky once on Windows: `LivePlayTests.responsesThePacerNeverReleasedStillAirLater` failed in teardown ("Failed to
     close extension context") when a render outlived the test; passed 6 of 6 alone. Not chased down.
+- **M11 in progress on `m11-you`** (R said go; token budget is tight, so small green steps). Latest commit is green locally.
+  - Done: like-meters (`GET /api/me/relationships`, `meter` on profiles, `meter.changed` with pulses, nightly
+    `meter_snapshot`, `ui.like-meters`, `LikeMeter`, the Relationships page, profile and chat header); friend requests
+    both ways (`FriendsController`, decided in 3-12 s, pending ones looked at again each session); backlash and AC tests
+    (`YouInTheWorldTests`, `LivePlayTests`, `FriendRequestTests`); new `Persona.FLIRTY`.
+  - Bugs found and fixed: same-gender flirting added attraction (`Airing.move`); replies to R's flirty comments skipped
+    the faithfulness ladder (`Stances.answerToFlirt`).
+  - Left: R's own @mentions drawing a response from whoever he names (`POST /api/posts` takes no mentions yet; residents'
+    mentions of R already notify); hover cards (none exist yet, so no meter on them); friend-request deltas from
+    `relationship-deltas.yaml` aren't applied; reciprocity is only implicit, through affinity. Then CI, merge, deploy.
 - Half-done: nothing.
 - The live world is a test world, and R will nuke it: acceptance testing comes later, with real LLM keys, on a
   fresh world (`docs/ops/hosting.md`, "Real prose"). The declarative `hosting` repo is deferred until R asks.
