@@ -78,3 +78,31 @@ describe("logging out", () => {
     expect(screen.getByRole("menuitem", { name: "Log out" })).toBeVisible();
   });
 });
+
+describe("the backup banner", () => {
+  const signedIn = {
+    "GET /api/me": { username: "r", worldReady: true, onboarded: true, actor: ME, networkName: "Radiance" },
+    "GET /api/feed": { items: [], nextCursor: null },
+  };
+
+  it("is loud when backups can't leave the server", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      mockFetch({
+        ...signedIn,
+        "GET /api/director/backups": { enabled: true, offsiteConfigured: false, warning: "Backups aren't leaving this server: R2_ACCESS_KEY_ID missing.", lastAt: null },
+      }).fn,
+    );
+    renderWith(<App />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Backups aren't leaving this server");
+  });
+
+  it("stays away when all is well", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      mockFetch({ ...signedIn, "GET /api/director/backups": { enabled: true, offsiteConfigured: true, warning: null, lastAt: 1 } }).fn,
+    );
+    renderWith(<App />);
+    await screen.findByRole("button", { name: "Your account" });
+    await new Promise((r) => setTimeout(r, 30));
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+});

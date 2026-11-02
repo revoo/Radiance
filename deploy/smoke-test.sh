@@ -20,7 +20,8 @@ fail() {
   exit 1
 }
 cleanup() {
-  docker rm -f "$NAME" >/dev/null 2>&1 || true
+  docker rm -f "$NAME" "$NAME-s3" >/dev/null 2>&1 || true
+  docker network rm "$NAME" >/dev/null 2>&1 || true
   sudo rm -rf "$WORK"
 }
 trap cleanup EXIT
@@ -78,9 +79,67 @@ api "$BASE/api/feed" | grep -q '"body"' || fail "the feed is empty"
 code=$(api -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' -d '{"text":"hello from the smoke test"}' "$BASE/api/posts")
 [ "$code" = 201 ] || fail "posting answered $code"
 
+echo "== with no R2 keys, backups are loud"
+docker logs "$NAME" 2>&1 | grep -q "BACKUPS ARE NOT LEAVING THIS SERVER" || fail "no banner in the app's log"
+api "$BASE/api/director/backups" | grep -q "leaving this server" || fail "the SPA isn't told"
+set +e
+out=$(docker run --rm "${run_args[@]}" "$IMAGE" backup 2>&1)
+code=$?
+set -e
+[ "$code" = 3 ] || fail "backup without keys exited $code, not 3: $out"
+grep -q "BACKUPS ARE NOT LEAVING THIS SERVER" <<<"$out" || fail "no banner from the one-shot backup"
+ls "$DATA/backups/" | grep -q 'radiance-.*\.db\.gz' || fail "no local snapshot"
+
+echo "== a backup while the app runs reaches an S3 store that checks signatures (rclone standing in for R2)"
+docker network create "$NAME" >/dev/null
+docker network connect "$NAME" "$NAME"
+S3_DATA="$WORK/s3"
+mkdir -p "$S3_DATA/radiance-backups"
+docker run -d --name "$NAME-s3" --network "$NAME" -v "$S3_DATA:/data" rclone/rclone:1.71 serve s3 --addr :9000 \
+  --auth-key smoke-access-key,smoke-secret-key --force-path-style=true /data >/dev/null
+sleep 3
+r2_env=(-e "R2_ENDPOINT=http://$NAME-s3:9000" -e R2_ACCESS_KEY_ID=smoke-access-key -e R2_SECRET_ACCESS_KEY=smoke-secret-key
+  -e R2_BACKUP_BUCKET=radiance-backups)
+out=$(docker run --rm --network "$NAME" "${run_args[@]}" "${r2_env[@]}" "$IMAGE" backup 2>&1) || fail "backup with keys failed: $out"
+grep -q "uploaded to backups/radiance-" <<<"$out" || fail "nothing uploaded: $out"
+
+echo "== restore refuses while the app runs"
+set +e
+out=$(docker run --rm --network "$NAME" "${run_args[@]}" "${r2_env[@]}" "$IMAGE" restore latest 2>&1)
+code=$?
+set -e
+[ "$code" = 3 ] || fail "restore with the app running exited $code, not 3: $out"
+
 echo "== it stops cleanly"
 docker stop -t 30 "$NAME" >/dev/null
 code=$(docker inspect --format '{{.State.ExitCode}}' "$NAME")
 [ "$code" = 0 ] || [ "$code" = 143 ] || fail "it exited with $code"
+docker rm "$NAME" >/dev/null
+
+echo "== the drill: the disk is lost, the database comes back from the store, and the app serves it"
+sudo rm -rf "$DATA"
+mkdir -p "$DATA"
+sudo chown "$USER_ID:$USER_ID" "$DATA"
+out=$(docker run --rm --network "$NAME" "${run_args[@]}" "${r2_env[@]}" "$IMAGE" restore latest 2>&1) || fail "restore failed: $out"
+grep -q "Restored radiance-" <<<"$out" || fail "restore said: $out"
+docker run -d --name "$NAME" "${run_args[@]}" -p "127.0.0.1:$PORT:8080" -e RADIANCE_USERNAME=sam \
+  -e "RADIANCE_PASSWORD_BCRYPT=$HASH" -e JAVA_TOOL_OPTIONS=-Xmx768m "$IMAGE" >/dev/null
+for _ in $(seq 1 45); do
+  status=$(docker inspect --format '{{.State.Health.Status}}' "$NAME" 2>/dev/null || echo gone)
+  [ "$status" = healthy ] && break
+  sleep 3
+done
+[ "$status" = healthy ] || fail "the restored app never got healthy ($status)"
+headers=$(curl -s -D - -o /dev/null -H 'X-Forwarded-Proto: https' "$BASE/api/me")
+xsrf=$(grep -i '^set-cookie: XSRF-TOKEN=' <<<"$headers" | sed -E 's/^[^=]+=([^;]+).*/\1/' | tr -d '\r')
+headers=$(curl -s -D - -o /dev/null -H 'X-Forwarded-Proto: https' -H "Cookie: XSRF-TOKEN=$xsrf" -H "X-XSRF-TOKEN: $xsrf" \
+  --data-urlencode username=sam --data-urlencode "password=$PASSWORD" "$BASE/api/auth/login")
+session=$(grep -i '^set-cookie: JSESSIONID=' <<<"$headers" | sed -E 's/^[^=]+=([^;]+).*/\1/' | tr -d '\r')
+new_xsrf=$(grep -i '^set-cookie: XSRF-TOKEN=' <<<"$headers" | tail -1 | sed -E 's/^[^=]+=([^;]+).*/\1/' | tr -d '\r')
+[ -n "$new_xsrf" ] && xsrf="$new_xsrf"
+api "$BASE/api/feed" | grep -q "hello from the smoke test" || fail "the restored world lost R's post"
+code=$(api -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' -d '{"text":"back from the dead"}' "$BASE/api/posts")
+[ "$code" = 201 ] || fail "the restored app can't write: posting answered $code"
+docker stop -t 30 "$NAME" >/dev/null
 
 echo "SMOKE TEST PASSED"

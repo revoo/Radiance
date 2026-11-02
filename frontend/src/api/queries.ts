@@ -391,3 +391,18 @@ export function useReadThread() {
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.threads }),
   });
 }
+
+// ---------------------------------------------------------------------------------------------- backups
+
+export type BackupStatus = { enabled: boolean; offsiteConfigured: boolean; warning: string | null; lastAt: number | null };
+
+/** How backups are doing (ADR 0019); the shell shows a banner when something's wrong. */
+export function useBackups() {
+  return useQuery({
+    queryKey: ["backups"],
+    queryFn: () => api<BackupStatus>("/api/director/backups"),
+    staleTime: 5 * 60_000,
+    refetchInterval: 15 * 60_000,
+    retry: false,
+  });
+}

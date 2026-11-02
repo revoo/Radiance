@@ -38,6 +38,20 @@ radiance:
     username: ${RADIANCE_USERNAME:}
     password-bcrypt: ${RADIANCE_PASSWORD_BCRYPT:}
     dev-login: false
+  backup:                              # ADR 0019; on in the prod profile
+    enabled: false
+    cron: "30 8 * * *"                 # UTC; before the night's first batch
+    dir: data/backups
+    keep-daily: 14
+    keep-weekly: 8
+    keep-local: 3
+    r2:
+      endpoint: ${R2_ENDPOINT:}        # defaults to the account's R2 endpoint
+      account-id: ${CF_ACCOUNT_ID:}
+      access-key-id: ${R2_ACCESS_KEY_ID:}
+      secret-access-key: ${R2_SECRET_ACCESS_KEY:}
+      bucket: ${R2_BACKUP_BUCKET:${R2_BUCKET:}}
+      region: ${R2_REGION:auto}
   persistence:
     db-path: data/radiance.db
     read-pool-size: 4

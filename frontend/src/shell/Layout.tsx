@@ -1,7 +1,7 @@
-import { Activity, Bell, House, LogOut, MessageCircle, Monitor, Moon, Sun, Users, X } from "lucide-react";
+import { Activity, Bell, House, LogOut, MessageCircle, Monitor, Moon, ShieldAlert, Sun, Users, X } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router";
-import { useLogout, useNotifications, usePeople, useThreads, useWorld } from "../api/queries.ts";
+import { useBackups, useLogout, useNotifications, usePeople, useThreads, useWorld } from "../api/queries.ts";
 import type { Actor } from "../api/types.ts";
 import { live, useLive, worldNow } from "../live/store.ts";
 import { Avatar, Card } from "../ui/kit.tsx";
@@ -366,6 +366,18 @@ function BackfillBanner() {
   );
 }
 
+/** Backups that can't leave the server are the one thing worth interrupting the game for (ADR 0019). */
+function BackupBanner() {
+  const warning = useBackups().data?.warning;
+  if (!warning) return null;
+  return (
+    <div role="alert" className="flex items-start gap-3 rounded-2xl border border-bad/40 bg-bad/10 px-4 py-3 text-sm font-medium text-bad">
+      <ShieldAlert className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
+      <span>{warning}</span>
+    </div>
+  );
+}
+
 export function Layout({ me, network, children }: { me: Actor; network: string; children: ReactNode }) {
   const wide = useLocation().pathname.startsWith("/messages");
   return (
@@ -374,6 +386,7 @@ export function Layout({ me, network, children }: { me: Actor; network: string; 
       <div className="mx-auto flex max-w-[1320px] gap-6 px-3 pt-4 sm:px-4">
         <LeftRail me={me} />
         <main className={`mx-auto w-full min-w-0 flex-1 space-y-4 ${wide ? "max-w-[980px]" : "max-w-[640px]"}`}>
+          <BackupBanner />
           <BackfillBanner />
           {children}
         </main>
