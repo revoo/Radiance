@@ -9,8 +9,12 @@
   fresh world (`docs/ops/hosting.md`, "Real prose"). The declarative `hosting` repo is deferred until R asks.
 - Waiting on R: the R2 keys (backups stay on the server, loudly, until then); a more permanent server (R is on the
   Linode free trial, and R2 must work before the move; the $5/month target waits for that purchase).
-- Still to prove: the nightly batch with R's computer off (first run 09:00 UTC; check `batch_run`), and a real R2
-  upload and restore once the keys are in.
+- Proven 2026-11-02: the nightly batch and the backup ran on the server with R's computer off. Still to prove: a
+  real R2 upload and restore once the keys are in, and real prose in the batch (both runs so far used FakeLlm).
+- Open bug, not fixed: `NightlyBatch` sets `script_to` from `nextRun()`, the next cron of either kind, so the 09:00
+  run scripts only to 17:00 (2 hours) and the 11:00 run scripts the other 22 (`batch_run` rows, 2026-11-02). The
+  docs say the second run "does nothing", and the 6-hour slack doesn't protect a failed 11:00 run: the script ends at
+  17:00 UTC, not 15:00 the next day. `NightlyBatchTests` reruns without moving the clock, which hides it.
 - Server rule from R (2026-11-02): changes allowed while there's no production load, carefully; don't duplicate
   what's there. One shared Caddy routes to all app containers: graceful reloads only, no second Caddy.
 - To play offline: `./gradlew genesis --args='--seed 7 --import' -Pprofile=offline` (once), then
