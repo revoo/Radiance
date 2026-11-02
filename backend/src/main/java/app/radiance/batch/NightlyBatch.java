@@ -29,7 +29,9 @@ import app.radiance.sim.WorldEngine;
 import app.radiance.weather.FakeWeather;
 import app.radiance.weather.WeatherBook;
 import app.radiance.weather.WeatherRepository;
+import app.radiance.weather.WeatherSource;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -38,6 +40,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.support.CronExpression;
@@ -77,11 +80,19 @@ public final class NightlyBatch {
   private final String networkName;
   private final List<CronExpression> crons;
   private final boolean softeningCheck;
+  private final BiFunction<Long, ZoneId, WeatherSource> weatherSources;
   private final AtomicInteger running = new AtomicInteger();
 
   public NightlyBatch(Sql sql, SqlAdmin admin, WriterLane lane, LeaseHolder lease, WallClock clock, ContentLibrary lib,
       WorldEngine engine, ScriptWriter writer, LlmGateway gateway, String networkName, List<String> crons,
       boolean softeningCheck) {
+    this(sql, admin, lane, lease, clock, lib, engine, writer, gateway, networkName, crons, softeningCheck, FakeWeather::new);
+  }
+
+  public NightlyBatch(Sql sql, SqlAdmin admin, WriterLane lane, LeaseHolder lease, WallClock clock, ContentLibrary lib,
+      WorldEngine engine, ScriptWriter writer, LlmGateway gateway, String networkName, List<String> crons,
+      boolean softeningCheck,
+      BiFunction<Long, ZoneId, WeatherSource> weatherSources) {
     this.sql = sql;
     this.admin = admin;
     this.lane = lane;
@@ -94,6 +105,7 @@ public final class NightlyBatch {
     this.networkName = networkName;
     this.crons = crons.stream().map(NightlyBatch::cron).toList();
     this.softeningCheck = softeningCheck;
+    this.weatherSources = weatherSources;
   }
 
   /** Spring's cron has a seconds field; the config uses Unix five-field crons (SPEC §9). */
@@ -197,12 +209,14 @@ public final class NightlyBatch {
     long scripted = row[2];
     long historyFrom = Math.min(scripted, now) - DAY;
     var headlines = headlines(w.seed, w.zone, w.date(historyFrom), w.date(now));
-    var hours = new FakeWeather(w.seed, w.zone).hours(historyFrom - historyFrom % HOUR - 8 * DAY, now - now % HOUR + 3 * DAY);
+    long weatherFrom = historyFrom - historyFrom % HOUR - 8 * DAY;
+    long weatherTo = now - now % HOUR + 3 * DAY;
+    var hours = weatherSources.apply(w.seed, w.zone).hours(weatherFrom, weatherTo);
     var uow = new UnitOfWork();
-    new WeatherRepository(sql).save(uow, hours);
+    new WeatherRepository(sql).saveKeepingReal(uow, hours);
     new HeadlineRepository(sql).save(uow, headlines);
     lane.run(() -> sql.commit(uow));
-    var weather = new WeatherBook(w.zone, lib.weather()).putAll(hours);
+    var weather = new WeatherBook(w.zone, lib.weather()).putAll(new WeatherRepository(sql).between(weatherFrom, weatherTo));
 
     // 3. air what's due; a script that ran out before now is backfilled first
     int planned = 0;

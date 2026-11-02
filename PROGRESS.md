@@ -3,7 +3,13 @@
 ## Resume here
 - **M9 accepted by R (2026-11-02) and merged**: `main` fast-forwarded to `m9-hosting`. Live at
   https://radiance.enigmatica.app, on image `:main`.
-- Next: **M10 — Headlines & weather** (SPEC §12), on a new branch from `main`. **Don't start until R says go.**
+- **M10 in progress on `m10-news`** (R said go, 2026-11-02; token budget is tight, so small green steps).
+  - Done: batch retry delay; `OpenMeteoWeather` wired into the batch (`radiance.weather.source`: fake by default,
+    open-meteo in prod; a failed call falls back to FakeWeather, and fake hours never replace real ones).
+  - Before deploying M10: the "Weather data by Open-Meteo.com" footer must ship with real weather (CC BY 4.0).
+  - Left: RSS fetch, parse and dedupe; verify feed URLs; `headline-classify`; selection on real headlines; ingest
+    hourly in live play; live takes; debates; link cards; "talked about" rail; weather refresh at login and hourly;
+    weather chip and attribution; the M10 AC tests. Nothing deployed from this branch yet.
 - Half-done: nothing.
 - The live world is a test world, and R will nuke it: acceptance testing comes later, with real LLM keys, on a
   fresh world (`docs/ops/hosting.md`, "Real prose"). The declarative `hosting` repo is deferred until R asks.

@@ -8,6 +8,8 @@ server:
       cookie:
         secure: true
 radiance:
+  weather:
+    source: open-meteo
   backup:
     enabled: true
   llm:

@@ -41,4 +41,14 @@ public final class WeatherRepository {
   public UnitOfWork save(UnitOfWork uow, Collection<WeatherHour> rows) {
     return TABLE.upsert(uow, rows);
   }
+
+  /** Like {@link #save}, but a fake hour (a fallback after a failed fetch) never replaces real data. */
+  public UnitOfWork saveKeepingReal(UnitOfWork uow, Collection<WeatherHour> rows) {
+    if (rows.isEmpty()) return uow;
+    long from = rows.stream().mapToLong(WeatherHour::hour).min().orElseThrow();
+    long to = rows.stream().mapToLong(WeatherHour::hour).max().orElseThrow() + WeatherHour.HOUR;
+    var real = between(from, to).stream().filter(h -> h.kind() != WeatherHour.Kind.FAKE).map(WeatherHour::hour)
+        .collect(java.util.stream.Collectors.toSet());
+    return save(uow, rows.stream().filter(h -> h.kind() != WeatherHour.Kind.FAKE || !real.contains(h.hour())).toList());
+  }
 }
