@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { ME, mockFetch, renderWith, SARAH } from "../test/render.tsx";
 import { FriendsPage } from "./FriendsPage.tsx";
+import { NotificationsPage } from "./NotificationsPage.tsx";
 import { ProfilePage } from "./ProfilePage.tsx";
 
 afterEach(() => vi.unstubAllGlobals());
@@ -114,5 +115,24 @@ describe("the People page", () => {
     renderWith(<FriendsPage />);
     await new Promise((r) => setTimeout(r, 20));
     expect(screen.queryByRole("heading", { name: "Friend requests" })).not.toBeInTheDocument();
+  });
+});
+
+describe("the Notifications page", () => {
+  it("says who accepted or asked, and links to their profile", async () => {
+    const note = (id: string, kind: string) => ({
+      id, kind, actors: [SARAH], refType: "ACTOR", refId: SARAH.id, postId: null, snippet: null, createdAt: 1, read: false,
+    });
+    vi.stubGlobal(
+      "fetch",
+      mockFetch({
+        "GET /api/notifications": { unread: 2, items: [note("n1", "FRIEND_ACCEPT"), note("n2", "FRIEND_REQUEST")], nextCursor: null },
+        "POST /api/notifications": undefined,
+      }).fn,
+    );
+    renderWith(<NotificationsPage />);
+    expect(await screen.findByText(/accepted your friend request/)).toBeInTheDocument();
+    expect(screen.getByText(/sent you a friend request/)).toBeInTheDocument();
+    expect(screen.getByText(/accepted your friend request/).closest("a")).toHaveAttribute("href", "/people/sarah.kim");
   });
 });

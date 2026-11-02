@@ -1,4 +1,4 @@
-import { AtSign, Bell, CheckCheck, CornerDownRight, Heart, MessageCircle, Send } from "lucide-react";
+import { AtSign, Bell, CheckCheck, CornerDownRight, Heart, MessageCircle, Send, UserRoundCheck, UserRoundPlus } from "lucide-react";
 import { useEffect } from "react";
 import { Link } from "react-router";
 import { useMarkNotificationsRead, useNotifications } from "../api/queries.ts";
@@ -13,6 +13,8 @@ const KIND: Record<string, { icon: typeof Heart; color: string; verb: (n: Notifi
   REPLY: { icon: CornerDownRight, color: "bg-[#1971c2]", verb: () => "replied to your comment" },
   MENTION: { icon: AtSign, color: "bg-[#9c36b5]", verb: () => "mentioned you" },
   DM: { icon: Send, color: "bg-[#0c8599]", verb: () => "sent you a message" },
+  FRIEND_REQUEST: { icon: UserRoundPlus, color: "bg-[#1971c2]", verb: () => "sent you a friend request" },
+  FRIEND_ACCEPT: { icon: UserRoundCheck, color: "bg-[#2f9e44]", verb: () => "accepted your friend request" },
 };
 
 function who(n: Notification): React.ReactNode {
@@ -82,7 +84,13 @@ export function NotificationsPage() {
           );
           return (
             <li key={n.id} className="animate-rise" style={{ animationDelay: `${Math.min(i, 10) * 25}ms` }}>
-              {n.postId ? <Link to={`/posts/${n.postId}`}>{body}</Link> : body}
+              {n.postId ? (
+                <Link to={`/posts/${n.postId}`}>{body}</Link>
+              ) : n.refType === "ACTOR" && n.actors[0] ? (
+                <Link to={`/people/${n.actors[0].handle}`}>{body}</Link>
+              ) : (
+                body
+              )}
             </li>
           );
         })}
