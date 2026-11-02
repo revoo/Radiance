@@ -1,0 +1,22 @@
+# Radiance on the server (ADR 0018). Lives at /opt/hosting/radiance/compose.yaml and is included from
+# /opt/hosting/compose.yaml, so it's part of the `hosting` project and its default network: Caddy reaches
+# it as radiance:8080, and it publishes no ports. See docs/ops/hosting.md.
+services:
+  radiance:
+    image: ghcr.io/revoo/radiance:${RADIANCE_TAG:-main}
+    restart: unless-stopped
+    user: "${RADIANCE_UID:-1001}:${RADIANCE_GID:-1001}" # owns ./data on the host
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      # the box hosts other projects: a fixed heap, and a clean restart rather than limping on after an OOM
+      JAVA_TOOL_OPTIONS: "-Xmx768m -XX:+ExitOnOutOfMemoryError"
+    volumes:
+      - ./data:/app/data
+    mem_limit: 1200m
+    stop_grace_period: 40s # time to finish a write and release the writer lease
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

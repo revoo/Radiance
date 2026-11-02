@@ -1,0 +1,3 @@
+radiance.enigmatica.app {
+	reverse_proxy radiance:8080
+}

@@ -1,5 +1,8 @@
 # The nightly batch on your machine
 
+On the server, none of this is needed: the app is always up and runs the batch itself (see `hosting.md`).
+These recipes are for running Radiance on your own computer.
+
 The batch writes and renders tomorrow's script (SPEC §5.1). It needs to run once a night whether or not
 the app is open.
 

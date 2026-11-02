@@ -20,7 +20,7 @@ fail() {
   exit 1
 }
 cleanup() {
-  docker rm -f "$NAME" "$NAME-s3" >/dev/null 2>&1 || true
+  docker rm -f "$NAME" "$NAME-s3" "$NAME-caddy" >/dev/null 2>&1 || true
   docker network rm "$NAME" >/dev/null 2>&1 || true
   sudo rm -rf "$WORK"
 }
@@ -92,7 +92,7 @@ ls "$DATA/backups/" | grep -q 'radiance-.*\.db\.gz' || fail "no local snapshot"
 
 echo "== a backup while the app runs reaches an S3 store that checks signatures (rclone standing in for R2)"
 docker network create "$NAME" >/dev/null
-docker network connect "$NAME" "$NAME"
+docker network connect --alias radiance "$NAME" "$NAME"
 S3_DATA="$WORK/s3"
 mkdir -p "$S3_DATA/radiance-backups"
 docker run -d --name "$NAME-s3" --network "$NAME" -v "$S3_DATA:/data" rclone/rclone:1.71 serve s3 --addr :9000 \
@@ -102,6 +102,17 @@ r2_env=(-e "R2_ENDPOINT=http://$NAME-s3:9000" -e R2_ACCESS_KEY_ID=smoke-access-k
   -e R2_BACKUP_BUCKET=radiance-backups)
 out=$(docker run --rm --network "$NAME" "${run_args[@]}" "${r2_env[@]}" "$IMAGE" backup 2>&1) || fail "backup with keys failed: $out"
 grep -q "uploaded to backups/radiance-" <<<"$out" || fail "nothing uploaded: $out"
+
+echo "== through Caddy, using the real site's proxy rule: pages, and the live stream isn't buffered"
+CADDY_DIR="$WORK/caddy"
+mkdir -p "$CADDY_DIR"
+# the site as deployed, on plain HTTP: no certificate here
+sed -E '1s/^.*\{$/:80 {/' "$(dirname "$0")/Caddyfile.radiance" >"$CADDY_DIR/Caddyfile"
+docker run -d --name "$NAME-caddy" --network "$NAME" -p 127.0.0.1:18081:80 -v "$CADDY_DIR:/etc/caddy:ro" caddy:2 >/dev/null
+sleep 2
+curl -fsS http://127.0.0.1:18081/ | grep -q 'id="root"' || fail "no page through Caddy"
+stream=$(timeout 5 curl -sN -H "Cookie: JSESSIONID=$session" http://127.0.0.1:18081/api/stream || true)
+grep -q "event:hello" <<<"$stream" || fail "the stream didn't get through Caddy promptly: $stream"
 
 echo "== restore refuses while the app runs"
 set +e

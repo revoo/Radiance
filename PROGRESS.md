@@ -1,18 +1,21 @@
 # Progress
 
 ## Resume here
-- Milestone: **M9 — Hosting on the Linode VPS** (rescoped, decision 19), branch `m9-hosting` (from `main` at
-  e494e7f). R said go on 2026-11-02. **Nothing gets deployed or changed on the server without asking R.**
-- Current step: 5.
+- Milestone: **M9 — Hosting on the Linode VPS** (decision 19), branch `m9-hosting`. **All build steps done;
+  nothing is deployed.** No deploy or server change without asking R; don't start a second Caddy or restart it
+  without asking. R adds the R2 keys next (tomorrow, as of 2026-11-02).
+- To deploy: `docs/ops/hosting.md`, after `main` is pushed (that's what publishes the image). Needs R: a merge
+  into `main`, the root-owned `/opt/hosting/compose.yaml` edit (no sudo for `claude`), the password hash and
+  `.env`, and an OK for the Caddy site and reload.
 - Half-done: nothing.
 
-## M9 steps
-1. ✔ Inspect the server (read-only); decision 19; ADRs 0018 and 0019
-2. ✔ `prod` profile; the app serves the SPA; security for a public origin
-3. ✔ Docker image (build stages on the runner's platform, multi-arch runtime); GHCR in CI; image smoke test
-4. ✔ Backup job to R2 and the restore procedure; loud when the R2 keys are missing
-5. `deploy/`: compose file and Caddy site for `/opt/hosting`
-6. Ops docs, PROGRESS, CI; stop before any deploy
+## M9 steps (all ✔)
+1. Inspect the server (read-only); decision 19; ADRs 0018 and 0019
+2. `prod` profile; the app serves the SPA; security for a public origin
+3. Docker image (build stages on the runner's platform, multi-arch runtime); GHCR in CI; image smoke test
+4. Backup job to R2 and the restore procedure; loud when the R2 keys are missing
+5. `deploy/`: compose file and Caddy site for `/opt/hosting`, checked against a copy of the server's layout
+6. Ops docs (`docs/ops/hosting.md`), PROGRESS, CI; stopped before any deploy
 
 ## M8 steps (all ✔)
 1. ✔ DM engine (`UserActions`): R's messages aired at once; the resident's reply planned by the engine
@@ -90,6 +93,14 @@
 7. World bible with the Chicagoland section
 
 ## Done
+- **M9 — Hosting** (2026-11-02, built, **not deployed**), branch `m9-hosting`:
+  - Tested on every milestone branch in CI on the real image (`deploy/smoke-test.sh`): non-root with a bind
+    mount, one-shot genesis and first batch, prod login with Secure cookies, a ready feed, the live stream
+    through a real Caddy with the site's proxy rule; a backup while the app runs to an S3 server that checks
+    signatures; the data directory deleted; a restore; the same world served and writable. linux/amd64 and
+    linux/arm64 both build.
+  - Not yet proven: the AC's real run (R's computer off, the batch runs, a ready day on his phone) needs the
+    deploy; R2 itself needs R's keys (signing is checked against AWS's published examples and rclone).
 - **M8 — Messenger** (2026-10-29), branch `m8-messenger`:
   - AC: a DM to any resident shows typing within 3 s and a reply within about 10 s (`MessengerTests`
     over all 30 residents; browser: typing and Seen at 1.5 s, reply at 2.0 s offline) ✔; a resident with
@@ -362,7 +373,17 @@ Resolutions of spec issues raised at kickoff. Each gets an ADR when its mileston
 - M8: offline (FakeLlm), a burst's messages can repeat the same line; real models write each one.
 - M8: the migration-count test now counts the shipped files instead of hard-coding a number.
 
+- M9: rescoped by decision 19; SPEC §12 M9's Worker, D1 and Cron Container scope is dropped, and the D1 SQL rules
+  in CLAUDE.md stay for now (ADR 0018).
+- M9: the batch and backups run in-process on an always-up container, not on an OS timer: a timer would add a
+  second moving part and only ever defer to the app.
+- M9: the app serves the SPA from the jar, since the shared Caddy's mounts stay untouched.
+- M9: `/api/director/*` is behind the login but not behind a separate role (single user).
+- M9: no infrastructure-as-code yet (it was optional); `docs/ops/hosting.md` is the procedure.
+
 ## Open questions for R
+- The $5/month infrastructure target in SPEC's M9 AC predates the Linode, which likely costs more. Keep it,
+  or replace it with the Linode's actual cost?
 - Provider keys: which providers will you use? Put their keys in `.env` and run
   `./gradlew :backend:liveTest` (well under a cent at default models) to close M2's live ACs, including
   two unverified Anthropic details (Appendix C note).

@@ -69,6 +69,8 @@ jobs:
           cache-to: type=gha,mode=max
       - name: Smoke test the image, run the way the server runs it
         run: bash deploy/smoke-test.sh radiance:smoke
+      - name: Check the deploy files against the server's layout
+        run: bash deploy/check-compose.sh
       - name: Log in to GHCR
         if: env.PUBLISH == 'true'
         uses: docker/login-action@v4
