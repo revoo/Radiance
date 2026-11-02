@@ -1,11 +1,16 @@
 import { Flame, HeartCrack, MessagesSquare, Sparkles, Wind } from "lucide-react";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ComponentProps, createElement, type ReactNode, useEffect, useState } from "react";
 import { Link } from "react-router";
 import { useRail, useWorld } from "../api/queries.ts";
 import type { Rail, TalkedStory } from "../api/types.ts";
 import { worldNow } from "../live/store.ts";
 import { Avatar } from "../ui/kit.tsx";
 import { isDaytime, skyGradient, skyIcon, skyOf, type Sky, weatherQuip } from "./weatherLook.ts";
+
+/** A sky's icon. */
+function SkyIcon({ sky, day, ...rest }: { sky: Sky; day: boolean } & ComponentProps<typeof Wind>) {
+  return createElement(skyIcon(sky, day), rest);
+}
 
 const FX_COUNT: Partial<Record<Sky, number>> = { drizzle: 8, rain: 16, storm: 16, snow: 14 };
 
@@ -70,7 +75,6 @@ export function WeatherCard() {
   if (!weather) return null;
   const sky = skyOf(weather.wmo);
   const day = isDaytime(localHour(weather.hour));
-  const Icon = skyIcon(sky, day);
   return (
     <section
       aria-label="Weather"
@@ -86,7 +90,7 @@ export function WeatherCard() {
             <p className="text-[44px] font-extrabold leading-none tracking-tighter tabular-nums">{weather.tempF}°</p>
             <p className="mt-1.5 text-sm font-semibold capitalize">{weather.sky}</p>
           </div>
-          <Icon className="weather-icon size-14 drop-shadow-lg" strokeWidth={1.5} aria-hidden="true" />
+          <SkyIcon sky={sky} day={day} className="weather-icon size-14 drop-shadow-lg" strokeWidth={1.5} aria-hidden="true" />
         </div>
         <p className="mt-1 text-[13px] italic text-white/85">{weatherQuip(sky, weather.tempF, weather.feelsLikeF)}</p>
         <div className="mt-2.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs font-medium tabular-nums text-white/80">
@@ -103,11 +107,10 @@ export function WeatherCard() {
           <ol className="mt-3 grid grid-cols-4 gap-1 rounded-xl bg-black/20 p-1.5 backdrop-blur-sm">
             {weather.next.map((h) => {
               const hour = localHour(h.hour);
-              const NextIcon = skyIcon(skyOf(h.wmo), isDaytime(hour));
               return (
                 <li key={h.hour} className="flex flex-col items-center gap-0.5 text-[11px] font-semibold tabular-nums">
                   <span className="text-white/70">{hourLabel(hour)}</span>
-                  <NextIcon className="size-4" aria-hidden="true" />
+                  <SkyIcon sky={skyOf(h.wmo)} day={isDaytime(hour)} className="size-4" aria-hidden="true" />
                   <span>{h.tempF}°</span>
                 </li>
               );
@@ -126,14 +129,13 @@ export function WeatherChip() {
   if (!weather) return null;
   const sky = skyOf(weather.wmo);
   const day = isDaytime(localHour(weather.hour));
-  const Icon = skyIcon(sky, day);
   return (
     <p
       title={weather.description}
       className="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-bold tabular-nums text-white shadow"
       style={{ background: skyGradient(sky, day) }}
     >
-      <Icon className="size-4" aria-hidden="true" />
+      <SkyIcon sky={sky} day={day} className="size-4" aria-hidden="true" />
       {weather.tempF}°F · {weather.sky}
     </p>
   );
