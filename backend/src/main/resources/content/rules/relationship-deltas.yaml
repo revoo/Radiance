@@ -24,6 +24,7 @@ interactions:
   supportive_comment:   { target: { affinity: 3, familiarity: 2, trust: 1 }, actor: { familiarity: 1 }, bystanders: { affinity: 0.5 } }
   congrats_comment:     { target: { affinity: 3, familiarity: 2 }, actor: { familiarity: 1 } }
   condolence_comment:   { target: { affinity: 4, trust: 2, familiarity: 2 }, actor: { familiarity: 1 } }
+  backlash_comment:     { target: { affinity: -6, respect: -3, familiarity: 1 }, actor: { familiarity: 1 }, bystanders: { affinity: -1 } }
   joke_comment:         { target: { affinity: 2, familiarity: 2 }, actor: { familiarity: 1 }, bystanders: { affinity: 0.5 } }
   agree_comment:        { target: { affinity: 2, familiarity: 2, respect: 1 }, actor: { familiarity: 1 } }
   question_comment:     { target: { affinity: 1, familiarity: 2 }, actor: { familiarity: 1 } }

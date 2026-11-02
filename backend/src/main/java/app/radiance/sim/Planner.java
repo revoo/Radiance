@@ -42,6 +42,9 @@ final class Planner {
   static final long HOUR = 3_600_000L;
   static final long DAY = 86_400_000L;
   private static final int MAX_DEBATE_ROUNDS = 4;
+  private static final int BACKLASH_REPLIES = 2;
+  private static final double NEWS_DEBATE_PULL = 1.0;
+  private static final double OPPOSED_ENGAGE = 2.5;
 
   private final ContentLibrary lib;
   private final Knobs k;
@@ -543,7 +546,9 @@ final class Planner {
     var a = w.person(item.authorId);
     if (a.user && !userShareOk(w, b, a, day)) return;
     var r = lib.engagement();
-    double u = utility(w, b, item, a, day, rng);
+    // people who oppose a controversial take are likelier to stop and answer it (SPEC §12 M10)
+    double u = utility(w, b, item, a, day, rng)
+        + ("NEWS".equals(item.category) && Stances.alignment(b, item) < 0 ? OPPOSED_ENGAGE * item.controversy : 0);
     boolean comment = !crowded(w, item, 0) && rng.chance(sigmoid(r.steepness() * (u - r.thetaComment())));
     boolean react = comment ? rng.chance(0.5) : rng.chance(sigmoid(r.steepness() * (u - r.thetaReact())));
     if (!comment && !react) return;
@@ -560,6 +565,7 @@ final class Planner {
           commentBrief(item, stance, a.id, null));
       spend(b, day);
       if (!a.user) replyIntent(p, a, b, c.id(), item.id, stance, c.createdAt(), 1);
+      if (stance == Stance.JOKE && item.tragic) backlash(p, item, c.id(), b.id, c.createdAt(), rng);
     }
     if (a.user) userShare.merge(b.id + "|" + day, 1, Integer::sum);
   }
@@ -577,6 +583,29 @@ final class Planner {
     String key = interaction != null ? interaction : Airing.interactionFor(stance.name());
     return new Brief(on.defId, on.category, null, stance.name(), toward, key, on.topics, on.controversy, on.drama,
         Plan.extra("on", on.id));
+  }
+
+  /**
+   * Someone joked about a tragedy, and the backlash is part of the story (SPEC §5.4): the post's author and whoever
+   * else is around get angry at the comment, and two of them say so.
+   */
+  static void backlash(Plan p, Item post, String commentId, String jokerId, long t, RandomSource rng) {
+    var around = new java.util.LinkedHashSet<String>();
+    around.add(post.authorId);
+    around.addAll(post.commenters);
+    var others = new ArrayList<>(p.w.residents());
+    while (around.size() < 5 && !others.isEmpty()) around.add(others.remove(rng.nextInt(others.size())).id);
+    around.remove(jokerId);
+    around.removeIf(id -> p.w.person(id).user);
+    int replies = 0;
+    for (String id : around) {
+      long at = t + LiveResponder.delay(rng, 10 * MIN, HOUR);
+      p.reaction(at, ReactionRow.Target.COMMENT, commentId, id, ReactionRow.Kind.ANGRY);
+      if (replies++ < BACKLASH_REPLIES) {
+        p.comment("backlash:" + id + ":" + commentId, at + MIN, post.id, commentId, id,
+            commentBrief(post, Stance.DISAGREE, jokerId, "backlash_comment"));
+      }
+    }
   }
 
   /** The person addressed may answer at their next session; debates alternate until someone tires. */
@@ -624,7 +653,9 @@ final class Planner {
     boolean clash = Airing.CLASH.contains(incoming.name());
     var rng = p.rng.derive("reply:" + i.id());
     double pr = toR ? 0.6 : 0.15 + 0.35 * x.trait("argumentativeness") / 100 * (clash ? 1.6 : 0.6) + 0.25 * Math.abs(aff) / 100
-        + (incoming == Stance.QUESTION || incoming == Stance.FLIRT ? 0.3 : 0) - 0.12 * (round - 1);
+        + (incoming == Stance.QUESTION || incoming == Stance.FLIRT ? 0.3 : 0) - 0.12 * (round - 1)
+        // controversial news is what people stay and argue about (SPEC §12 M10)
+        + (clash && "NEWS".equals(post.category) ? NEWS_DEBATE_PULL * post.controversy : 0);
     if (!rng.chance(Math.max(0, Math.min(0.9, pr)))) {
       if (rng.chance(0.5)) p.reaction(t, ReactionRow.Target.COMMENT, i.targetId(), x.id, Stances.reaction(incoming, x, post, aff, rng));
       return;

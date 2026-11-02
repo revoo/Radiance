@@ -35,6 +35,11 @@ class ContextPacketTests {
         var packet = builder.thread(id, BUDGET);
         assertThat(packet.prefix()).isEqualTo(prefix);
         assertThat(packet.content()).contains("<today>", "<people>", "<canon>", "<thread>", "<briefs>");
+        // SPEC §12 M10: the Today block matches weather_hour for its hour
+        long at = sim.sql.queryOne("SELECT created_at FROM post WHERE id = ?", List.of(id), r -> r.lng("created_at")).orElseThrow();
+        long top = at - at % app.radiance.weather.WeatherHour.HOUR;
+        var hour = new app.radiance.weather.WeatherRepository(sim.sql).between(top, top + app.radiance.weather.WeatherHour.HOUR).getFirst();
+        assertThat(packet.content()).contains("Weather: " + hour.describe() + ".");
         assertThat(BUDGET.estimateTokens(packet.content()) + BUDGET.estimateTokens(joined)).isLessThan(24_000);
         int from = packet.content().indexOf("<briefs>"), to = packet.content().indexOf("</briefs>");
         var briefs = Json.tree(packet.content().substring(from + 8, to).strip());

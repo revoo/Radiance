@@ -23,6 +23,9 @@ import java.util.Set;
  */
 public final class LiveResponder {
 
+  /** R laughing this hard at a tragedy reads as callous. */
+  private static final double CALLOUS_HUMOR = 0.5;
+
   private final ContentLibrary lib;
   private final Knobs k;
 
@@ -129,6 +132,9 @@ public final class LiveResponder {
         plan.reaction(t + horizon + delay(rng, 3 * 60_000L, 3_600_000L), ReactionRow.Target.COMMENT, comment.id, b.id,
             Stances.reaction(Stance.valueOf(comment.stance == null ? "SUPPORT" : comment.stance), b, post, aff, rng));
       }
+    }
+    if (post.tragic && features.getOrDefault("humor", 0.0) >= CALLOUS_HUMOR) {
+      Planner.backlash(plan, post, comment.id, user.id, t + horizon, RandomSource.forActor(w.seed, user.id, t).derive("backlash:" + comment.id));
     }
     return plan.script;
   }

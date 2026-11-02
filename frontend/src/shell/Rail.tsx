@@ -23,7 +23,7 @@ export function TalkedAbout() {
   return (
     <Card className="p-3">
       <h2 className="flex items-center gap-1.5 px-1 pb-2 text-sm font-bold text-muted">
-        <Flame className="size-4 text-brand" aria-hidden />
+        <Flame className="size-4 text-accent" aria-hidden />
         Talked about
       </h2>
       <ol className="space-y-1">

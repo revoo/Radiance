@@ -60,6 +60,8 @@ class AiringTests {
     db.close();
   }
 
+  private static final long WeatherHour_HOUR = app.radiance.weather.WeatherHour.HOUR;
+
   String id(String handle) {
     return h.get(handle).id;
   }
@@ -207,6 +209,39 @@ class AiringTests {
     var r = engine.advanceTo(T + 20 * MIN);
     assertThat(r.dropReasons()).anyMatch(s -> s.contains("out of attention"));
     assertThat(commentStatus("c5")).isEqualTo(AirStatus.DROPPED);
+  }
+
+  /** SPEC §12 M10: a forecast snow day that never comes drops its scripted snow posts at airing. */
+  @Test
+  void aSnowDayThatNeverCameDropsItsPostsAndOneThatCameAirs() {
+    String kristen = id("kristen.wagner");
+    var w = engine.world();
+    var clearDay = w.date(T + MIN);
+    var snowDay = clearDay.plusDays(1);
+    var hours = new java.util.ArrayList<app.radiance.weather.WeatherHour>();
+    long top = T - T % WeatherHour_HOUR;
+    for (long h = top - 48 * WeatherHour_HOUR; h < top + 96 * WeatherHour_HOUR; h += WeatherHour_HOUR) {
+      double snow = w.date(h).equals(snowDay) ? 1 : 0;
+      hours.add(new app.radiance.weather.WeatherHour(h, 28, 20, snow, snow, 5, snow > 0 ? 73 : 3,
+          app.radiance.weather.WeatherHour.Kind.FORECAST, T));
+    }
+    db.commit(new app.radiance.weather.WeatherRepository(db.sql).save(new UnitOfWork(), hours));
+    var payload = new EventPayload("SEASONAL", Map.of("actor", kristen), Map.of(), null, null, List.of(), "snow_day", null);
+    long dayLater = T + 24 * 60 * MIN;
+    save(List.of(snowEvent("gone", T + MIN, kristen, payload), snowEvent("came", dayLater + MIN, kristen, payload)),
+        List.of(post("shovel1", kristen, T + 2 * MIN, "gone", Brief.NONE), post("shovel2", kristen, dayLater + 2 * MIN, "came", Brief.NONE)),
+        List.of(), List.of());
+
+    var r = engine.advanceTo(dayLater + 10 * MIN);
+
+    assertThat(r.dropReasons()).anyMatch(s -> s.contains("snow_day") && s.contains("no longer holds"));
+    assertThat(postStatus("shovel1")).isEqualTo(AirStatus.DROPPED);
+    assertThat(postStatus("shovel2")).isEqualTo(AirStatus.AIRED);
+  }
+
+  static EventRow snowEvent(String id, long t, String actor, EventPayload p) {
+    return new EventRow(id, t, "SEASONAL", "snow", actor, null, null, 3, Visibility.PUBLIC, EventRow.Source.STORYTELLER, AirStatus.SCRIPTED,
+        p.json(), null);
   }
 
   static EventRow arcEvent(String id, long t, String arcId, EventPayload p) {

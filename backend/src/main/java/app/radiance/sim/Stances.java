@@ -17,6 +17,7 @@ import java.util.EnumMap;
  * scales the ugly stances for everyone; META needs two prior clashes.
  */
 public final class Stances {
+private static final double OPPOSED_PULL = 3.5;
 
   private Stances() {}
 
@@ -42,7 +43,9 @@ public final class Stances {
     l.put(Stance.JOKE, -0.3 + (b.trait("humor") - 50) / 35 - (bad && i.importance >= 5 ? 1.8 : 0));
     l.put(Stance.AGREE, news ? 0.8 * align * (0.6 + b.politics.interest()) + 0.2 : -0.6 + aff / 100);
     double rival = e != null && e.hasTag("debate_rival") ? 1.5 : 0;
+    // on controversial news, those who oppose a take say so: that is how debates start (SPEC §12 M10)
     l.put(Stance.DISAGREE, news ? -1.0 * align * (0.4 + b.trait("argumentativeness") / 60) + rival - 0.3
+        + (align < 0 ? OPPOSED_PULL * i.controversy : 0)
         : -1.8 + (b.trait("argumentativeness") - 50) / 40 - aff / 70 + rival);
     double edge = k.edge() <= 0 ? NEVER : Math.log(k.edge());
     double bias = bias(b, a, day);
