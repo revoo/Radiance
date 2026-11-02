@@ -20,7 +20,16 @@ build here; Gradle and npm need more memory than the app.
 
 Run Radiance's commands from `/opt/hosting/radiance`.
 
+## Logging in
+
+The username is in `.env`. The first deploy generated a random password, in `~/radiance-initial-password` on the
+server (`claude`'s home, readable only by that user). To change it, make a new hash (below), put it in `.env` in
+single quotes, and run `docker compose up -d`. Then delete that file.
+
 ## First deploy
+
+Already done on this server; these steps are for rebuilding it. Step 1 overwrites `.env`, so skip it if that exists.
+
 
 1. **Get the files onto the server.** From a checkout of the repository:
 
@@ -38,7 +47,8 @@ Run Radiance's commands from `/opt/hosting/radiance`.
 
    Put the username and that hash in `.env`. **Keep the hash in single quotes**: Compose expands `$` in `.env`,
    and an unquoted hash silently becomes a different value. The LLM keys are optional, and the R2 keys can wait
-   (see [Backups](#backups)). To run a branch's image, add `RADIANCE_TAG=m9-hosting`.
+   (see [Backups](#backups)). `RADIANCE_TAG` in `.env` picks the image: a branch, `main`, or a commit. The server
+   runs `m9-hosting` until M9 is merged; then set it to `main`.
 
 3. **Pull the image.**
 
@@ -87,8 +97,21 @@ docker compose pull && docker compose up -d
 
 The app stops cleanly and releases its writer lease, so the new one takes over at once. Sessions are in memory,
 so you'll log in again. To roll back, pin a commit in `/opt/hosting/radiance/.env`, say `RADIANCE_TAG=sha-abc1234`,
-and run the same command. Newer migrations aren't undone by rolling back: restore a backup if a release's
+and run the same command. Other containers aren't touched. Newer migrations aren't undone by rolling back: restore a backup if a release's
 migration is the problem.
+
+## Real prose
+
+Without LLM keys in `.env`, residents write placeholder lines. After adding keys and running `docker compose up -d`,
+new writing is real, but what's already been written stays. To start the world over with real prose, before you've
+played anything you'd miss (this deletes the world; keep a backup if unsure):
+
+```bash
+docker compose stop
+mv data data.old && mkdir data
+docker compose run --rm radiance genesis --seed 7 --authored --import
+docker compose up -d
+```
 
 ## The nightly batch
 
@@ -166,19 +189,6 @@ docker stats --no-stream
 
 The app's heap is capped at 768 MB and the container at 1200 MB, so one app can't starve the others. Logs rotate
 at 3 × 10 MB. `/api/director/backups` and `/director/pacer` (signed in) show backup status and live pacing.
-
-## The `radiance` entry in `/opt/hosting/compose.yaml`
-
-That root-owned file still has a placeholder from before Radiance had an image:
-
-```yaml
-  radiance:
-    build: ./radiance
-```
-
-Delete those two lines (it needs sudo). Radiance doesn't use them, but until they're gone a bare `docker compose
-up` in `/opt/hosting` tries to build it on the server and fails, and running that service would put a second
-`radiance` on the shared network.
 
 ## Server hardening
 

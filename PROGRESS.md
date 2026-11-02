@@ -1,9 +1,15 @@
 # Progress
 
 ## Resume here
-- Milestone: **M9 — Hosting on the Linode VPS** (decision 19), branch `m9-hosting`. Build steps done; deploying.
-  R allowed server changes on 2026-11-02 while it runs no production load ("just be careful"): back up what's
-  touched, validate first, a Caddy reload but no restart and no second Caddy. R adds the R2 keys next.
+- Milestone: **M9 — Hosting on the Linode VPS** (decision 19), branch `m9-hosting`. **Built and deployed:**
+  https://radiance.enigmatica.app runs image `:m9-hosting`. Not merged into `main`: wait for R, then set
+  `RADIANCE_TAG=main` on the server. Don't start M10 until R says go.
+- Waiting on R: the R2 keys (backups stay on the server, and the app says so loudly, until then); LLM keys for real
+  prose; R's first login and onboarding (R's to do: the world is ready and R isn't in it yet).
+- Still to prove, once tonight's runs have happened: the nightly batch at 09:00 UTC with R's computer off, and a real
+  R2 upload and restore. Check `batch_run` and `data/backups/status.json`.
+- Server rule from R (2026-11-02): changes allowed while there's no production load, carefully; don't duplicate
+  what's there. One shared Caddy routes to all app containers: graceful reloads only, no second Caddy.
 - Half-done: nothing.
 
 ## M9 steps (all ✔)
@@ -12,7 +18,8 @@
 3. Docker image (build stages on the runner's platform, multi-arch runtime); GHCR in CI; image smoke test
 4. Backup job to R2 and the restore procedure; loud when the R2 keys are missing
 5. `deploy/`: compose file and Caddy site for `/opt/hosting`, checked against a copy of the server's layout
-6. Ops docs (`docs/ops/hosting.md`), PROGRESS, CI; stopped before any deploy
+6. Ops docs (`docs/ops/hosting.md`), PROGRESS, CI
+7. Deployed with R's OK, and verified on the live domain
 
 ## M8 steps (all ✔)
 1. ✔ DM engine (`UserActions`): R's messages aired at once; the resident's reply planned by the engine
@@ -90,14 +97,21 @@
 7. World bible with the Chicagoland section
 
 ## Done
-- **M9 — Hosting** (2026-11-02, built, **not deployed**), branch `m9-hosting`:
-  - Tested on every milestone branch in CI on the real image (`deploy/smoke-test.sh`): non-root with a bind
-    mount, one-shot genesis and first batch, prod login with Secure cookies, a ready feed, the live stream
-    through a real Caddy with the site's proxy rule; a backup while the app runs to an S3 server that checks
-    signatures; the data directory deleted; a restore; the same world served and writable. linux/amd64 and
-    linux/arm64 both build.
-  - Not yet proven: the AC's real run (R's computer off, the batch runs, a ready day on his phone) needs the
-    deploy; R2 itself needs R's keys (signing is checked against AWS's published examples and rclone).
+- **M9 — Hosting** (2026-11-02, deployed, not merged), branch `m9-hosting`:
+  - On every milestone branch, CI runs the real image (`deploy/smoke-test.sh`): non-root with a bind mount, one-shot
+    genesis and first batch, prod login with Secure cookies, a ready feed, the live stream through a real Caddy; a
+    backup while the app runs to an S3 server that checks signatures; the data directory deleted; a restore; the
+    same world served and writable. linux/amd64 and linux/arm64 both build and publish.
+  - On the live domain, through Cloudflare and Caddy: pages, client routes and assets; the API closed, Secure and
+    HttpOnly cookies, no anonymous sessions; login; the live stream; a local backup 30 s after start; the real
+    backup restored somewhere throwaway; restore refusing the live database; a redeploy with a stream open in 1 s
+    and healthy in 11.5 s, with the other sites untouched. The app uses about 175 MB.
+  - Not yet proven: the nightly batch with R's computer off (first run 09:00 UTC) and R2 itself (needs R's keys;
+    signing is checked against AWS's published examples and rclone).
+  - Bugs found and fixed, each with a regression test: an open live stream stalled shutdown for 30 s until `docker
+    stop` killed the app (found by the smoke test); `docker run IMAGE genesis` also started the batch scheduler; a
+    restored snapshot's stale lease blocked writes; anonymous requests each held a session for 30 days; dotted
+    handles 404ed on refresh.
 - **M8 — Messenger** (2026-10-29), branch `m8-messenger`:
   - AC: a DM to any resident shows typing within 3 s and a reply within about 10 s (`MessengerTests`
     over all 30 residents; browser: typing and Seen at 1.5 s, reply at 2.0 s offline) ✔; a resident with
@@ -372,6 +386,9 @@ Resolutions of spec issues raised at kickoff. Each gets an ADR when its mileston
 
 - M9: rescoped by decision 19; SPEC §12 M9's Worker, D1 and Cron Container scope is dropped, and the D1 SQL rules
   in CLAUDE.md stay for now (ADR 0018).
+- M9: Radiance is its own Compose project on the external `hosting_default` network, not part of the root
+  compose file; the old `radiance: build:` placeholder there was removed with R's OK (a copy is in `claude`'s home).
+- M9: milestone branches publish images under their own tag, so a branch can be deployed before it merges.
 - M9: the batch and backups run in-process on an always-up container, not on an OS timer: a timer would add a
   second moving part and only ever defer to the app.
 - M9: the app serves the SPA from the jar, since the shared Caddy's mounts stay untouched.
