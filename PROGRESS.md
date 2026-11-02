@@ -1,16 +1,22 @@
 # Progress
 
 ## Resume here
-- Milestone: **M9 — Hosting on the Linode VPS** (decision 19), branch `m9-hosting`. **Built and deployed:**
-  https://radiance.enigmatica.app runs image `:m9-hosting`. Not merged into `main`: wait for R, then set
-  `RADIANCE_TAG=main` on the server. Don't start M10 until R says go.
-- Waiting on R: the R2 keys (backups stay on the server, and the app says so loudly, until then); LLM keys for real
-  prose; R's first login and onboarding (R's to do: the world is ready and R isn't in it yet).
-- Still to prove, once tonight's runs have happened: the nightly batch at 09:00 UTC with R's computer off, and a real
-  R2 upload and restore. Check `batch_run` and `data/backups/status.json`.
+- **M9 accepted by R (2026-11-02) and merged**: `main` fast-forwarded to `m9-hosting`. Live at
+  https://radiance.enigmatica.app, on image `:main`.
+- Next: **M10 — Headlines & weather** (SPEC §12), on a new branch from `main`. **Don't start until R says go.**
+- Half-done: nothing.
+- The live world is a test world, and R will nuke it: acceptance testing comes later, with real LLM keys, on a
+  fresh world (`docs/ops/hosting.md`, "Real prose"). The declarative `hosting` repo is deferred until R asks.
+- Waiting on R: the R2 keys (backups stay on the server, loudly, until then); a more permanent server (R is on the
+  Linode free trial, and R2 must work before the move; the $5/month target waits for that purchase).
+- Still to prove: the nightly batch with R's computer off (first run 09:00 UTC; check `batch_run`), and a real R2
+  upload and restore once the keys are in.
 - Server rule from R (2026-11-02): changes allowed while there's no production load, carefully; don't duplicate
   what's there. One shared Caddy routes to all app containers: graceful reloads only, no second Caddy.
-- Half-done: nothing.
+- To play offline: `./gradlew genesis --args='--seed 7 --import' -Pprofile=offline` (once), then
+  `./gradlew bootRun --args='--spring.profiles.active=offline'` and `cd frontend && npm run dev`.
+- Open for tuning (from M7): a post of R's right after onboarding draws ~3 reactions and under one comment
+  inside the 5-minute burst; `user-salience` and `theta_comment` are the knobs. Real voices need keys.
 
 ## M9 steps (all ✔)
 1. Inspect the server (read-only); decision 19; ADRs 0018 and 0019
@@ -97,7 +103,7 @@
 7. World bible with the Chicagoland section
 
 ## Done
-- **M9 — Hosting** (2026-11-02, deployed, not merged), branch `m9-hosting`:
+- **M9 — Hosting** (2026-11-02, deployed and merged), branch `m9-hosting`:
   - On every milestone branch, CI runs the real image (`deploy/smoke-test.sh`): non-root with a bind mount, one-shot
     genesis and first batch, prod login with Secure cookies, a ready feed, the live stream through a real Caddy; a
     backup while the app runs to an S3 server that checks signatures; the data directory deleted; a restore; the
@@ -396,8 +402,8 @@ Resolutions of spec issues raised at kickoff. Each gets an ADR when its mileston
 - M9: no infrastructure-as-code yet (it was optional); `docs/ops/hosting.md` is the procedure.
 
 ## Open questions for R
-- The $5/month infrastructure target in SPEC's M9 AC predates the Linode, which likely costs more. Keep it,
-  or replace it with the Linode's actual cost?
+- The $5/month infrastructure target in SPEC's M9 AC predates the Linode. R is on its free trial and will buy a
+  more permanent server; revisit the target then.
 - Provider keys: which providers will you use? Put their keys in `.env` and run
   `./gradlew :backend:liveTest` (well under a cent at default models) to close M2's live ACs, including
   two unverified Anthropic details (Appendix C note).
