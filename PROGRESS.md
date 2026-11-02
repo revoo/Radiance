@@ -1,15 +1,18 @@
 # Progress
 
 ## Resume here
-- **M8 accepted by R (2026-10-29) and merged**: `main` fast-forwarded to `m8-messenger`.
-- Next: **M9 — Cloud & nightly schedule** (SPEC §12), on a new branch from `main`. **Don't start until R
-  says go.**
+- Milestone: **M9 — Hosting on the Linode VPS** (rescoped, decision 19), branch `m9-hosting` (from `main` at
+  e494e7f). R said go on 2026-11-02. **Nothing gets deployed or changed on the server without asking R.**
+- Current step: 2.
 - Half-done: nothing.
-- To play offline: `./gradlew genesis --args='--seed 7 --import' -Pprofile=offline` (once), then
-  `./gradlew bootRun --args='--spring.profiles.active=offline'` and `cd frontend && npm run dev`; open
-  http://localhost:5173 and log in with the built-in offline dev login.
-- Open for tuning (from M7): a post of R's right after onboarding draws ~3 reactions and under one comment
-  inside the 5-minute burst; `user-salience` and `theta_comment` are the knobs. Real voices need keys.
+
+## M9 steps
+1. ✔ Inspect the server (read-only); decision 19; ADRs 0018 and 0019
+2. `prod` profile; the app serves the SPA; security for a public origin
+3. Docker image (build stages on the runner's platform, multi-arch runtime); GHCR in CI; image smoke test
+4. Backup job to R2 and the restore procedure; loud when the R2 keys are missing
+5. `deploy/`: compose file and Caddy site for `/opt/hosting`
+6. Ops docs, PROGRESS, CI; stop before any deploy
 
 ## M8 steps (all ✔)
 1. ✔ DM engine (`UserActions`): R's messages aired at once; the resident's reply planned by the engine
@@ -264,6 +267,14 @@ Resolutions of spec issues raised at kickoff. Each gets an ADR when its mileston
     purpose, including `recap` and `genesis` (were Sonnet with a Haiku fallback); the `sonnet` alias
     stays defined. R runs `./gradlew llm-bakeoff` and tunes per-purpose models in V2. The live checks of
     M5's meter (≤ $0.15 per FULL day) and provider-reported cache hits wait until keys are in `.env`.
+
+19. **Hosting: one Linode VPS (R, 2026-11-02; relayed 2026-11-01 and confirmed by R's go).** Replaces the
+    Cloudflare plan and the brief Oracle plan (ADR 0018). `radiance.enigmatica.app`, Debian 13 x86_64, 4 GB
+    RAM, 2 CPUs, 80 GB. Docker and a shared Caddy run from `/opt/hosting`; Radiance goes in
+    `/opt/hosting/radiance` and joins that Caddy. SQLite in production, GHCR images built in CI, backups to
+    R2 (ADR 0019). No deploy or server change without asking R. M9's new AC: with R's computer off, the
+    nightly batch runs and R opens the app on his phone to a ready day; the server is never the only
+    copy of the database, and a restore has been tested.
 
 ## Deviations from spec
 - TypeScript pinned to 6.0.x, not latest (7.x), for typescript-eslint compatibility (ADR 0009).
