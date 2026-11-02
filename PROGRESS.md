@@ -9,13 +9,14 @@
     - "Over a week of real headlines": the 20-30% and region split hold on fixtures (`FeelBandsTests`). A real week can
       only be measured once this is deployed. Real classification hasn't run without an LLM key: offline it's a fake.
 - **M11 merged (2026-11-02)**, see "M11 steps" below. R gave standing approval to merge when CI is green.
-- Rail redesign on `rail-polish` after M11: one sky card (clock, weather, forecast strip, animated skies), news rail with faces and heat.
+- Rail redesign, after M11: one sky card (clock, weather, forecast strip, animated skies), news rail with faces and heat.
 - Live Chicago cameras on the left rail (R's idea, ADR 0020): five hand-picked IDOT cameras, proxied and cached by the
   server, on in `prod` only. To add or change one: `radiance.cameras.spots`, matching part of its `SnapShot` file name.
 - Next: **M12 — Media** (SPEC §12), on a new branch from `main`. **Don't start until R says go.**
-- To check next time: on the server, `headline` should have real rows and `weather_hour` real kinds since the first batch
-  or login after M10 (the first check found none, as nothing had refreshed yet); and the batch's new script window (09:00
-  planning a full day, 11:00 planning 0).
+- Live on the server at 048356d (2026-11-02): M11, the rail, the cameras. Real feeds and weather confirmed there: 128 real
+  headlines, classified by the placeholder until an LLM key goes in; 96 real weather hours.
+- To check next time: the batch's new script window (09:00 planning a full day, 11:00 planning 0); the first `meter_snapshot`
+  rows; the first scheduled backup upload; and that the camera tile shows when logged in on the live site.
 - Half-done: nothing.
 - The live world is a test world, and R will nuke it: acceptance testing comes later, with real LLM keys, on a
   fresh world (`docs/ops/hosting.md`, "Real prose"). The declarative `hosting` repo is deferred until R asks.
