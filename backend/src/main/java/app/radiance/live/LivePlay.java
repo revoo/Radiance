@@ -21,6 +21,11 @@ import app.radiance.sim.WorldEngine;
 import app.radiance.sim.model.Item;
 import app.radiance.social.ReactionRow;
 import java.time.Duration;
+import app.radiance.news.HeadlineFeeds;
+import app.radiance.news.HeadlineRepository;
+import app.radiance.weather.WeatherHour;
+import app.radiance.weather.WeatherRepository;
+import app.radiance.weather.WeatherSources;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -49,6 +54,11 @@ import org.slf4j.LoggerFactory;
  */
 public final class LivePlay {
 
+  private WeatherSources weatherSources;
+  private HeadlineFeeds headlineFeeds;
+  private long lastRefresh;
+  private final java.util.concurrent.atomic.AtomicBoolean refreshing = new java.util.concurrent.atomic.AtomicBoolean();
+
   /** Something for the SPA's stream (SPEC §7 {@code GET /api/stream}). */
   public record LiveEvent(String name, Map<String, Object> data) {}
 
@@ -71,6 +81,10 @@ public final class LivePlay {
 
   private static final Logger log = LoggerFactory.getLogger(LivePlay.class);
   private static final long AIR_EVERY = 10_000;
+  /** News and weather during a session (SPEC §5.12); the first turn of a session past this counts as login's. */
+  static final long REFRESH_EVERY = 3_600_000L;
+  private static final long BROKE_WITHIN = 6 * 3_600_000L;
+  private static final int MAX_TAKES_PER_REFRESH = 2;
 
   private final Sql sql;
   private final WriterLane lane;
@@ -136,6 +150,47 @@ public final class LivePlay {
   synchronized LivePlay manualLoop() {
     manual = true;
     return this;
+  }
+
+  /** Turns on hourly news and weather during sessions. */
+  public LivePlay withNews(WeatherSources weatherSources, HeadlineFeeds headlineFeeds) {
+    this.weatherSources = weatherSources;
+    this.headlineFeeds = headlineFeeds;
+    return this;
+  }
+
+  /** Calls out over the network, so never on the loop's thread or the writer lane. */
+  private void refresh(long wall) {
+    if (!refreshing.compareAndSet(false, true)) return;
+    Thread.ofVirtual().name("live-refresh").start(() -> {
+      try {
+        refreshNow(wall);
+      } catch (RuntimeException e) {
+        log.warn("Live news and weather refresh failed", e);
+      } finally {
+        refreshing.set(false);
+        wake.offer(true);
+      }
+    });
+  }
+
+  void refreshNow(long wall) {
+    long seed = engine.locked(w -> w.seed);
+    var zone = engine.locked(w -> w.zone);
+    long t = now();
+    long topOfHour = t - t % WeatherHour.HOUR;
+    var hours = weatherSources.forWorld(seed, zone).hours(topOfHour - 24 * WeatherHour.HOUR, topOfHour + 72 * WeatherHour.HOUR);
+    var repo = new WeatherRepository(sql);
+    lane.run(() -> sql.commit(repo.saveKeepingReal(new UnitOfWork(), hours)));
+
+    headlineFeeds.forWorld(seed, zone).refresh(wall);
+    long batch = sql.queryOne("SELECT MAX(started_at) AS s FROM batch_run WHERE status IN ('DONE', 'PARTIAL')", List.of(),
+        r -> r.isNull("s") ? 0L : r.lng("s")).orElse(0L);
+    var broke = new HeadlineRepository(sql).publishedBetween(Math.max(batch, t - BROKE_WITHIN), t + 1);
+    if (broke.isEmpty()) return;
+    var script = actions.takes(broke, MAX_TAKES_PER_REFRESH, t);
+    actions.save(script);
+    script.posts.forEach(p -> render(p.id()));
   }
 
   public void addListener(Consumer<LiveEvent> l) {
@@ -449,6 +504,11 @@ public final class LivePlay {
     }
     if (!lease.isHeld()) return 1_000;
     long t = now();
+
+    if (headlineFeeds != null && wall - lastRefresh >= REFRESH_EVERY) {
+      lastRefresh = wall;
+      refresh(wall);
+    }
 
     // background activity keeps airing from the script
     if (wall - lastAir >= AIR_EVERY) {

@@ -320,6 +320,33 @@ final class Planner {
     }
   }
 
+  /** Online residents take on what broke since the batch (SPEC §5.12), {@code max} takes at most. */
+  void liveTakes(Plan p, List<Headline> broke, long now, RandomSource rng, int max) {
+    var w = p.w;
+    var date = w.date(now);
+    int hour = java.time.Instant.ofEpochMilli(now).atZone(w.zone).getHour();
+    var residents = new ArrayList<>(w.residents());
+    int made = 0;
+    while (made < max && !residents.isEmpty()) {
+      var a = residents.remove(rng.nextInt(residents.size()));
+      if (Presence.curve(a, date, java.util.Set.of(), k.primeTimeBoost())[hour] <= 0) continue;
+      if (postsOn(p, a, now) >= STORYTELLER_POSTS_PER_DAY) continue;
+      for (var def : new TreeMap<>(lib.events()).values()) {
+        if (def.trigger() == null || def.trigger().headline() == null) continue;
+        if (!Eligibility.holds(def, a, w, lib, null, now)) continue;
+        double min = def.trigger().headline().minInterest();
+        String region = region(p, rng);
+        var eligible = broke.stream().filter(h -> h.region().equals(region) && interest(a, h) >= min && !took(w, a, h)).toList();
+        if (eligible.isEmpty()) continue;
+        var h = pickHeadline(eligible, a, rng);
+        take(p, def, a, h, now + LiveResponder.delay(rng, 2 * MIN, 30 * MIN));
+        w.fired.computeIfAbsent(a.id + "|news:" + h.id(), x -> new java.util.TreeSet<>()).add(now);
+        made++;
+        break;
+      }
+    }
+  }
+
   /** Interest = topic match × salience × (1 + politics_interest × controversy) (SPEC §5.4). */
   static double interest(Person a, Headline h) {
     double match = 0;

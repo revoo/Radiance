@@ -20,7 +20,9 @@ import app.radiance.sim.model.SimWorld;
 import app.radiance.social.CommentRow;
 import app.radiance.social.PostRow;
 import app.radiance.social.ReactionRow;
+import app.radiance.news.Headline;
 import app.radiance.social.SocialRepository;
+import app.radiance.story.EventRepository;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -199,6 +201,15 @@ public final class UserActions {
     });
   }
 
+  /** Takes on news that broke since the batch, by residents who are online now (SPEC §5.12). */
+  public Script takes(List<Headline> broke, int max, long now) {
+    return engine.locked(w -> {
+      var plan = plan(w, now);
+      new Planner(engine.lib(), engine.knobs()).liveTakes(plan, broke, now, RandomSource.forSlice(w.seed, now).derive("live-takes"), max);
+      return plan.script;
+    });
+  }
+
   /**
    * A hook against dead air (SPEC §5.1): a resident with a real motive — a crush, a fan, a close friend
    * or a rival — comments on one of R's recent posts they haven't commented on yet.
@@ -255,7 +266,9 @@ public final class UserActions {
   public void save(Script s) {
     if (s.size() == 0) return;
     var uow = new UnitOfWork();
+    new EventRepository(sql).save(uow, s.events);
     var social = new SocialRepository(sql);
+    social.savePosts(uow, s.posts);
     social.saveComments(uow, s.comments);
     social.saveReactions(uow, s.reactions);
     var dms = new DmRepository(sql);
