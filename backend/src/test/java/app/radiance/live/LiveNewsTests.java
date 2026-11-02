@@ -95,7 +95,7 @@ class LiveNewsTests {
   @AfterEach
   void close() throws Exception {
     live.stop();
-    Thread.sleep(200); // a render on a virtual thread finishes before the database closes
+    assertThat(live.awaitIdle(Duration.ofSeconds(20))).isTrue();
     db.close();
   }
 

@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import type { Actor } from "../api/types.ts";
 import { useLive } from "../live/store.ts";
 import { colorFor, initials } from "./format.ts";
+import { PersonHover } from "./PersonHover.tsx";
 
 const SIZES = { xs: "size-6 text-[10px]", sm: "size-8 text-xs", md: "size-10 text-sm", lg: "size-14 text-lg", xl: "size-32 text-4xl" };
 
@@ -55,9 +56,11 @@ export function Avatar({ actor, size = "md", ring = false, link = true }: {
 
 export function Name({ actor, className = "" }: { actor: Pick<Actor, "name" | "handle">; className?: string }) {
   return (
-    <Link to={`/people/${actor.handle}`} className={`font-semibold text-ink hover:underline ${className}`}>
-      {actor.name}
-    </Link>
+    <PersonHover handle={actor.handle}>
+      <Link to={`/people/${actor.handle}`} className={`font-semibold text-ink hover:underline ${className}`}>
+        {actor.name}
+      </Link>
+    </PersonHover>
   );
 }
 

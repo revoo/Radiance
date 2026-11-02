@@ -49,6 +49,7 @@ class LivePlayTests {
   TestDatabase db;
   WorldEngine engine;
   final List<Timed> events = new CopyOnWriteArrayList<>();
+  final List<LivePlay> lives = new CopyOnWriteArrayList<>();
   final AtomicBoolean backfillStarted = new AtomicBoolean();
 
   record Timed(long at, LivePlay.LiveEvent e) {}
@@ -65,8 +66,13 @@ class LivePlayTests {
     db.clock.advance(Duration.ofMinutes(5)); // time has moved on since the import; no script covers it
   }
 
+  /** Regression: a render outliving a test kept the database open on Windows, so its folder couldn't be deleted. */
   @AfterEach
-  void close() {
+  void close() throws InterruptedException {
+    for (var live : lives) {
+      live.stop();
+      assertThat(live.awaitIdle(Duration.ofSeconds(20))).as("background work finished").isTrue();
+    }
     db.close();
   }
 
@@ -124,6 +130,7 @@ class LivePlayTests {
     var live = new LivePlay(db.sql, db.lane, engine, actions, new Appraiser(gateway, Duration.ofSeconds(5)), gateway,
         db.clock, db.holder, backfill, "Radiance", true, Duration.ofMinutes(10)).manualLoop();
     live.addListener(e -> events.add(new Timed(db.clock.nowMs(), e)));
+    lives.add(live);
     return live;
   }
 
@@ -434,5 +441,63 @@ class LivePlayTests {
       assertThat(responses.getLast().at() - responses.getFirst().at()).as("spread out by the Pacer").isPositive();
     }
     assertThat(responses.stream().allMatch(t -> t.at() - posted >= 0)).isTrue();
+  }
+
+  /** Waits for the considered phase, which runs on a virtual thread, to plan a comment by {@code handle}. */
+  long commentsBy(String handle, String postId) throws InterruptedException {
+    String id = engine.world().byHandle().get(handle).id;
+    long n = 0;
+    for (int i = 0; i < 200 && n == 0; i++) {
+      n = db.sql.queryOne("SELECT COUNT(*) AS n FROM comment WHERE author_id = ? AND post_id = ?", List.of(id, postId),
+          r -> r.lng("n")).orElseThrow();
+      if (n == 0) Thread.sleep(10);
+    }
+    return n;
+  }
+
+  @Test
+  void whoeverRNamesInAPostAnswersIt() throws Exception {
+    var live = live(gateway(null));
+    live.touch();
+    String post = live.post("Has anyone seen @kristen.wagner lately?");
+    assertThat(commentsBy("kristen.wagner", post)).isEqualTo(1);
+  }
+
+  @Test
+  void aMentionInACommentGetsAReplyToThatComment() throws Exception {
+    var live = live(gateway(null));
+    live.touch();
+    String post = live.post("Deep dish or tavern style?");
+    String comment = live.comment(post, null, "I bet @deepa.kulkarni has opinions.").orElseThrow();
+    assertThat(commentsBy("deepa.kulkarni", post)).isPositive();
+    String id = engine.world().byHandle().get("deepa.kulkarni").id;
+    assertThat(db.sql.query("SELECT parent_id FROM comment WHERE author_id = ? AND post_id = ?", List.of(id, post), r -> r.str("parent_id")))
+        .contains(comment);
+  }
+
+  @Test
+  void onlyRealPeopleCount_AndAFullStopIsntPartOfAHandle() {
+    var actions = new UserActions(db.sql, db.lane, engine);
+    String kristen = engine.world().byHandle().get("kristen.wagner").id;
+    assertThat(actions.mentioned("Hi @kristen.wagner.")).containsExactly(kristen);
+    assertThat(actions.mentioned("@kristen.wagner and @kristen.wagner again")).containsExactly(kristen);
+    assertThat(actions.mentioned("Hi @nobody.here, mail me at sam@example.com")).isEmpty();
+    assertThat(actions.mentioned("No handles here")).isEmpty();
+  }
+
+  @Test
+  void someoneWhoCantStandRDoesntAnswerBeingNamed() {
+    var actions = new UserActions(db.sql, db.lane, engine);
+    var live = live(gateway(null));
+    live.touch();
+    String kristen = engine.world().byHandle().get("kristen.wagner").id;
+    String post = actions.post("Hey @kristen.wagner", app.radiance.live.Appraiser.reading(app.radiance.live.Appraiser.heuristic("Hey", false)), db.clock.nowMs());
+    engine.locked(w -> {
+      w.edge(kristen, w.userId).affinity = -80;
+      return null;
+    });
+    var script = new app.radiance.sim.Script();
+    actions.answerMentions(script, post, List.of(kristen), db.clock.nowMs());
+    assertThat(script.comments).isEmpty();
   }
 }

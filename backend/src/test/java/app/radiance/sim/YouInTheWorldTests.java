@@ -52,4 +52,43 @@ class YouInTheWorldTests {
       assertThat(faithfulAnswers).as("the most faithful answered at all").isNotEmpty();
     }
   }
+
+  /** SPEC §5.9: engage with someone's posts and they're likelier to engage with yours. */
+  @Test
+  void aResidentIsLikelierToEngageWithSomeoneWhoRecentlyEngagedWithThem() {
+    try (var sim = new Simulation(Simulation.Options.of(42, 2, Persona.WARM, dir.resolve("reciprocity"))).run()) {
+      var w = sim.engine.world();
+      var user = w.person(w.userId);
+      var planner = new Planner(sim.lib, Knobs.defaults());
+      var resident = w.residents().getFirst();
+      var post = w.items.values().stream().filter(i -> i.type == app.radiance.sim.model.Item.Type.POST && w.userId.equals(i.authorId))
+          .findFirst().orElseThrow();
+      var back = w.edge(w.userId, resident.id);
+      String day = w.day(w.time);
+
+      back.lastInteraction = null;
+      double strangers = planner.utility(w, resident, post, user, day, app.radiance.kernel.RandomSource.seeded(1));
+      back.lastInteraction = w.time - 86_400_000L;
+      double recent = planner.utility(w, resident, post, user, day, app.radiance.kernel.RandomSource.seeded(1));
+      back.lastInteraction = w.time - 10 * 86_400_000L;
+      double longAgo = planner.utility(w, resident, post, user, day, app.radiance.kernel.RandomSource.seeded(1));
+
+      assertThat(recent).isGreaterThan(strangers);
+      assertThat(longAgo).as("it wears off after a week").isEqualTo(strangers);
+    }
+  }
+
+  /** Reciprocity needs R's own actions to count: reacting and commenting stamp his edge toward the author. */
+  @Test
+  void whatRDoesOnAPostIsWhatReciprocityReads() {
+    try (var sim = new Simulation(Simulation.Options.of(42, 3, Persona.WARM, dir.resolve("stamp"))).run()) {
+      var w = sim.engine.world();
+      long stamped = w.residents().stream().filter(b -> {
+        var e = w.edgeOrNull(w.userId, b.id);
+        return e != null && e.lastInteraction != null;
+      }).count();
+      assertThat(sim.userComments).isNotEmpty();
+      assertThat(stamped).as("residents R has engaged with").isPositive();
+    }
+  }
 }

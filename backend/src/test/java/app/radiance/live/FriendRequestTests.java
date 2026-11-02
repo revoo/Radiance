@@ -192,4 +192,32 @@ class FriendRequestTests {
     settle();
     assertThat(status(id)).isEqualTo("ACCEPTED");
   }
+
+  double meter(String resident) {
+    return engine.locked(w -> w.edge(resident, w.userId).affinity);
+  }
+
+  @Test
+  void decliningAResidentsRequestStingsAndAcceptingWarmsThem() {
+    String fan = stranger("kristen.wagner", 50, 60);
+    String id = actions.residentFriendRequests(1, db.clock.nowMs()).getFirst();
+    double before = meter(fan);
+    assertThat(live.answerFriendRequest(id, false)).isTrue();
+    assertThat(meter(fan)).as("friend_request_ignored").isLessThan(before);
+
+    String other = stranger("marko.jovanovic", 50, 60);
+    String second = actions.residentFriendRequests(1, db.clock.nowMs()).getFirst();
+    double was = meter(other);
+    assertThat(live.answerFriendRequest(second, true)).isTrue();
+    assertThat(meter(other)).as("friend_request_accepted").isGreaterThan(was);
+  }
+
+  @Test
+  void asking_MakesThemAwareOfR() {
+    String sarah = stranger("kristen.wagner", -30, 10);
+    double before = engine.locked(w -> w.edge(sarah, w.userId).familiarity);
+    live.requestFriend(sarah).orElseThrow();
+    double after = engine.locked(w -> w.edge(sarah, w.userId).familiarity);
+    assertThat(after).as("friend_request_sent").isGreaterThan(before);
+  }
 }

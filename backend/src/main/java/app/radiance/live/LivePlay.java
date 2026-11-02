@@ -56,6 +56,7 @@ public final class LivePlay {
 
   private WeatherSources weatherSources;
   private HeadlineFeeds headlineFeeds;
+  private final java.util.concurrent.atomic.AtomicInteger busy = new java.util.concurrent.atomic.AtomicInteger();
   private long lastRefresh;
   private final Map<String, Long> friendDecisions = new java.util.HashMap<>();
   /** R's meters when last published, to spot what moved. */
@@ -197,7 +198,7 @@ public final class LivePlay {
   /** Calls out over the network, so never on the loop's thread or the writer lane. */
   private void refresh(long wall) {
     if (!refreshing.compareAndSet(false, true)) return;
-    Thread.ofVirtual().name("live-refresh").start(() -> {
+    background("live-refresh", () -> {
       try {
         refreshNow(wall);
       } catch (RuntimeException e) {
@@ -317,6 +318,28 @@ public final class LivePlay {
     wake.offer(true);
   }
 
+  /** Work that outlives the request that started it: planning, renders, refreshes. */
+  private void background(String name, Runnable work) {
+    busy.incrementAndGet();
+    Thread.ofVirtual().name(name).start(() -> {
+      try {
+        work.run();
+      } finally {
+        busy.decrementAndGet();
+      }
+    });
+  }
+
+  /** Waits for background work to finish, so a test can close the database under it. True if it did. */
+  public boolean awaitIdle(Duration timeout) throws InterruptedException {
+    long end = System.nanoTime() + timeout.toNanos();
+    while (busy.get() > 0) {
+      if (System.nanoTime() > end) return false;
+      Thread.sleep(5);
+    }
+    return true;
+  }
+
   // ---------------------------------------------------------------------------------- R's actions
 
   /** R posts: written and aired at once; responses follow at the Pacer's pace. Returns the post's id. */
@@ -337,13 +360,15 @@ public final class LivePlay {
     }
     wake.offer(true);
     // considered (after the appraisal): who comments, and how; renders start at once
-    Thread.ofVirtual().name("live-considered").start(() -> {
+    background("live-considered", () -> {
       try {
         var reading = appraiser.read(text, null);
         lane.run(() -> sql.commit(new UnitOfWork().add("UPDATE post SET appraisal_json = ? WHERE id = ?",
             reading.appraisalJson(), id)));
         var script = actions.considered(id, reading, reacted, t);
-        plan(id, wall, script, null, dramatic, false);
+        var named = actions.mentioned(text);
+        actions.answerMentions(script, id, named, t);
+        plan(id, wall, script, named.isEmpty() ? null : named.getFirst(), dramatic, false);
       } catch (RuntimeException e) {
         log.warn("Live response planning failed for post {}", id, e);
       }
@@ -365,12 +390,13 @@ public final class LivePlay {
     String context = sql.queryOne("SELECT body FROM " + (parent != null ? "comment" : "post") + " WHERE id = ?",
         List.of(parent != null ? parentId : postId), r -> r.str("body")).orElse("");
     boolean dramatic = post.controversy > 0.6 || post.drama > 0.6;
-    Thread.ofVirtual().name("live-considered").start(() -> {
+    background("live-considered", () -> {
       try {
         var reading = appraiser.read(text, context);
         lane.run(() -> sql.commit(new UnitOfWork().add("UPDATE comment SET appraisal_json = ? WHERE id = ?",
             reading.appraisalJson(), id.get())));
         var script = actions.considered(id.get(), reading, t);
+        actions.answerMentions(script, id.get(), actions.mentioned(text), t);
         plan(id.get(), wall, script, addressee, dramatic, true);
       } catch (RuntimeException e) {
         log.warn("Live response planning failed for comment {}", id.get(), e);
@@ -495,7 +521,7 @@ public final class LivePlay {
 
   /** Renders the live responses on {@code postId} now, on a virtual thread, one render per post at a time. */
   private void render(String postId) {
-    Thread.ofVirtual().name("live-render").start(() -> {
+    background("live-render", () -> {
       var lock = renderLocks.computeIfAbsent(postId, k -> new ReentrantLock());
       lock.lock();
       try {

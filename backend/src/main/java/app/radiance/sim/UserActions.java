@@ -51,6 +51,8 @@ public final class UserActions {
   private static final double ACCEPTS_FROM_METER = 0;
   private static final double ASKS_FROM_METER = 25;
   private static final double ASKS_FROM_FAMILIARITY = 40;
+  private static final double IGNORES_MENTION_AT = -50;
+  private static final java.util.regex.Pattern MENTION = java.util.regex.Pattern.compile("@([a-z0-9_.]+)");
 
   private final Sql sql;
   private final WriterLane lane;
@@ -206,11 +208,64 @@ public final class UserActions {
     });
   }
 
+  /** Who R names with an @handle in {@code text}, in order: real residents only. */
+  public List<String> mentioned(String text) {
+    return engine.locked(w -> {
+      var out = new java.util.LinkedHashSet<String>();
+      var m = MENTION.matcher(text);
+      var people = w.byHandle();
+      while (m.find()) {
+        // a sentence's full stop isn't part of the handle
+        var person = people.get(m.group(1).replaceAll("\\.+$", ""));
+        if (person != null && !person.user) out.add(person.id);
+      }
+      return List.copyOf(out);
+    });
+  }
+
+  /**
+   * Whoever R names answers, unless they can't stand him (SPEC §5.9). Adds to {@code script}, leaving out anyone who
+   * is already answering there.
+   */
+  public void answerMentions(Script script, String itemId, List<String> residents, long now) {
+    if (residents.isEmpty()) return;
+    engine.locked(w -> {
+      var item = item(w, itemId);
+      if (item == null) return null;
+      var post = item.type == Item.Type.POST ? item : item(w, item.postId);
+      if (post == null) return null;
+      String parent = item.type == Item.Type.POST ? null : item.id;
+      var plan = plan(w, now);
+      var user = w.person(w.userId);
+      String day = w.day(now);
+      for (String id : residents) {
+        if (w.edge(id, w.userId).affinity <= IGNORES_MENTION_AT) continue;
+        if (script.comments.stream().anyMatch(c -> c.authorId().equals(id) && c.postId().equals(post.id))) continue;
+        var rng = RandomSource.forActor(w.seed, id, now).derive("mention:" + itemId);
+        var stance = Stances.comment(w, w.person(id), user, item, engine.lib(), engine.knobs(), day, rng);
+        if (stance == Stance.REACT_ONLY) stance = Stance.QUESTION;
+        plan.comment("mention:" + id + ":" + itemId, now + HORIZON + LiveResponder.delay(rng, 3 * 60_000L, 30 * 60_000L), post.id, parent, id,
+            Planner.commentBrief(post, stance, w.userId, null));
+      }
+      script.addAll(plan.script);
+      return null;
+    });
+  }
+
+  private void friendDeltas(SimWorld w, String key, String receiver, String actor, long now) {
+    var rule = engine.lib().relationships().interactions().get(key);
+    if (rule == null) return;
+    var ctx = new Airing.Ctx(engine.lib(), engine.knobs(), null, false, Airing.Lookup.NONE);
+    Airing.move(w, receiver, actor, rule.target(), false, now, ctx);
+    Airing.move(w, actor, receiver, rule.actor(), false, now, ctx);
+  }
+
   /** R asks a resident. Empty when they're friends already, a request is waiting, or it's nobody. */
   public Optional<String> friendRequest(String residentId, long now) {
     return engine.locked(w -> {
       if (w.userId == null || residentId.equals(w.userId) || !w.people.containsKey(residentId)) return Optional.<String>empty();
       if (w.edge(w.userId, residentId).connected || requestBetween(w.userId, residentId)) return Optional.<String>empty();
+      friendDeltas(w, "friend_request_sent", residentId, w.userId, now);
       return Optional.of(saveRequest(w, w.userId, residentId, now));
     });
   }
@@ -222,6 +277,7 @@ public final class UserActions {
           r -> new String[] {r.str("from_id"), r.str("to_id")}).orElse(null);
       if (from == null || !from[0].equals(w.userId) || w.edge(from[1], w.userId).affinity < ACCEPTS_FROM_METER) return Optional.<String>empty();
       resolve(w, id, from[1], "ACCEPTED", now);
+      friendDeltas(w, "friend_request_accepted", w.userId, from[1], now);
       var uow = new UnitOfWork();
       new app.radiance.social.NotificationRepository(sql).save(uow, List.of(Airing.note(w, "FRIEND_ACCEPT", from[1], "ACTOR", from[1], Math.max(now, w.time))));
       lane.run(() -> sql.commit(uow));
@@ -237,7 +293,9 @@ public final class UserActions {
       if (from == null) return false;
       if (accept) {
         resolve(w, id, from, "ACCEPTED", now);
+        friendDeltas(w, "friend_request_accepted", from, w.userId, now);
       } else {
+        friendDeltas(w, "friend_request_ignored", from, w.userId, now);
         lane.run(() -> sql.commit(new UnitOfWork().add("UPDATE friend_request SET status = 'DECLINED', resolved_at = ? WHERE id = ?", now, id)));
       }
       return true;
@@ -255,6 +313,7 @@ public final class UserActions {
         if (e == null || e.connected || e.familiarity < ASKS_FROM_FAMILIARITY || e.affinity < ASKS_FROM_METER) continue;
         if (requestBetween(b.id, w.userId)) continue;
         String id = saveRequest(w, b.id, w.userId, now);
+        friendDeltas(w, "friend_request_sent", w.userId, b.id, now);
         var uow = new UnitOfWork();
         new app.radiance.social.NotificationRepository(sql).save(uow, List.of(Airing.note(w, "FRIEND_REQUEST", b.id, "ACTOR", b.id, Math.max(now, w.time))));
         lane.run(() -> sql.commit(uow));
