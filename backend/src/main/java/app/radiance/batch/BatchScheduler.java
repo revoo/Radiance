@@ -20,6 +20,8 @@ import org.springframework.context.SmartLifecycle;
 public final class BatchScheduler implements SmartLifecycle {
 
   private static final Logger log = LoggerFactory.getLogger(BatchScheduler.class);
+  /** How long a failed run waits before the next try, so a batch that keeps failing doesn't go every minute. */
+  static final long FAILED_RETRY = 15 * 60_000L;
 
   private final NightlyBatch batch;
   private final Sql sql;
@@ -46,7 +48,9 @@ public final class BatchScheduler implements SmartLifecycle {
     if (last == Long.MIN_VALUE) return false;
     var since = sql.query("SELECT status FROM batch_run WHERE started_at >= ? AND status IN ('RUNNING', 'DONE', 'PARTIAL')"
         + " ORDER BY started_at DESC", List.of(last), r -> r.str("status"));
-    if (since.isEmpty()) return true;
+    var failed = sql.queryOne("SELECT COUNT(*) AS n FROM batch_run WHERE status = 'FAILED' AND started_at > ?",
+        List.of(Math.max(last, now - FAILED_RETRY)), r -> r.lng("n")).orElse(0L);
+    if (since.isEmpty()) return failed == 0;
     if (since.contains("RUNNING") || since.contains("DONE")) return false;
     // only PARTIAL runs since the last fire: resume once a parked render can go
     return sql.queryOne("SELECT COUNT(*) AS n FROM job WHERE status IN ('WAITING', 'PENDING') AND run_after <= ?"

@@ -156,6 +156,38 @@ class NightlyBatchTests {
         List.of(crons), true);
   }
 
+  /** Regression: a failed run counted as no run, so a failing batch went again at every one-minute check. */
+  @Test
+  void aFailedRunWaitsBeforeTryingAgain() {
+    var calls = new AtomicInteger();
+    var real = offline();
+    LlmGateway dying = new Delegating(real) {
+      @Override
+      public <T> LlmResult<T> call(LlmRequest<T> r) {
+        if (r.purpose() == Purpose.RENDER_THREAD && calls.incrementAndGet() > 2) throw new Killed();
+        return real.call(r);
+      }
+    };
+    long now = db.clock.nowMs();
+    long nine = now - now % DAY + 9 * HOUR;
+    if (nine <= now) nine += DAY;
+    db.clock.set(nine + 53_000);
+    var failing = new BatchScheduler(batch(dying, db.holder), db.sql, db.holder, db.clock, false);
+    assertThat(failing.tick()).isTrue();
+    assertThat(count("SELECT COUNT(*) AS n FROM batch_run WHERE status = 'FAILED'")).isEqualTo(1);
+
+    db.clock.set(nine + 53_000 + 60_000);
+    assertThat(failing.overdue()).as("a minute later").isFalse();
+    db.clock.set(nine + 53_000 + BatchScheduler.FAILED_RETRY - 1);
+    assertThat(failing.overdue()).as("just before the wait is up").isFalse();
+
+    db.clock.set(nine + 53_000 + BatchScheduler.FAILED_RETRY);
+    var healthy = new BatchScheduler(batch(offline(), db.holder), db.sql, db.holder, db.clock, false);
+    assertThat(healthy.tick()).as("once the wait is up").isTrue();
+    assertThat(count("SELECT COUNT(*) AS n FROM batch_run WHERE status = 'DONE'")).isEqualTo(1);
+    assertThat(healthy.overdue()).isFalse();
+  }
+
   long scriptedUntil() {
     return db.sql.queryOne("SELECT scripted_until AS s FROM world", List.of(), r -> r.lng("s")).orElseThrow();
   }

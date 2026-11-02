@@ -15,8 +15,6 @@
 - Fixed and live (d108cfe): the 09:00 run scripted only 2 hours, leaving the rest to the 11:00 run, because the
   window ended at the next cron of either kind. It now ends at the next night's first run plus the slack. To confirm
   on the server: on 2026-11-03, `batch_run` should show 09:00 planning a full day and 11:00 planning 0.
-- Open, from reading the code, not reproduced: `BatchScheduler.overdue()` doesn't count FAILED runs, so a failing
-  batch looks like it retries every minute. R was told; add a retry delay before real keys go in.
 - Server rule from R (2026-11-02): do what's needed while there's no production load; don't duplicate what's there.
   One shared Caddy routes to all app containers: no second Caddy, but restarting it is fine.
 - To play offline: `./gradlew genesis --args='--seed 7 --import' -Pprofile=offline` (once), then
