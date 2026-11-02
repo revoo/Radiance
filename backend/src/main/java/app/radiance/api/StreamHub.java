@@ -8,6 +8,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.springframework.context.SmartLifecycle;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,7 +21,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
  */
 @ConditionalOnWebApplication
 @RestController
-class StreamHub {
+class StreamHub implements SmartLifecycle {
 
   private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
   private final ScheduledExecutorService pings = Executors.newSingleThreadScheduledExecutor(Thread.ofVirtual().factory());
@@ -69,10 +70,28 @@ class StreamHub {
     }
   }
 
-  @jakarta.annotation.PreDestroy
-  void close() {
+  private volatile boolean running;
+
+  @Override
+  public void start() {
+    running = true;
+  }
+
+  /**
+   * Streams close first: an open one is an active request, and graceful shutdown would otherwise wait out
+   * its whole timeout for a tab that never hangs up. This default phase stops before the web server's.
+   */
+  @Override
+  public void stop() {
+    running = false;
     pings.shutdownNow();
     emitters.forEach(SseEmitter::complete);
+    emitters.clear();
+  }
+
+  @Override
+  public boolean isRunning() {
+    return running;
   }
 
   @Component
