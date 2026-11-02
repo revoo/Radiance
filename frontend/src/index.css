@@ -249,7 +249,82 @@ body {
   animation-delay: 0.3s;
 }
 
+.weather-drop {
+  top: -14px;
+  width: 1.5px;
+  height: 12px;
+  border-radius: 1px;
+  background: rgb(255 255 255 / 0.5);
+  transform: rotate(8deg);
+  animation: weather-rain 0.9s linear infinite;
+}
+@keyframes weather-rain {
+  to {
+    transform: translate(-22px, 260px) rotate(8deg);
+  }
+}
+.weather-flake {
+  top: -8px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.85);
+  animation: weather-snow 4s linear infinite;
+}
+@keyframes weather-snow {
+  50% {
+    transform: translate(10px, 130px);
+  }
+  100% {
+    transform: translate(-4px, 260px);
+  }
+}
+.weather-star {
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: white;
+  animation: weather-twinkle 3s ease-in-out infinite;
+}
+@keyframes weather-twinkle {
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.weather-flash {
+  background: white;
+  opacity: 0;
+  animation: weather-lightning 7s linear infinite;
+}
+@keyframes weather-lightning {
+  0%,
+  91%,
+  94%,
+  100% {
+    opacity: 0;
+  }
+  92%,
+  95% {
+    opacity: 0.35;
+  }
+}
+.weather-icon {
+  animation: weather-bob 5s ease-in-out infinite;
+}
+@keyframes weather-bob {
+  50% {
+    transform: translateY(-4px) rotate(-3deg);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .weather-fx {
+    display: none;
+  }
   *,
   *::before,
   *::after {

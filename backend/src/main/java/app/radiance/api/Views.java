@@ -29,9 +29,13 @@ final class Views {
   /** The right rail: the weather now, and the news the network is talking about. */
   record Rail(Weather weather, List<Talked> talkedAbout) {}
 
-  record Weather(long tempF, String sky, String description) {}
+  record Weather(long hour, long tempF, long feelsLikeF, long windMph, int wmo, long highF, long lowF, String sky,
+      String description, List<WeatherSoon> next) {}
 
-  record Talked(String title, String source, String postId, int posts, int comments) {}
+  record WeatherSoon(long hour, long tempF, int wmo) {}
+
+  record Talked(String title, String source, String postId, int posts, int comments, String region, double controversy,
+      String sensitivity, List<Actor> people) {}
 
   record Page<T>(List<T> items, String nextCursor) {}
 

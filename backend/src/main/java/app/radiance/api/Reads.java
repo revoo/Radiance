@@ -226,16 +226,41 @@ final class Reads {
         }).orElse(null);
   }
 
+  /** The faces on a story: the latest few who've posted about it. */
+  private List<Views.Actor> peopleOn(String headlineId) {
+    return sql.query("SELECT author_id, MAX(created_at) AS t FROM post WHERE headline_id = ? AND " + VISIBLE
+        + " GROUP BY author_id ORDER BY t DESC, author_id LIMIT 3", List.of(headlineId), r -> actor(r.str("author_id")));
+  }
+
+  private Views.Weather weatherNow(long worldTime, long top) {
+    var repo = new WeatherRepository(sql);
+    var coming = repo.between(top, top + 9 * WeatherHour.HOUR);
+    if (coming.isEmpty()) return null;
+    var now = coming.getFirst();
+    var zone = java.time.ZoneId.of(sql.queryOne("SELECT timezone FROM world", List.of(), r -> r.str("timezone")).orElse("UTC"));
+    var today = java.time.Instant.ofEpochMilli(worldTime).atZone(zone).toLocalDate();
+    var day = repo.between(today.atStartOfDay(zone).toInstant().toEpochMilli(), today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli());
+    double high = day.stream().mapToDouble(WeatherHour::tempF).max().orElse(now.tempF());
+    double low = day.stream().mapToDouble(WeatherHour::tempF).min().orElse(now.tempF());
+    var next = new ArrayList<Views.WeatherSoon>();
+    for (int i = 2; i < coming.size() && next.size() < 4; i += 2) {
+      var h = coming.get(i);
+      next.add(new Views.WeatherSoon(h.hour(), Math.round(h.tempF()), h.wmo()));
+    }
+    return new Views.Weather(now.hour(), Math.round(now.tempF()), Math.round(now.feelsLikeF()), Math.round(now.windMph()), now.wmo(),
+        Math.round(high), Math.round(low), now.sky(), now.describe(), next);
+  }
+
   /** Only what has aired counts: a scripted take isn't talk yet. */
   Views.Rail rail(long worldTime) {
     long top = worldTime - worldTime % WeatherHour.HOUR;
-    var hours = new WeatherRepository(sql).between(top, top + WeatherHour.HOUR);
-    var weather = hours.isEmpty() ? null : new Views.Weather(Math.round(hours.getFirst().tempF()), hours.getFirst().sky(),
-        hours.getFirst().describe());
-    var talked = sql.query("SELECT h.title, h.source, MIN(p.id) AS post_id, COUNT(*) AS posts, SUM(p.comment_count) AS comments"
+    var weather = weatherNow(worldTime, top);
+    var talked = sql.query("SELECT h.id, h.title, h.source, h.region, h.controversy, h.sensitivity, MIN(p.id) AS post_id, COUNT(*) AS posts,"
+        + " SUM(p.comment_count) AS comments"
         + " FROM post p JOIN headline h ON h.id = p.headline_id WHERE p.created_at >= ? AND p.created_at <= ? AND " + VISIBLE
         + " GROUP BY h.id ORDER BY COUNT(*) + SUM(p.comment_count) DESC, h.id LIMIT 5", List.of(worldTime - TALKED_WINDOW, worldTime),
-        r -> new Views.Talked(r.str("title"), r.str("source"), r.str("post_id"), (int) r.lng("posts"), (int) r.lng("comments")));
+        r -> new Views.Talked(r.str("title"), r.str("source"), r.str("post_id"), (int) r.lng("posts"), (int) r.lng("comments"),
+            r.str("region"), r.isNull("controversy") ? 0 : r.dbl("controversy"), r.str("sensitivity"), peopleOn(r.str("id"))));
     return new Views.Rail(weather, talked);
   }
 

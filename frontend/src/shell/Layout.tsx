@@ -1,11 +1,11 @@
 import { Activity, Bell, HeartHandshake, House, LogOut, MessageCircle, Monitor, Moon, ShieldAlert, Sun, Users, X } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router";
-import { useBackups, useLogout, useMe, useNotifications, usePeople, useThreads, useWorld } from "../api/queries.ts";
+import { useBackups, useLogout, useMe, useNotifications, usePeople, useRail, useThreads, useWorld } from "../api/queries.ts";
 import type { Actor } from "../api/types.ts";
 import { live, useLive, worldNow } from "../live/store.ts";
 import { Avatar, Card } from "../ui/kit.tsx";
-import { TalkedAbout, WeatherChip, WeatherCredit } from "./Rail.tsx";
+import { TalkedAbout, WeatherCard, WeatherChip, WeatherCredit } from "./Rail.tsx";
 
 type Theme = "system" | "light" | "dark";
 
@@ -305,13 +305,13 @@ function WorldClock() {
 }
 
 function RightRail() {
+  const hasWeather = Boolean(useRail().data?.weather);
   const friends = usePeople("friends");
   return (
-    <aside className="sticky top-20 hidden h-[calc(100vh-6rem)] w-72 shrink-0 flex-col gap-4 xl:flex">
-      <WorldClock />
-      <WeatherChip />
+    <aside className="sticky top-20 hidden h-[calc(100vh-6rem)] w-72 shrink-0 flex-col gap-3 overflow-y-auto [scrollbar-width:thin] xl:flex">
+      {hasWeather ? <WeatherCard /> : <WorldClock />}
       <TalkedAbout />
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="min-h-32 flex-1 overflow-y-auto">
         <h2 className="px-2 pb-2 text-sm font-bold text-muted">Contacts</h2>
         <ul>
           {(friends.data ?? []).map((a) => (

@@ -8,7 +8,8 @@
       empty two-day window. `NewsAcceptanceTests` allows that one, which is looser than the AC. Recheck on real news.
     - "Over a week of real headlines": the 20-30% and region split hold on fixtures (`FeelBandsTests`). A real week can
       only be measured once this is deployed. Real classification hasn't run without an LLM key: offline it's a fake.
-- **M11 built on `m11-you`** (see "M11 steps" below). R gave standing approval to merge when CI is green.
+- **M11 merged (2026-11-02)**, see "M11 steps" below. R gave standing approval to merge when CI is green.
+- Rail redesign on `rail-polish` after M11: one sky card (clock, weather, forecast strip, animated skies), news rail with faces and heat.
 - Next: **M12 — Media** (SPEC §12), on a new branch from `main`. **Don't start until R says go.**
 - To check next time: on the server, `headline` should have real rows and `weather_hour` real kinds since the first batch
   or login after M10 (the first check found none, as nothing had refreshed yet); and the batch's new script window (09:00

@@ -50,9 +50,32 @@ export type Post = {
 /** A news take's link card. The url is null unless it's a real web link. */
 export type PostLink = { url: string | null; source: string; title: string };
 
+export type TalkedStory = {
+  title: string;
+  source: string;
+  postId: string;
+  posts: number;
+  comments: number;
+  region: string;
+  controversy: number;
+  sensitivity: string;
+  people: Actor[];
+};
+
 export type Rail = {
-  weather: { tempF: number; sky: string; description: string } | null;
-  talkedAbout: { title: string; source: string; postId: string; posts: number; comments: number }[];
+  weather: {
+    hour: number;
+    tempF: number;
+    feelsLikeF: number;
+    windMph: number;
+    wmo: number;
+    highF: number;
+    lowF: number;
+    sky: string;
+    description: string;
+    next: { hour: number; tempF: number; wmo: number }[];
+  } | null;
+  talkedAbout: TalkedStory[];
 };
 
 export type Page<T> = { items: T[]; nextCursor: string | null };
