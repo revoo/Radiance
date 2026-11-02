@@ -22,9 +22,15 @@ Run Radiance's commands from `/opt/hosting/radiance`.
 
 ## Logging in
 
-The username is in `.env`. The first deploy generated a random password, in `~/radiance-initial-password` on the
-server (`claude`'s home, readable only by that user). To change it, make a new hash (below), put it in `.env` in
-single quotes, and run `docker compose up -d`. Then delete that file.
+The username is in `.env`. To set your own password, run this on the server. It asks twice, stores only a hash, and
+restarts the app:
+
+```bash
+sudo -u claude /opt/hosting/radiance/set-password.sh
+```
+
+The first deploy generated a random one, in `/home/claude/radiance-initial-password`; delete that file once you've
+set your own. After 5 failed logins, the login page answers "Too many failed logins" for 5 minutes.
 
 ## First deploy
 
@@ -42,11 +48,10 @@ Already done on this server; these steps are for rebuilding it. Step 1 overwrite
 
    ```bash
    cd /opt/hosting/radiance && chmod 600 .env && mkdir -p data
-   docker run --rm httpd:2-alpine htpasswd -bnBC 12 "" 'your password' | tr -d ':\n'
    ```
 
-   Put the username and that hash in `.env`. **Keep the hash in single quotes**: Compose expands `$` in `.env`,
-   and an unquoted hash silently becomes a different value. The LLM keys are optional, and the R2 keys can wait
+   Put the username in `.env`, and copy `deploy/set-password.sh` beside it to set the password (see
+   [Logging in](#logging-in)); it keeps the hash in the single quotes `.env` needs. The LLM keys are optional, and the R2 keys can wait
    (see [Backups](#backups)). `RADIANCE_TAG` in `.env` picks the image: a branch, `main`, or a commit. The server
    runs `m9-hosting` until M9 is merged; then set it to `main`.
 

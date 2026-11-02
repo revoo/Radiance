@@ -38,6 +38,22 @@ assert r["logging"]["options"]["max-size"]
 print("compose layout OK")
 ' "$HASH" <<<"$config"
 
+# set-password.sh writes a quoted hash that verifies, leaves the rest of .env alone and keeps its mode
+cp "$HERE/set-password.sh" "$HOSTING/radiance/set-password.sh"
+chmod 600 "$HOSTING/radiance/.env"
+printf 'a new password, with $ and spaces\na new password, with $ and spaces\n' |
+  SET_PASSWORD_NO_RESTART=1 bash "$HOSTING/radiance/set-password.sh" 2>/dev/null
+new_hash=$(sed -nE "s/^RADIANCE_PASSWORD_BCRYPT='(.*)'$/\\1/p" "$HOSTING/radiance/.env")
+[ -n "$new_hash" ] && [ "$new_hash" != "$HASH" ] || { echo "set-password.sh didn't write a quoted hash"; exit 1; }
+grep -q '^RADIANCE_USERNAME=sam$' "$HOSTING/radiance/.env" || { echo "set-password.sh damaged .env"; exit 1; }
+[ "$(stat -c %a "$HOSTING/radiance/.env")" = 600 ] || { echo "set-password.sh changed .env's mode"; exit 1; }
+docker run --rm -e "H=$new_hash" httpd:2-alpine sh -c 'printf "sam:%s\n" "$H" >/tmp/p && htpasswd -vb /tmp/p sam "a new password, with \$ and spaces"' 2>&1 | grep -q correct ||
+  { echo "the written hash doesn't verify"; exit 1; }
+if printf 'one password\nanother one\n' | SET_PASSWORD_NO_RESTART=1 bash "$HOSTING/radiance/set-password.sh" 2>/dev/null; then
+  echo "set-password.sh accepted a mismatch"; exit 1
+fi
+echo "set-password.sh OK"
+
 # the Caddy site parses, added to what's already there
 cat >"$HOSTING/caddy/Caddyfile" <<'CADDY'
 test.enigmatica.app {
