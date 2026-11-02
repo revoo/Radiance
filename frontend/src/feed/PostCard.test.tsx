@@ -17,6 +17,26 @@ describe("PostCard", () => {
     expect(screen.getByText("5m")).toBeInTheDocument();
   });
 
+  it("shows a news take's link card, opening safely in a new tab", () => {
+    const link = { url: "https://thehill.com/senate", source: "The Hill", title: "Senate passes the budget" };
+    renderWith(<PostCard post={post({ link })} me={ME} />);
+    const card = screen.getByRole("link", { name: /Senate passes the budget/ });
+    expect(card).toHaveAttribute("href", "https://thehill.com/senate");
+    expect(card).toHaveAttribute("target", "_blank");
+    expect(card).toHaveAttribute("rel", "noopener noreferrer");
+    expect(card).toHaveTextContent("The Hill");
+  });
+
+  it("shows a link card with no real url as plain text, and no card without a link", () => {
+    const link = { url: null, source: "Fixture Wire", title: "A made-up story" };
+    const { unmount } = renderWith(<PostCard post={post({ link })} me={ME} />);
+    expect(screen.getByText("A made-up story")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /A made-up story/ })).not.toBeInTheDocument();
+    unmount();
+    renderWith(<PostCard post={post()} me={ME} />);
+    expect(screen.queryByText("Fixture Wire")).not.toBeInTheDocument();
+  });
+
   it("shows two preview comments and how many more there are", () => {
     const c = (id: string, body: string) => ({
       id,

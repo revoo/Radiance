@@ -222,4 +222,50 @@ class ApiTests {
     mvc.perform(get("/api/notifications").with(R)).andExpect(jsonPath("$.unread").value(0))
         .andExpect(jsonPath("$.items[?(@.kind == 'DM')]").isEmpty());
   }
+
+  @Test
+  @Order(9)
+  void aNewsTakeCarriesItsLinkCardAndTheRailCountsOnlyWhatAired() throws Exception {
+    long now = System.currentTimeMillis();
+    var posts = sql.query("SELECT id FROM post WHERE air_status = 'AIRED' AND render_status = 'RENDERED' AND body IS NOT NULL"
+        + " AND headline_id IS NULL ORDER BY id LIMIT 3", java.util.List.of(), r -> r.str("id"));
+    assertThat(posts).hasSize(3);
+    String insert = "INSERT INTO headline (id, url, source, title, published_at, fetched_at, classified_at)"
+        + " VALUES (?, ?, ?, ?, ?, ?, ?)";
+    writer.run(() -> sql.commit(new app.radiance.persistence.UnitOfWork()
+        .add(insert, "real", "https://thehill.com/senate", "The Hill", "Senate passes the budget", now, now, now)
+        .add(insert, "fake", "fixture://api-test/1", "Fixture Wire", "A made-up story", now, now, now)
+        .add(insert, "hidden", "https://example.com/spoiler", "Wire", "A story nobody has posted yet", now, now, now)
+        .add("UPDATE post SET headline_id = 'real', created_at = ?, comment_count = 1000, audience = 'PUBLIC' WHERE id = ?", now - 60_000, posts.get(0))
+        .add("UPDATE post SET headline_id = 'fake', created_at = ?, audience = 'PUBLIC' WHERE id = ?", now - 60_000, posts.get(1))
+        .add("UPDATE post SET headline_id = 'hidden', created_at = ?, air_status = 'SCRIPTED' WHERE id = ?", now - 60_000, posts.get(2))
+        .add("INSERT INTO weather_hour (hour, temp_f, feels_like_f, precip_in, snow_in, wind_mph, wmo_code, kind, fetched_at)"
+            + " VALUES (?, 34.4, 27, 0, 0.1, 5, 71, 'FORECAST', ?) ON CONFLICT (hour) DO UPDATE SET temp_f = 34.4,"
+            + " feels_like_f = 27, snow_in = 0.1, wmo_code = 71", now - now % 3_600_000L, now)
+        .add("INSERT INTO weather_hour (hour, temp_f, feels_like_f, precip_in, snow_in, wind_mph, wmo_code, kind, fetched_at)"
+            + " VALUES (?, 34.4, 27, 0, 0.1, 5, 71, 'FORECAST', ?) ON CONFLICT (hour) DO UPDATE SET temp_f = 34.4,"
+            + " feels_like_f = 27, snow_in = 0.1, wmo_code = 71", now - now % 3_600_000L + 3_600_000L, now)));
+
+    mvc.perform(get("/api/posts/" + posts.get(0)).with(R)).andExpect(status().isOk())
+        .andExpect(jsonPath("$.link.url").value("https://thehill.com/senate"))
+        .andExpect(jsonPath("$.link.source").value("The Hill"))
+        .andExpect(jsonPath("$.link.title").value("Senate passes the budget"));
+    mvc.perform(get("/api/posts/" + posts.get(1)).with(R)).andExpect(status().isOk())
+        .andExpect(jsonPath("$.link.url").doesNotExist())
+        .andExpect(jsonPath("$.link.title").value("A made-up story"));
+
+    mvc.perform(get("/api/rail").with(R)).andExpect(status().isOk())
+        .andExpect(jsonPath("$.weather.tempF").value(34))
+        .andExpect(jsonPath("$.weather.sky").value("light snow"))
+        .andExpect(jsonPath("$.talkedAbout[0].title").value("Senate passes the budget"))
+        .andExpect(jsonPath("$.talkedAbout[0].posts").value(1))
+        .andExpect(jsonPath("$.talkedAbout[0].comments").value(1000))
+        .andExpect(jsonPath("$.talkedAbout[?(@.title == 'A story nobody has posted yet')]").isEmpty());
+  }
+
+  @Test
+  @Order(10)
+  void theRailNeedsALogin() throws Exception {
+    mvc.perform(get("/api/rail")).andExpect(status().isUnauthorized());
+  }
 }

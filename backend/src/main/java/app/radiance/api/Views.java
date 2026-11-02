@@ -21,7 +21,17 @@ final class Views {
       List<Comment> replies) {}
 
   record Post(String id, Actor author, long createdAt, String kind, String audience, String body, Reactions reactions,
-      int commentCount, List<Comment> preview, List<Typing> typing) {}
+      int commentCount, List<Comment> preview, List<Typing> typing, Link link) {}
+
+  /** A news take's link card. The url is null unless it's a real web link (offline fixtures aren't). */
+  record Link(String url, String source, String title) {}
+
+  /** The right rail: the weather now, and the news the network is talking about. */
+  record Rail(Weather weather, List<Talked> talkedAbout) {}
+
+  record Weather(long tempF, String sky, String description) {}
+
+  record Talked(String title, String source, String postId, int posts, int comments) {}
 
   record Page<T>(List<T> items, String nextCursor) {}
 

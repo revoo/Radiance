@@ -58,6 +58,11 @@ class WorldController {
         .map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
   }
 
+  @GetMapping("/rail")
+  Views.Rail rail() {
+    return new Reads(sql, live).rail(live.now());
+  }
+
   @GetMapping("/world/recap")
   Views.Recap recap() {
     return new Reads(sql, live).recap(live.now());

@@ -1,8 +1,8 @@
-import { Globe, MessageCircle, UsersRound } from "lucide-react";
+import { ExternalLink, Globe, MessageCircle, UsersRound } from "lucide-react";
 import { useRef, useState } from "react";
 import { Link } from "react-router";
 import { useComments, useReact } from "../api/queries.ts";
-import type { Actor, Comment, Post } from "../api/types.ts";
+import type { Actor, Comment, Post, PostLink } from "../api/types.ts";
 import { useLive, useWorldNow } from "../live/store.ts";
 import { fullTime, relativeTime } from "../ui/format.ts";
 import { Avatar, Card, Name, RichText } from "../ui/kit.tsx";
@@ -61,6 +61,8 @@ export function PostCard({ post, me, expanded = false }: { post: Post; me: Actor
         <div className="px-4 pb-3 pt-3">
           <RichText text={post.body} className={short ? "text-[22px] font-medium leading-snug tracking-tight" : "text-[15px] leading-relaxed"} />
         </div>
+
+        {post.link && <LinkCard link={post.link} />}
 
         {(post.reactions.total > 0 || post.commentCount > 0) && (
           <div className="flex items-center justify-between px-4 pb-2">
@@ -126,5 +128,25 @@ export function PostCard({ post, me, expanded = false }: { post: Post; me: Actor
         )}
       </article>
     </Card>
+  );
+}
+
+/** Outside links open in a new tab, and the outside page gets no handle on this one. */
+function LinkCard({ link }: { link: PostLink }) {
+  const body = (
+    <>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-bold uppercase tracking-[0.12em] text-muted">{link.source}</p>
+        <p className="mt-1 font-semibold leading-snug">{link.title}</p>
+      </div>
+      {link.url && <ExternalLink className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden />}
+    </>
+  );
+  const shape = "mx-4 mb-3 flex items-start gap-3 rounded-xl border border-line bg-panel p-3";
+  if (!link.url) return <div className={shape}>{body}</div>;
+  return (
+    <a href={link.url} target="_blank" rel="noopener noreferrer" className={`${shape} transition hover:bg-brand-soft`}>
+      {body}
+    </a>
   );
 }

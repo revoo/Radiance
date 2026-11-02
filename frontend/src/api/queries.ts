@@ -10,6 +10,7 @@ import { live } from "../live/store.ts";
 import { api, ApiError } from "./client.ts";
 import type {
   Comment,
+  Rail,
   DmConversation,
   DmMessage,
   DmThread,
@@ -49,6 +50,15 @@ export const keys = {
 
 export function useMe() {
   return useQuery({ queryKey: keys.me, queryFn: () => api<Me>("/api/me"), retry: false, staleTime: 60_000 });
+}
+
+export function useRail() {
+  return useQuery({
+    queryKey: ["rail"],
+    queryFn: () => api<Rail>("/api/rail"),
+    staleTime: 5 * 60_000,
+    refetchInterval: 5 * 60_000,
+  });
 }
 
 export function useWorld() {

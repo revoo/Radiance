@@ -26,7 +26,7 @@ public record WeatherHour(
     return sb.toString();
   }
 
-  String sky() {
+  public String sky() {
     if (wmo >= 95) return "thunderstorms";
     if (wmo >= 71 && wmo <= 77) return snowIn >= 0.3 ? "heavy snow" : "light snow";
     if (wmo >= 51 && wmo <= 67) return precipIn >= 0.15 ? "heavy rain" : "light rain";

@@ -2,6 +2,8 @@ package app.radiance.api;
 
 import app.radiance.live.LivePlay;
 import app.radiance.persistence.Sql;
+import app.radiance.weather.WeatherHour;
+import app.radiance.weather.WeatherRepository;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -21,6 +23,7 @@ import java.util.TreeMap;
 final class Reads {
 
   private static final long DAY = 86_400_000L;
+  private static final long TALKED_WINDOW = 36 * WeatherHour.HOUR;
   private static final String VISIBLE = "air_status = 'AIRED' AND render_status = 'RENDERED' AND body IS NOT NULL";
 
   private final Sql sql;
@@ -181,6 +184,27 @@ final class Reads {
         reactions.getOrDefault(r[0], Views.Reactions.NONE), replies);
   }
 
+  private Views.Link link(String postId) {
+    return sql.queryOne("SELECT h.url, h.source, h.title FROM post p JOIN headline h ON h.id = p.headline_id WHERE p.id = ?",
+        List.of(postId), r -> {
+          String url = r.str("url");
+          return new Views.Link(url.startsWith("https://") || url.startsWith("http://") ? url : null, r.str("source"), r.str("title"));
+        }).orElse(null);
+  }
+
+  /** Only what has aired counts: a scripted take isn't talk yet. */
+  Views.Rail rail(long worldTime) {
+    long top = worldTime - worldTime % WeatherHour.HOUR;
+    var hours = new WeatherRepository(sql).between(top, top + WeatherHour.HOUR);
+    var weather = hours.isEmpty() ? null : new Views.Weather(Math.round(hours.getFirst().tempF()), hours.getFirst().sky(),
+        hours.getFirst().describe());
+    var talked = sql.query("SELECT h.title, h.source, MIN(p.id) AS post_id, COUNT(*) AS posts, SUM(p.comment_count) AS comments"
+        + " FROM post p JOIN headline h ON h.id = p.headline_id WHERE p.created_at >= ? AND p.created_at <= ? AND " + VISIBLE
+        + " GROUP BY h.id ORDER BY COUNT(*) + SUM(p.comment_count) DESC, h.id LIMIT 5", List.of(worldTime - TALKED_WINDOW, worldTime),
+        r -> new Views.Talked(r.str("title"), r.str("source"), r.str("post_id"), (int) r.lng("posts"), (int) r.lng("comments")));
+    return new Views.Rail(weather, talked);
+  }
+
   private List<Views.Post> posts(List<String[]> rows) {
     var ids = rows.stream().map(r -> r[0]).toList();
     var reactions = reactions("POST", ids);
@@ -195,7 +219,7 @@ final class Reads {
           : live.typingOn(r[0]).stream().map(t -> new Views.Typing(t.actorId(), t.name())).toList();
       out.add(new Views.Post(r[0], actor(r[1]), Long.parseLong(r[2]), r[3], r[4], r[5],
           reactions.getOrDefault(r[0], Views.Reactions.NONE), Integer.parseInt(r[6]),
-          preview.stream().map(x -> comment(x, r[0], previewReactions, List.of())).toList(), typing));
+          preview.stream().map(x -> comment(x, r[0], previewReactions, List.of())).toList(), typing, link(r[0])));
     }
     return out;
   }

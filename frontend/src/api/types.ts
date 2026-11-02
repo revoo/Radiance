@@ -44,6 +44,15 @@ export type Post = {
   commentCount: number;
   preview: Comment[];
   typing: Typing[];
+  link?: PostLink | null;
+};
+
+/** A news take's link card. The url is null unless it's a real web link. */
+export type PostLink = { url: string | null; source: string; title: string };
+
+export type Rail = {
+  weather: { tempF: number; sky: string; description: string } | null;
+  talkedAbout: { title: string; source: string; postId: string; posts: number; comments: number }[];
 };
 
 export type Page<T> = { items: T[]; nextCursor: string | null };
