@@ -38,6 +38,8 @@ radiance:
     username: ${RADIANCE_USERNAME:}
     password-bcrypt: ${RADIANCE_PASSWORD_BCRYPT:}
     dev-login: false
+  ui:
+    like-meters: true                  # Sims-style meters and pulses (SPEC §5.9); false for full immersion
   weather:
     source: fake                       # open-meteo in prod; tests and offline never call it
     latitude: 41.88                    # the Loop

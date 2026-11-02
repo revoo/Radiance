@@ -62,6 +62,12 @@ public final class RelationshipRepository {
     return TABLE.where(sql, "to_id = ?", toId);
   }
 
+  /** Today's copy of everyone's like-meter for {@code userId}, for the 7-day trends (SPEC §5.9). */
+  public UnitOfWork snapshotMeters(UnitOfWork uow, String day, String userId) {
+    return uow.add("INSERT INTO meter_snapshot (day, actor_id, affinity) SELECT ?, from_id, affinity FROM relationship"
+        + " WHERE to_id = ? ON CONFLICT (day, actor_id) DO UPDATE SET affinity = excluded.affinity", day, userId);
+  }
+
   public UnitOfWork save(UnitOfWork uow, Collection<RelationshipRow> rows) {
     return TABLE.upsert(uow, rows);
   }

@@ -192,6 +192,22 @@ class NightlyBatchTests {
     return db.sql.queryOne("SELECT scripted_until AS s FROM world", List.of(), r -> r.lng("s")).orElseThrow();
   }
 
+  @Test
+  void aNightKeepsACopyOfEveryMeterForTheTrends() {
+    new app.radiance.graph.Onboarding(db.sql, db.lane, offline(), LIB, 1.0).onboard(new app.radiance.graph.Onboarding.Profile("Sam Rivera",
+        "Engineer, runner.", "Acme", "Logan Square", List.of("softball"), List.of("tech", "fitness"),
+        app.radiance.graph.Onboarding.Backstory.LOCAL), 7, db.clock.nowMs());
+    batch(offline(), db.holder).run(NightlyBatch.Kind.NIGHTLY);
+    long residents = count("SELECT COUNT(*) AS n FROM relationship WHERE to_id = (SELECT id FROM actor WHERE kind <> 'BOT' LIMIT 1)");
+    assertThat(residents).isPositive();
+    assertThat(count("SELECT COUNT(*) AS n FROM meter_snapshot")).isEqualTo(residents);
+    assertThat(count("SELECT COUNT(*) AS n FROM meter_snapshot m JOIN relationship r ON r.from_id = m.actor_id"
+        + " JOIN world w ON 1 = 1 WHERE r.to_id = (SELECT id FROM actor WHERE kind <> 'BOT' LIMIT 1) AND r.affinity = m.affinity"))
+        .as("a true copy").isEqualTo(residents);
+    batch(offline(), db.holder).run(NightlyBatch.Kind.NIGHTLY);
+    assertThat(count("SELECT COUNT(*) AS n FROM meter_snapshot")).as("one row a day").isEqualTo(residents);
+  }
+
   /** Dies like a killed process: an Error isn't a job failure. */
   static final class Killed extends Error {}
 

@@ -11,6 +11,7 @@ import { api, ApiError } from "./client.ts";
 import type {
   Comment,
   Rail,
+  Relationship,
   DmConversation,
   DmMessage,
   DmThread,
@@ -34,6 +35,7 @@ export type FeedMode = "recent" | "top";
 export const keys = {
   me: ["me"] as const,
   world: ["world"] as const,
+  relationships: ["relationships"] as const,
   feed: (mode: FeedMode) => ["feed", mode] as const,
   post: (id: string) => ["post", id] as const,
   comments: (id: string) => ["comments", id] as const,
@@ -50,6 +52,10 @@ export const keys = {
 
 export function useMe() {
   return useQuery({ queryKey: keys.me, queryFn: () => api<Me>("/api/me"), retry: false, staleTime: 60_000 });
+}
+
+export function useRelationships() {
+  return useQuery({ queryKey: keys.relationships, queryFn: () => api<Relationship[]>("/api/me/relationships") });
 }
 
 export function useRail() {

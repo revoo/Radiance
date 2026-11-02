@@ -35,7 +35,7 @@ final class Views {
 
   record Page<T>(List<T> items, String nextCursor) {}
 
-  record Me(String username, boolean worldReady, boolean onboarded, Actor actor, String networkName) {}
+  record Me(String username, boolean worldReady, boolean onboarded, Actor actor, String networkName, boolean likeMeters) {}
 
   record World(String name, String networkName, String timezone, long worldTime, long committedUntil, long scriptedUntil,
       boolean paused, boolean backfilling) {}
@@ -45,7 +45,10 @@ final class Views {
   record Recap(Long since, List<RecapLine> lines) {}
 
   record Person(Actor actor, String bio, String employer, String hometown, String relationshipStatus, String birthday,
-      String relationship, boolean friend, int mutualFriends, List<Actor> friends) {}
+      String relationship, boolean friend, int mutualFriends, List<Actor> friends, Integer meter) {}
+
+  /** A resident's like-meter for R, with its change over the last 7 days (null until there's a snapshot). */
+  record Relationship(Actor actor, int meter, Integer trend, String kind, boolean friend) {}
 
   record Notification(String id, String kind, List<Actor> actors, String refType, String refId, String postId,
       String snippet, long createdAt, boolean read) {}

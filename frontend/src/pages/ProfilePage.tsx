@@ -1,7 +1,8 @@
 import { Briefcase, Cake, Heart, House, MapPin, MessageCircle, Pencil, Search, UserRoundCheck } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { useOpenThread, usePerson, usePersonPosts, useUpdateProfile } from "../api/queries.ts";
+import { useMe, useOpenThread, usePerson, usePersonPosts, useUpdateProfile } from "../api/queries.ts";
+import { LikeMeter } from "../ui/LikeMeter.tsx";
 import type { Actor, Person } from "../api/types.ts";
 import { PostCard } from "../feed/PostCard.tsx";
 import { colorFor } from "../ui/format.ts";
@@ -124,6 +125,7 @@ function FriendsGrid({ person }: { person: Person }) {
 export function ProfilePage({ me }: { me: Actor }) {
   const { handle = "" } = useParams();
   const person = usePerson(handle);
+  const likeMeters = useMe().data?.likeMeters !== false;
   const posts = usePersonPosts(handle);
   const [editing, setEditing] = useState(false);
   const openThread = useOpenThread();
@@ -164,6 +166,11 @@ export function ProfilePage({ me }: { me: Actor }) {
           <div className="mt-3 min-w-0 flex-1 text-center sm:text-left">
             <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{p.actor.name}</h1>
             <p className="text-sm text-muted">@{p.actor.handle}</p>
+            {likeMeters && p.meter != null && (
+              <div className="mt-2">
+                <LikeMeter value={p.meter} name={p.actor.name} />
+              </div>
+            )}
           </div>
           <div className="mt-3 flex gap-2">
             {!p.actor.you && (

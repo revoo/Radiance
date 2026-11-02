@@ -350,4 +350,28 @@ class LivePlayTests {
   static Map<String, Object> data(Timed t) {
     return t.e().data();
   }
+
+  /** SPEC §12 M11: every visible interaction that moves a meter shows its pulse, and silent moves don't. */
+  @Test
+  void aMeterThatMovesWhenAResponseLandsPulsesAndASilentOneDoesnt() throws Exception {
+    var live = live(gateway(null));
+    live.touch();
+    live.tick();
+    for (String text : POSTS) live.post(text);
+    play(live, Duration.ofMinutes(20));
+
+    var changes = events.stream().filter(t -> t.e().name().equals("meter.changed")).map(t -> t.e().data()).toList();
+    assertThat(changes).as("meters moved").isNotEmpty();
+    var landed = events.stream().map(Timed::e).filter(e -> e.name().equals("reaction.changed") || e.name().equals("comment.aired"))
+        .map(e -> String.valueOf(e.data().getOrDefault("actorId", e.data().get("authorId")))).collect(java.util.stream.Collectors.toSet());
+    for (var c : changes) {
+      assertThat((Long) c.get("delta")).as("only real changes").isNotZero();
+      if (Boolean.TRUE.equals(c.get("pulse"))) assertThat(landed).as("a pulse follows something R could see").contains((String) c.get("actorId"));
+    }
+    assertThat(changes).as("at least one visible move pulsed").anyMatch(c -> Boolean.TRUE.equals(c.get("pulse")));
+
+    var last = changes.getLast();
+    long stored = engine.locked(w -> Math.round(w.edge((String) last.get("actorId"), w.userId).affinity));
+    assertThat((Long) last.get("value")).as("the last value sent is today's meter, or close behind it").isCloseTo(stored, org.assertj.core.data.Offset.offset(20L));
+  }
 }

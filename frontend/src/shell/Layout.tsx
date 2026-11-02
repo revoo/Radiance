@@ -1,7 +1,7 @@
-import { Activity, Bell, House, LogOut, MessageCircle, Monitor, Moon, ShieldAlert, Sun, Users, X } from "lucide-react";
+import { Activity, Bell, HeartHandshake, House, LogOut, MessageCircle, Monitor, Moon, ShieldAlert, Sun, Users, X } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router";
-import { useBackups, useLogout, useNotifications, usePeople, useThreads, useWorld } from "../api/queries.ts";
+import { useBackups, useLogout, useMe, useNotifications, usePeople, useThreads, useWorld } from "../api/queries.ts";
 import type { Actor } from "../api/types.ts";
 import { live, useLive, worldNow } from "../live/store.ts";
 import { Avatar, Card } from "../ui/kit.tsx";
@@ -227,6 +227,7 @@ function Shortcut({ to, icon, label }: { to: string; icon: ReactNode; label: str
 }
 
 function LeftRail({ me }: { me: Actor }) {
+  const likeMeters = useMe().data?.likeMeters !== false;
   return (
     <aside className="sticky top-20 hidden h-[calc(100vh-6rem)] w-64 shrink-0 flex-col gap-1 lg:flex">
       <Shortcut to={`/people/${me.handle}`} icon={<Avatar actor={me} size="sm" ring link={false} />} label={me.name} />
@@ -240,6 +241,13 @@ function LeftRail({ me }: { me: Actor }) {
         icon={<span className="flex size-8 items-center justify-center rounded-full bg-[#1971c2] text-white"><Users className="size-4" /></span>}
         label="Friends"
       />
+      {likeMeters && (
+        <Shortcut
+          to="/relationships"
+          icon={<span className="flex size-8 items-center justify-center rounded-full bg-[#c2255c] text-white"><HeartHandshake className="size-4" /></span>}
+          label="Relationships"
+        />
+      )}
       <Shortcut
         to="/messages"
         icon={<span className="flex size-8 items-center justify-center rounded-full bg-[#2f9e44] text-white"><MessageCircle className="size-4" /></span>}

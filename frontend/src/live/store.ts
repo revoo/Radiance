@@ -16,9 +16,12 @@ export type LiveState = {
   openThread: string | null;
   /** World time minus this browser's clock, from the last heartbeat. */
   clockOffset: number;
+  /** Sims-style pulses over residents' avatars, by actor id; each change gets a new key so it animates again. */
+  pulses: Record<string, { delta: number; key: number }>;
 };
 
-let state: LiveState = { newPosts: 0, typing: {}, toasts: [], backfilling: false, openThread: null, clockOffset: 0 };
+let pulseKey = 0;
+let state: LiveState = { newPosts: 0, typing: {}, toasts: [], backfilling: false, openThread: null, clockOffset: 0, pulses: {} };
 const listeners = new Set<() => void>();
 
 function set(next: Partial<LiveState>) {
@@ -65,8 +68,18 @@ export const live = {
   setClockOffset(ms: number) {
     set({ clockOffset: ms });
   },
+  pulse(actorId: string, delta: number) {
+    const key = ++pulseKey;
+    set({ pulses: { ...state.pulses, [actorId]: { delta, key } } });
+    setTimeout(() => {
+      if (state.pulses[actorId]?.key !== key) return;
+      const pulses = { ...state.pulses };
+      delete pulses[actorId];
+      set({ pulses });
+    }, 2_000);
+  },
   reset() {
-    state = { newPosts: 0, typing: {}, toasts: [], backfilling: false, openThread: null, clockOffset: 0 };
+    state = { newPosts: 0, typing: {}, toasts: [], backfilling: false, openThread: null, clockOffset: 0, pulses: {} };
     listeners.forEach((l) => l());
   },
 };

@@ -83,3 +83,15 @@ describe("useRadianceStream", () => {
     vi.unstubAllGlobals();
   });
 });
+
+describe("meter.changed", () => {
+  it("pulses only when it says to, and refreshes what shows meters either way", () => {
+    const qc = new QueryClient();
+    const spy = vi.spyOn(qc, "invalidateQueries");
+    applyEvent(qc, "meter.changed", { actorId: "a", value: 12, delta: 3, pulse: false });
+    expect(live.get().pulses.a).toBeUndefined();
+    expect(spy).toHaveBeenCalledWith({ queryKey: keys.relationships });
+    applyEvent(qc, "meter.changed", { actorId: "a", value: 15, delta: 3, pulse: true });
+    expect(live.get().pulses.a?.delta).toBe(3);
+  });
+});

@@ -276,6 +276,10 @@ public final class NightlyBatch {
         .on(JobKinds.DM_SUMMARY, j -> maintenance.summarizeThread(j.refId()))
         .drain();
 
+    if (w.userId != null) {
+      lane.run(() -> sql.commit(new app.radiance.graph.RelationshipRepository(sql).snapshotMeters(new UnitOfWork(), w.date(now).toString(), w.userId)));
+    }
+
     int rendered = results.stream().mapToInt(Renderer.Result::rendered).sum();
     int fellBack = results.stream().mapToInt(Renderer.Result::fellBack).sum();
     long waiting = sql.queryOne("SELECT COUNT(*) AS n FROM job WHERE status IN ('WAITING', 'PENDING')"

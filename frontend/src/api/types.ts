@@ -57,7 +57,10 @@ export type Rail = {
 
 export type Page<T> = { items: T[]; nextCursor: string | null };
 
+export type Relationship = { actor: Actor; meter: number; trend: number | null; kind: string; friend: boolean };
+
 export type Me = {
+  likeMeters?: boolean;
   username: string;
   worldReady: boolean;
   onboarded: boolean;
@@ -90,6 +93,7 @@ export type RecapLine = {
 export type Recap = { since: number | null; lines: RecapLine[] };
 
 export type Person = {
+  meter?: number | null;
   actor: Actor;
   bio: string | null;
   employer: string | null;

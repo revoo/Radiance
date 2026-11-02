@@ -184,6 +184,33 @@ final class Reads {
         reactions.getOrDefault(r[0], Views.Reactions.NONE), replies);
   }
 
+  private Integer meter(String residentId) {
+    if (userId == null || residentId.equals(userId)) return null;
+    return sql.queryOne("SELECT affinity FROM relationship WHERE from_id = ? AND to_id = ?", List.of(residentId, userId),
+        r -> (int) Math.round(r.dbl("affinity"))).orElse(null);
+  }
+
+  /** Everyone's like-meter for R, highest first (SPEC §5.9). */
+  List<Views.Relationship> relationships(long worldTime) {
+    if (userId == null) return List.of();
+    String zone = sql.queryOne("SELECT timezone FROM world", List.of(), r -> r.str("timezone")).orElse("UTC");
+    var today = java.time.Instant.ofEpochMilli(worldTime).atZone(java.time.ZoneId.of(zone)).toLocalDate();
+    var oldest = new java.util.HashMap<String, Double>();
+    sql.query("SELECT actor_id, affinity FROM meter_snapshot WHERE day >= ? ORDER BY day", List.of(today.minusDays(7).toString()),
+        r -> new Object[] {r.str("actor_id"), r.dbl("affinity")}).forEach(x -> oldest.putIfAbsent((String) x[0], (Double) x[1]));
+    var mine = friends();
+    // everyone, including those who haven't formed a view of R yet: they sit at zero
+    return sql.query("SELECT a.id AS from_id, COALESCE(r.affinity, 0) AS affinity, COALESCE(r.kind, 'STRANGER') AS kind FROM actor a"
+        + " LEFT JOIN relationship r ON r.from_id = a.id AND r.to_id = ? WHERE a.kind = 'BOT' ORDER BY 2 DESC, a.id", List.of(userId),
+        r -> {
+          String id = r.str("from_id");
+          int meter = (int) Math.round(r.dbl("affinity"));
+          Double then = oldest.get(id);
+          return new Views.Relationship(actor(id), meter, then == null ? null : meter - (int) Math.round(then), r.str("kind"),
+              mine.contains(id));
+        });
+  }
+
   private Views.Link link(String postId) {
     return sql.queryOne("SELECT h.url, h.source, h.title FROM post p JOIN headline h ON h.id = p.headline_id WHERE p.id = ?",
         List.of(postId), r -> {
@@ -316,7 +343,7 @@ final class Reads {
     int mutual = (int) theirFriends.stream().filter(mine::contains).count();
     String birthday = row[4] == null || row[4].length() < 10 ? null : row[4].substring(5);
     return Optional.of(new Views.Person(actor(id.get()), row[0], row[1], row[2], row[3], birthday, kind,
-        mine.contains(id.get()), mutual, theirFriends.stream().map(this::actor).toList()));
+        mine.contains(id.get()), mutual, theirFriends.stream().map(this::actor).toList(), meter(id.get())));
   }
 
   // --------------------------------------------------------------------------------- notifications

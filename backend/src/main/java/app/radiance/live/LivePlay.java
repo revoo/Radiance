@@ -57,6 +57,9 @@ public final class LivePlay {
   private WeatherSources weatherSources;
   private HeadlineFeeds headlineFeeds;
   private long lastRefresh;
+  /** R's meters when last published, to spot what moved. */
+  private Map<String, Long> meters = Map.of();
+  private final Map<String, Long> meterMovedAt = new java.util.HashMap<>();
   private final java.util.concurrent.atomic.AtomicBoolean refreshing = new java.util.concurrent.atomic.AtomicBoolean();
 
   /** Something for the SPA's stream (SPEC §7 {@code GET /api/stream}). */
@@ -83,6 +86,8 @@ public final class LivePlay {
   private static final long AIR_EVERY = 10_000;
   /** News and weather during a session (SPEC §5.12); the first turn of a session past this counts as login's. */
   static final long REFRESH_EVERY = 3_600_000L;
+  /** How long a moved meter waits for a response to land before it goes out without a pulse. */
+  private static final long METER_HOLD = 15 * 60_000L;
   private static final long BROKE_WITHIN = 6 * 3_600_000L;
   private static final int MAX_TAKES_PER_REFRESH = 2;
 
@@ -257,6 +262,8 @@ public final class LivePlay {
   private void start(long wall) {
     sessionId = Ulid.next(wall, RandomSource.seeded(System.nanoTime()).derive("session"));
     sessionStart = wall;
+    meters = currentMeters();
+    meterMovedAt.clear();
     long seed = engine.locked(w -> w.seed);
     pacer = new Pacer(lib.pacing(), RandomSource.seeded(seed).derive("pacer:" + sessionId));
     sessionRng = RandomSource.seeded(seed).derive("session:" + sessionId);
@@ -585,7 +592,10 @@ public final class LivePlay {
     WorldEngine.Report r;
     int newPosts = 0;
     String userId = null;
+    var landed = new java.util.HashSet<String>();
+    boolean any = false;
     while ((r = aired.poll()) != null) {
+      any = true;
       if (userId == null) userId = engine.locked(w -> w.userId);
       var commentIds = new ArrayList<String>();
       for (String key : r.airedKeys()) {
@@ -602,9 +612,13 @@ public final class LivePlay {
           case "COMMENT" -> commentIds.add(id);
           case "DM" -> sql.queryOne("SELECT thread_id, sender_id FROM dm_message WHERE id = ? AND render_status = 'RENDERED'",
                   List.of(id), x -> new String[] {x.str("thread_id"), x.str("sender_id")})
-              .ifPresent(m -> emit("dm.message", Map.of("id", id, "threadId", m[0], "senderId", m[1])));
+              .ifPresent(m -> {
+                landed.add(m[1]);
+                emit("dm.message", Map.of("id", id, "threadId", m[0], "senderId", m[1]));
+              });
           case "REACTION" -> {
             var k = id.split(":", 3);
+            landed.add(k[2]);
             emit("reaction.changed", Map.of("targetType", k[0], "targetId", k[1], "actorId", k[2]));
           }
           default -> {}
@@ -613,16 +627,54 @@ public final class LivePlay {
       for (String id : commentIds) {
         sql.queryOne("SELECT post_id, author_id FROM comment WHERE id = ? AND render_status = 'RENDERED'", List.of(id),
             x -> new String[] {x.str("post_id"), x.str("author_id")})
-            .ifPresent(c -> emit("comment.aired", Map.of("id", id, "postId", c[0], "authorId", c[1])));
+            .ifPresent(c -> {
+              landed.add(c[1]);
+              emit("comment.aired", Map.of("id", id, "postId", c[0], "authorId", c[1]));
+            });
       }
       for (var n : r.notes()) {
         pacer.notify(new Pacer.Note(n.id(), n.kind(), n.actorId(), n.refType(), n.refId(), n.createdAt()));
       }
     }
+    if (any) publishMeters(landed, wall);
     if (newPosts > 0) {
       emit("feed.new", Map.of("count", newPosts));
       pacer.seen(wall);
     }
+  }
+
+  /**
+   * Meters for R that moved (SPEC §5.9). A resident's meter moves when they read what R wrote, before their response
+   * lands, so the change waits for that response and shows as its pulse. One with no response goes out silently.
+   */
+  private void publishMeters(Set<String> visible, long wall) {
+    for (var e : currentMeters().entrySet()) {
+      String id = e.getKey();
+      Long was = meters.get(id);
+      if (was == null || was.equals(e.getValue())) {
+        if (was == null) meters.put(id, e.getValue());
+        meterMovedAt.remove(id);
+        continue;
+      }
+      long since = meterMovedAt.computeIfAbsent(id, k -> wall);
+      boolean pulse = visible.contains(id);
+      if (!pulse && wall - since < METER_HOLD) continue;
+      emit("meter.changed", Map.of("actorId", id, "value", e.getValue(), "delta", e.getValue() - was, "pulse", pulse));
+      meters.put(id, e.getValue());
+      meterMovedAt.remove(id);
+    }
+  }
+
+  private Map<String, Long> currentMeters() {
+    return engine.locked(w -> {
+      var out = new java.util.HashMap<String, Long>();
+      if (w.userId == null) return out;
+      for (var b : w.residents()) {
+        var e = w.edgeOrNull(b.id, w.userId);
+        if (e != null) out.put(b.id, Math.round(e.affinity));
+      }
+      return out;
+    });
   }
 
   private void hook(long t, long wall) {

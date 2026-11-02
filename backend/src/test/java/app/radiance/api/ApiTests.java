@@ -268,4 +268,32 @@ class ApiTests {
   void theRailNeedsALogin() throws Exception {
     mvc.perform(get("/api/rail")).andExpect(status().isUnauthorized());
   }
+
+  @Test
+  @Order(11)
+  void aResidentsMeterShowsOnTheirProfileAndEveryoneIsListedByItWithATrend() throws Exception {
+    String me = sql.queryOne("SELECT to_id FROM relationship WHERE from_id IN (SELECT id FROM actor WHERE kind = 'BOT')"
+        + " AND to_id NOT IN (SELECT id FROM actor WHERE kind = 'BOT') LIMIT 1", java.util.List.of(), r -> r.str("to_id")).orElseThrow();
+    var rows = sql.query("SELECT r.from_id, a.handle FROM relationship r JOIN actor a ON a.id = r.from_id WHERE r.to_id = ?"
+        + " ORDER BY r.from_id LIMIT 2", java.util.List.of(me), r -> new String[] {r.str("from_id"), r.str("handle")});
+    String today = java.time.LocalDate.now(java.time.ZoneId.of("America/Chicago")).toString();
+    String long_ago = java.time.LocalDate.now(java.time.ZoneId.of("America/Chicago")).minusDays(40).toString();
+    writer.run(() -> sql.commit(new app.radiance.persistence.UnitOfWork()
+        .add("UPDATE relationship SET affinity = 90.4 WHERE from_id = ? AND to_id = ?", rows.get(0)[0], me)
+        .add("UPDATE relationship SET affinity = -95 WHERE from_id = ? AND to_id = ?", rows.get(1)[0], me)
+        .add("DELETE FROM meter_snapshot")
+        .add("INSERT INTO meter_snapshot (day, actor_id, affinity) VALUES (?, ?, 80)", today, rows.get(0)[0])
+        .add("INSERT INTO meter_snapshot (day, actor_id, affinity) VALUES (?, ?, 5)", long_ago, rows.get(1)[0])));
+
+    mvc.perform(get("/api/people/" + rows.get(0)[1]).with(R)).andExpect(jsonPath("$.meter").value(90));
+    mvc.perform(get("/api/me/relationships").with(R)).andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].actor.handle").value(rows.get(0)[1]))
+        .andExpect(jsonPath("$[0].meter").value(90))
+        .andExpect(jsonPath("$[0].trend").value(10))
+        .andExpect(jsonPath("$[-1:].actor.handle").value(rows.get(1)[1]))
+        .andExpect(jsonPath("$[-1:].meter").value(-95))
+        .andExpect(jsonPath("$[-1:].trend").value(org.hamcrest.Matchers.contains(org.hamcrest.Matchers.nullValue())));
+    mvc.perform(get("/api/me").with(R)).andExpect(jsonPath("$.likeMeters").value(true));
+    mvc.perform(get("/api/me/relationships")).andExpect(status().isUnauthorized());
+  }
 }

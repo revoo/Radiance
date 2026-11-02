@@ -26,8 +26,11 @@ class WorldController {
   private final WriterLane lane;
   private final LivePlay live;
   private final WorldProperties world;
+  private final boolean likeMeters;
 
-  WorldController(Sql sql, WriterLane lane, LivePlay live, WorldProperties world) {
+  WorldController(Sql sql, WriterLane lane, LivePlay live, WorldProperties world,
+      @org.springframework.beans.factory.annotation.Value("${radiance.ui.like-meters:true}") boolean likeMeters) {
+    this.likeMeters = likeMeters;
     this.sql = sql;
     this.lane = lane;
     this.live = live;
@@ -41,7 +44,12 @@ class WorldController {
         .orElse(0L) > 0;
     String user = reads.userId();
     return new Views.Me(principal.getName(), residents, user != null, user == null ? null : reads.actor(user),
-        world.networkName());
+        world.networkName(), likeMeters);
+  }
+
+  @GetMapping("/me/relationships")
+  List<Views.Relationship> relationships() {
+    return new Reads(sql, live).relationships(live.now());
   }
 
   @PostMapping("/session/heartbeat")

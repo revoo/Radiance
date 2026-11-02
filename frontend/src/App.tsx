@@ -6,6 +6,7 @@ import { useHeartbeat } from "./live/useHeartbeat.ts";
 import { useRadianceStream } from "./live/useRadianceStream.ts";
 import { FeedPage } from "./pages/FeedPage.tsx";
 import { FriendsPage } from "./pages/FriendsPage.tsx";
+import { RelationshipsPage } from "./pages/RelationshipsPage.tsx";
 import { LoginPage } from "./pages/LoginPage.tsx";
 import { MessengerPage } from "./pages/MessengerPage.tsx";
 import { NotificationsPage } from "./pages/NotificationsPage.tsx";
@@ -65,6 +66,7 @@ export default function App() {
         <Route path="/posts/:id" element={<PostPage me={actor} />} />
         <Route path="/people/:handle" element={<ProfilePage me={actor} />} />
         <Route path="/friends" element={<FriendsPage />} />
+        <Route path="/relationships" element={<RelationshipsPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/messages" element={<MessengerPage me={actor} />} />
         <Route path="/messages/:threadId" element={<MessengerPage me={actor} />} />

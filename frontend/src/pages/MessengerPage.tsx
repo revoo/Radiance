@@ -1,7 +1,8 @@
 import { ArrowLeft, MessagesSquare, Search, SendHorizontal, SquarePen } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { useConversation, useOpenThread, usePeople, useReadThread, useSendDm, useThreads } from "../api/queries.ts";
+import { useConversation, useMe, useOpenThread, usePeople, usePerson, useReadThread, useSendDm, useThreads } from "../api/queries.ts";
+import { LikeMeter } from "../ui/LikeMeter.tsx";
 import type { Actor, DmMessage, DmThread } from "../api/types.ts";
 import { live, useLive, useWorldNow } from "../live/store.ts";
 import { emojiOnly, fullTime, relativeTime } from "../ui/format.ts";
@@ -244,6 +245,7 @@ function Chat({ threadId, me }: { threadId: string; me: Actor }) {
           </Link>
           <span className="text-xs text-muted">{typing.length ? "typing…" : (them.occupation ?? `@${them.handle}`)}</span>
         </div>
+        <ThreadMeter them={them} />
       </header>
 
       <div className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-4" aria-live="polite">
@@ -345,5 +347,17 @@ export function MessengerPage({ me }: { me: Actor }) {
         </div>
       </div>
     </section>
+  );
+}
+
+/** The chat header's like-meter (SPEC §5.9). */
+function ThreadMeter({ them }: { them: Actor }) {
+  const meter = usePerson(them.handle).data?.meter;
+  const on = useMe().data?.likeMeters !== false;
+  if (!on || meter == null) return null;
+  return (
+    <div className="ml-auto">
+      <LikeMeter value={meter} name={them.name} compact />
+    </div>
   );
 }

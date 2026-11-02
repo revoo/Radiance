@@ -2,6 +2,7 @@ import { X } from "lucide-react";
 import { type ButtonHTMLAttributes, type ReactNode, useEffect, useRef } from "react";
 import { Link } from "react-router";
 import type { Actor } from "../api/types.ts";
+import { useLive } from "../live/store.ts";
 import { colorFor, initials } from "./format.ts";
 
 const SIZES = { xs: "size-6 text-[10px]", sm: "size-8 text-xs", md: "size-10 text-sm", lg: "size-14 text-lg", xl: "size-32 text-4xl" };
@@ -16,15 +17,25 @@ export function Avatar({ actor, size = "md", ring = false, link = true }: {
   ring?: boolean;
   link?: boolean;
 }) {
+  const pulse = useLive((s) => s.pulses[actor.id]);
   const a = colorFor(actor.id);
   const b = colorFor(actor.id + "~");
   const face = (
     <span
       aria-hidden="true"
-      className={`${SIZES[size]} inline-flex shrink-0 select-none items-center justify-center rounded-full font-semibold tracking-wide text-white`}
+      className={`${SIZES[size]} relative inline-flex shrink-0 select-none items-center justify-center rounded-full font-semibold tracking-wide text-white`}
       style={{ backgroundImage: `linear-gradient(135deg, ${a}, ${b})` }}
     >
       {initials(actor.name)}
+      {pulse && (
+        <span
+          key={pulse.key}
+          className={`pointer-events-none absolute -top-3 left-1/2 z-10 -translate-x-1/2 rounded-full bg-panel px-1.5 text-xs font-extrabold shadow ${pulse.delta > 0 ? "text-good" : "text-bad"}`}
+          style={{ animation: "float-up 1.8s ease-out forwards" }}
+        >
+          {pulse.delta > 0 ? `+${pulse.delta}` : `−${Math.abs(pulse.delta)}`}
+        </span>
+      )}
     </span>
   );
   const body = ring ? (

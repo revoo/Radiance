@@ -31,6 +31,11 @@ function describe(d: Data): string {
  */
 export function applyEvent(qc: QueryClient, name: string, d: Data, refresh = refreshPost) {
   switch (name) {
+    case "meter.changed":
+      if (d.pulse) live.pulse(d.actorId as string, d.delta as number);
+      void qc.invalidateQueries({ queryKey: keys.relationships });
+      void qc.invalidateQueries({ queryKey: ["person"] });
+      break;
     case "feed.new":
       live.addNewPosts((d.count as number) ?? 1);
       break;
@@ -91,6 +96,7 @@ const EVENTS = [
   "backfill.progress",
   "dm.message",
   "dm.seen",
+  "meter.changed",
 ];
 
 /** Subscribes to {@code /api/stream} while signed in; EventSource reconnects on its own. */
