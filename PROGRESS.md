@@ -3,12 +3,12 @@
 ## Resume here
 - Milestone: **M9 — Hosting on the Linode VPS** (rescoped, decision 19), branch `m9-hosting` (from `main` at
   e494e7f). R said go on 2026-11-02. **Nothing gets deployed or changed on the server without asking R.**
-- Current step: 2.
+- Current step: 3.
 - Half-done: nothing.
 
 ## M9 steps
 1. ✔ Inspect the server (read-only); decision 19; ADRs 0018 and 0019
-2. `prod` profile; the app serves the SPA; security for a public origin
+2. ✔ `prod` profile; the app serves the SPA; security for a public origin
 3. Docker image (build stages on the runner's platform, multi-arch runtime); GHCR in CI; image smoke test
 4. Backup job to R2 and the restore procedure; loud when the R2 keys are missing
 5. `deploy/`: compose file and Caddy site for `/opt/hosting`

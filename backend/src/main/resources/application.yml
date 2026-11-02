@@ -10,6 +10,9 @@ spring:
   mvc:
     problemdetails:
       enabled: true                    # errors as RFC 9457 problem details (SPEC §7)
+  web:
+    resources:
+      add-mappings: false              # api/SpaWebConfig serves the SPA
 
 server:
   servlet:

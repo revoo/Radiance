@@ -1,0 +1,12 @@
+# The server (ADR 0018): behind Caddy on one Docker host. Real LLM providers for whichever keys are
+# present; credentials are required (the app won't start without them); backups run and leave the box.
+server:
+  # Caddy terminates HTTPS: trust its X-Forwarded-* (only it can reach this container)
+  forward-headers-strategy: native
+  servlet:
+    session:
+      cookie:
+        secure: true
+radiance:
+  llm:
+    mode: live

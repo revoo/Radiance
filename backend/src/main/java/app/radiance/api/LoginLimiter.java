@@ -20,6 +20,7 @@ final class LoginLimiter extends OncePerRequestFilter {
 
   static final int MAX_FAILURES = 5;
   static final long WINDOW_MS = 5 * 60_000L;
+  static final int MAX_ADDRESSES = 10_000;
 
   private final Map<String, Deque<Long>> failures = new ConcurrentHashMap<>();
 
@@ -46,6 +47,8 @@ final class LoginLimiter extends OncePerRequestFilter {
   }
 
   void failed(HttpServletRequest req) {
+    // a public host sees many addresses once each: don't keep them forever
+    if (failures.size() >= MAX_ADDRESSES) forgetStale(System.currentTimeMillis());
     var q = failures.computeIfAbsent(req.getRemoteAddr(), k -> new ArrayDeque<>());
     synchronized (q) {
       q.addLast(System.currentTimeMillis());
@@ -55,6 +58,20 @@ final class LoginLimiter extends OncePerRequestFilter {
 
   void succeeded(HttpServletRequest req) {
     failures.remove(req.getRemoteAddr());
+  }
+
+  private void forgetStale(long now) {
+    failures.values().removeIf(q -> {
+      synchronized (q) {
+        prune(q, now);
+        return q.isEmpty();
+      }
+    });
+    if (failures.size() >= MAX_ADDRESSES) failures.clear();
+  }
+
+  int tracked() {
+    return failures.size();
   }
 
   private static void prune(Deque<Long> q, long now) {

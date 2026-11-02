@@ -67,8 +67,14 @@ class WebSecurityConfig {
             auth ->
                 auth.requestMatchers("/actuator/health", "/actuator/health/**", "/api/auth/login")
                     .permitAll()
+                    .requestMatchers("/api/**", "/internal/**", "/actuator/**")
+                    .authenticated()
+                    // everything else is the SPA's files and pages, which hold no data (SpaRoutingTests checks
+                    // that every controller stays under /api)
                     .anyRequest()
-                    .authenticated())
+                    .permitAll())
+        // no session for anonymous requests: on a public host, bots would otherwise fill the heap
+        .requestCache(cache -> cache.disable())
         .csrf(csrf -> csrf.spa())
         .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
         .addFilterBefore(limiter, UsernamePasswordAuthenticationFilter.class)
