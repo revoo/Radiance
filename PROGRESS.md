@@ -10,6 +10,8 @@
       only be measured once this is deployed. Real classification hasn't run without an LLM key: offline it's a fake.
 - **M11 merged (2026-11-02)**, see "M11 steps" below. R gave standing approval to merge when CI is green.
 - Rail redesign on `rail-polish` after M11: one sky card (clock, weather, forecast strip, animated skies), news rail with faces and heat.
+- Live Chicago cameras on the left rail (R's idea, ADR 0020): five hand-picked IDOT cameras, proxied and cached by the
+  server, on in `prod` only. To add or change one: `radiance.cameras.spots`, matching part of its `SnapShot` file name.
 - Next: **M12 — Media** (SPEC §12), on a new branch from `main`. **Don't start until R says go.**
 - To check next time: on the server, `headline` should have real rows and `weather_hour` real kinds since the first batch
   or login after M10 (the first check found none, as nothing had refreshed yet); and the batch's new script window (09:00

@@ -312,6 +312,14 @@ body {
     opacity: 0.35;
   }
 }
+.cam-in {
+  animation: cam-in 0.9s ease-out;
+}
+@keyframes cam-in {
+  from {
+    opacity: 0;
+  }
+}
 .weather-icon {
   animation: weather-bob 5s ease-in-out infinite;
 }

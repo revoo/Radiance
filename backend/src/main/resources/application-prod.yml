@@ -8,6 +8,8 @@ server:
       cookie:
         secure: true
 radiance:
+  cameras:
+    enabled: true
   news:
     source: rss
   weather:

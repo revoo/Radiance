@@ -38,6 +38,16 @@ radiance:
     username: ${RADIANCE_USERNAME:}
     password-bcrypt: ${RADIANCE_PASSWORD_BCRYPT:}
     dev-login: false
+  cameras:                             # ADR 0020; on in prod. Picked by eye, 2026-11-02
+    enabled: false
+    dataset: https://services2.arcgis.com/aIrBD8yn1TDTEXoz/arcgis/rest/services/TrafficCamerasTM_Public/FeatureServer/0/query
+    image-origin: https://cctv.travelmidwest.com
+    spots:
+      - { id: loop,    name: "The Loop from UIC",        match: "Cook__I-290_4187397" }
+      - { id: river,   name: "River West skyline",       match: "Cook_NWB_I-90_4189262" }
+      - { id: circle,  name: "The Circle Interchange",   match: "Cook__I-290_4187371" }
+      - { id: lake,    name: "Toward the lake on I-55",  match: "Cook_WB_I-55_4184816" }
+      - { id: ike,     name: "The Ike and the Blue Line", match: "Cook_WB_I-290_4187610" }
   ui:
     like-meters: true                  # Sims-style meters and pulses (SPEC §5.9); false for full immersion
   weather:

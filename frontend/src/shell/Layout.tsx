@@ -5,6 +5,7 @@ import { useBackups, useLogout, useMe, useNotifications, usePeople, useRail, use
 import type { Actor } from "../api/types.ts";
 import { live, useLive, worldNow } from "../live/store.ts";
 import { Avatar, Card } from "../ui/kit.tsx";
+import { LiveCams } from "./LiveCams.tsx";
 import { TalkedAbout, WeatherCard, WeatherChip, WeatherCredit } from "./Rail.tsx";
 
 type Theme = "system" | "light" | "dark";
@@ -263,7 +264,8 @@ function LeftRail({ me }: { me: Actor }) {
         icon={<span className="flex size-8 items-center justify-center rounded-full bg-[#5f3dc4] text-white"><Activity className="size-4" /></span>}
         label="Pacing monitor"
       />
-      <p className="mt-auto px-3 text-xs text-faint">A simulated Chicagoland. Everyone here but you is a resident.</p>
+      <LiveCams />
+      <p className="mt-auto px-3 pt-2 text-xs text-faint">A simulated Chicagoland. Everyone here but you is a resident.</p>
     </aside>
   );
 }

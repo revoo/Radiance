@@ -11,6 +11,7 @@ import { api, ApiError } from "./client.ts";
 import type {
   Comment,
   FriendRequest,
+  LiveCamera,
   Rail,
   Relationship,
   DmConversation,
@@ -85,6 +86,15 @@ export function useAnswerFriendRequest() {
 
 export function useRelationships() {
   return useQuery({ queryKey: keys.relationships, queryFn: () => api<Relationship[]>("/api/me/relationships") });
+}
+
+export function useCameras() {
+  return useQuery({
+    queryKey: ["cameras"],
+    queryFn: () => api<LiveCamera[]>("/api/cameras"),
+    staleTime: 60_000,
+    refetchInterval: 2 * 60_000,
+  });
 }
 
 export function useRail() {

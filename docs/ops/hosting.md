@@ -139,6 +139,12 @@ If a feed or Open-Meteo is down, the app logs a warning and carries on: other fe
 back to simulated hours until the next good fetch. Without an LLM key, headlines get a rough placeholder
 classification, and with one, classifying costs about 4 calls per batch. If a budget runs out, headlines wait.
 
+## Live cameras
+
+The left rail shows public Illinois DOT cameras (ADR 0020), with no key. The server fetches them, at most once a minute
+per camera. They hide when the world's clock has moved off real time, and if the source is down the tile just goes
+away. To turn them off, set `radiance.cameras.enabled` to false. Keep the image credit on the tile: the license needs it.
+
 ## Backups
 
 Every night at 08:30 UTC, the app takes a consistent snapshot (`VACUUM INTO`), checks it, gzips it and uploads

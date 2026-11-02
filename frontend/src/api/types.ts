@@ -50,6 +50,8 @@ export type Post = {
 /** A news take's link card. The url is null unless it's a real web link. */
 export type PostLink = { url: string | null; source: string; title: string };
 
+export type LiveCamera = { id: string; name: string; takenAt: number };
+
 export type TalkedStory = {
   title: string;
   source: string;

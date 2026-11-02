@@ -301,4 +301,23 @@ class ApiTests {
     mvc.perform(get("/api/me").with(R)).andExpect(jsonPath("$.likeMeters").value(true));
     mvc.perform(get("/api/me/relationships")).andExpect(status().isUnauthorized());
   }
+
+  @Test
+  @Order(12)
+  void camerasAreOffUntilConfigured_AndNeedALogin() throws Exception {
+    mvc.perform(get("/api/cameras").with(R)).andExpect(status().isOk()).andExpect(jsonPath("$").isEmpty());
+    mvc.perform(get("/api/cameras/loop/image").with(R)).andExpect(status().isNotFound());
+    mvc.perform(get("/api/cameras")).andExpect(status().isUnauthorized());
+    mvc.perform(get("/api/cameras/loop/image")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void camerasHideWhenTheWorldsClockHasMovedOffRealTime() {
+    long wall = 1_000_000_000L;
+    assertThat(CamerasController.inRealTime(wall, wall)).isTrue();
+    assertThat(CamerasController.inRealTime(wall + CamerasController.MAX_DRIFT, wall)).isTrue();
+    assertThat(CamerasController.inRealTime(wall - CamerasController.MAX_DRIFT, wall)).isTrue();
+    assertThat(CamerasController.inRealTime(wall + CamerasController.MAX_DRIFT + 1, wall)).as("fast-forwarded").isFalse();
+    assertThat(CamerasController.inRealTime(wall - CamerasController.MAX_DRIFT - 1, wall)).as("paused or behind").isFalse();
+  }
 }
