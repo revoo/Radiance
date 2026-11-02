@@ -3,7 +3,7 @@
 ## Resume here
 - Milestone: **M9 — Hosting on the Linode VPS** (rescoped, decision 19), branch `m9-hosting` (from `main` at
   e494e7f). R said go on 2026-11-02. **Nothing gets deployed or changed on the server without asking R.**
-- Current step: 3.
+- Current step: 3 (image built only in CI: check the `image` job).
 - Half-done: nothing.
 
 ## M9 steps

@@ -119,3 +119,7 @@ val liveTest by tasks.registering(Test::class) {
 tasks.bootRun {
     jvmArgs(nativeAccess)
 }
+
+tasks.bootJar {
+    archiveFileName = "radiance.jar" // the Docker image's name for it
+}
