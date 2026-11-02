@@ -7,7 +7,9 @@
   - Done: `RssFeeds` (parse, safe XML, dedupe; not wired in yet); batch retry delay; `OpenMeteoWeather` wired into the batch (`radiance.weather.source`: fake by default,
     open-meteo in prod; a failed call falls back to FakeWeather, and fake hours never replace real ones).
   - Before deploying M10: the "Weather data by Open-Meteo.com" footer must ship with real weather (CC BY 4.0).
-  - Left: feed list in config; `headline-classify`; selection on real headlines; ingest
+  - Feeds: all 13 in `radiance.news.sources` parsed live (532 stories, 511 after dedupe). The Tribune (403) and Daily
+    Herald (empty) have no usable feed; Google News · Chicago stands in. Google items carry no snippet.
+  - Left: read that config; ingest in the batch; `headline-classify`; selection on real headlines; ingest
     hourly in live play; live takes; debates; link cards; "talked about" rail; weather refresh at login and hourly;
     weather chip and attribution; the M10 AC tests. Nothing deployed from this branch yet.
 - Half-done: nothing.

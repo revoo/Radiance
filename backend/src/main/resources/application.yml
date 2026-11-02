@@ -38,6 +38,21 @@ radiance:
     username: ${RADIANCE_USERNAME:}
     password-bcrypt: ${RADIANCE_PASSWORD_BCRYPT:}
     dev-login: false
+  news:                                # SPEC §5.12; every feed checked by parsing it live, 2026-11-02. Not read yet.
+    sources:
+      - { name: "Google News · Top (US)", url: "https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en" }
+      - { name: "Google News · Nation",   url: "https://news.google.com/rss/headlines/section/topic/NATION?hl=en-US&gl=US&ceid=US:en" }
+      - { name: "Google News · World",    url: "https://news.google.com/rss/headlines/section/topic/WORLD?hl=en-US&gl=US&ceid=US:en" }
+      - { name: "Google News · Chicago",  url: "https://news.google.com/rss/search?q=Chicago,+IL&hl=en-US&gl=US&ceid=US:en" }
+      - { name: "Block Club Chicago",     url: "https://blockclubchicago.org/feed/" }
+      - { name: "Chicago Sun-Times",      url: "https://chicago.suntimes.com/rss/index.xml" }
+      - { name: "WBEZ",                   url: "https://www.wbez.org/rss" }
+      - { name: "NPR",                    url: "https://feeds.npr.org/1001/rss.xml" }
+      - { name: "The Guardian US",        url: "https://www.theguardian.com/us-news/rss" }
+      - { name: "The Hill",               url: "https://thehill.com/feed/" }
+      - { name: "Fox News",               url: "https://moxie.foxnews.com/google-publisher/latest.xml" }
+      - { name: "New York Post",          url: "https://nypost.com/feed/" }
+      - { name: "BBC World",              url: "https://feeds.bbci.co.uk/news/world/rss.xml" }
   weather:
     source: fake                       # open-meteo in prod; tests and offline never call it
     latitude: 41.88                    # the Loop
