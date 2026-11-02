@@ -8,18 +8,11 @@
       empty two-day window. `NewsAcceptanceTests` allows that one, which is looser than the AC. Recheck on real news.
     - "Over a week of real headlines": the 20-30% and region split hold on fixtures (`FeelBandsTests`). A real week can
       only be measured once this is deployed. Real classification hasn't run without an LLM key: offline it's a fake.
-  - Flaky once on Windows: `LivePlayTests.responsesThePacerNeverReleasedStillAirLater` failed in teardown ("Failed to
-    close extension context") when a render outlived the test; passed 6 of 6 alone. Not chased down.
-- **M11 in progress on `m11-you`** (R said go; token budget is tight, so small green steps). Latest commit is green locally.
-  - Done: like-meters (`GET /api/me/relationships`, `meter` on profiles, `meter.changed` with pulses, nightly
-    `meter_snapshot`, `ui.like-meters`, `LikeMeter`, the Relationships page, profile and chat header); friend requests
-    both ways (`FriendsController`, decided in 3-12 s, pending ones looked at again each session); backlash and AC tests
-    (`YouInTheWorldTests`, `LivePlayTests`, `FriendRequestTests`); new `Persona.FLIRTY`.
-  - Bugs found and fixed: same-gender flirting added attraction (`Airing.move`); replies to R's flirty comments skipped
-    the faithfulness ladder (`Stances.answerToFlirt`).
-  - Left: R's own @mentions drawing a response from whoever he names (`POST /api/posts` takes no mentions yet; residents'
-    mentions of R already notify); hover cards (none exist yet, so no meter on them); friend-request deltas from
-    `relationship-deltas.yaml` aren't applied; reciprocity is only implicit, through affinity. Then CI, merge, deploy.
+- **M11 built on `m11-you`** (see "M11 steps" below). R gave standing approval to merge when CI is green.
+- Next: **M12 — Media** (SPEC §12), on a new branch from `main`. **Don't start until R says go.**
+- To check next time: on the server, `headline` should have real rows and `weather_hour` real kinds since the first batch
+  or login after M10 (the first check found none, as nothing had refreshed yet); and the batch's new script window (09:00
+  planning a full day, 11:00 planning 0).
 - Half-done: nothing.
 - The live world is a test world, and R will nuke it: acceptance testing comes later, with real LLM keys, on a
   fresh world (`docs/ops/hosting.md`, "Real prose"). The declarative `hosting` repo is deferred until R asks.
@@ -37,6 +30,16 @@
   `./gradlew bootRun --args='--spring.profiles.active=offline'` and `cd frontend && npm run dev`.
 - Open for tuning (from M7): a post of R's right after onboarding draws ~3 reactions and under one comment
   inside the 5-minute burst; `user-salience` and `theta_comment` are the knobs. Real voices need keys.
+
+## M11 steps (all ✔)
+1. ✔ Like-meters: `GET /api/me/relationships`, `meter` on profiles, nightly `meter_snapshot`, `ui.like-meters`.
+2. ✔ Pulses: a meter moves when a resident reads what R wrote, so the change waits for their response and shows as its pulse (`LivePlay.publishMeters`); with no response in 15 minutes it goes out silently.
+3. ✔ UI: `LikeMeter`, the Relationships page, profile, chat header, hover cards (`PersonHover`, on every `Name`).
+4. ✔ Friend requests both ways (`FriendsController`): R's decided in 3-12 s, pending ones looked at again each session; residents with familiarity 40+ and a meter of 25+ ask, one per refresh; deltas from `relationship-deltas.yaml`.
+5. ✔ R's @mentions: parsed from the text, and whoever he names answers unless their meter is -50 or lower (`UserActions.answerMentions`). `mentions[]` in `POST /api/posts` is ignored: the text is the source.
+6. ✔ Reciprocity was already in `Planner.utility` (`wRecip`); now tested, as is tag hysteresis (`ImpressionTagTests`).
+7. ✔ AC tests: `YouInTheWorldTests` (combative, flirty, new `Persona.FLIRTY`), `LivePlayTests` (pulses, a pretentious comment), checked in the browser on the offline profile.
+8. ✔ Bugs fixed, each with a regression test: same-gender flirting added attraction (`Airing.move`); replies to R's flirty comments skipped the faithfulness ladder (`Stances.answerToFlirt`); the flaky `LivePlayTests` teardown, from background work holding the database open on Windows (`LivePlay.awaitIdle`).
 
 ## M10 steps (all ✔ unless noted)
 1. ✔ A failed batch waits 15 minutes before trying again (`BatchScheduler.FAILED_RETRY`).
