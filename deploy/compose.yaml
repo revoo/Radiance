@@ -1,6 +1,8 @@
-# Radiance on the server (ADR 0018). Lives at /opt/hosting/radiance/compose.yaml and is included from
-# /opt/hosting/compose.yaml, so it's part of the `hosting` project and its default network: Caddy reaches
-# it as radiance:8080, and it publishes no ports. See docs/ops/hosting.md.
+# Radiance on the server (ADR 0018). Lives at /opt/hosting/radiance/compose.yaml. It's its own Compose
+# project, so updating it touches nothing else, and it joins the hosting project's network: the shared Caddy
+# reaches it as radiance:8080, and it publishes no ports. See docs/ops/hosting.md.
+name: radiance
+
 services:
   radiance:
     image: ghcr.io/revoo/radiance:${RADIANCE_TAG:-main}
@@ -20,3 +22,8 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+networks:
+  default:
+    name: hosting_default
+    external: true

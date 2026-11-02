@@ -1,12 +1,9 @@
 # Progress
 
 ## Resume here
-- Milestone: **M9 — Hosting on the Linode VPS** (decision 19), branch `m9-hosting`. **All build steps done;
-  nothing is deployed.** No deploy or server change without asking R; don't start a second Caddy or restart it
-  without asking. R adds the R2 keys next (tomorrow, as of 2026-11-02).
-- To deploy: `docs/ops/hosting.md`, after `main` is pushed (that's what publishes the image). Needs R: a merge
-  into `main`, the root-owned `/opt/hosting/compose.yaml` edit (no sudo for `claude`), the password hash and
-  `.env`, and an OK for the Caddy site and reload.
+- Milestone: **M9 — Hosting on the Linode VPS** (decision 19), branch `m9-hosting`. Build steps done; deploying.
+  R allowed server changes on 2026-11-02 while it runs no production load ("just be careful"): back up what's
+  touched, validate first, a Caddy reload but no restart and no second Caddy. R adds the R2 keys next.
 - Half-done: nothing.
 
 ## M9 steps (all ✔)
@@ -283,7 +280,7 @@ Resolutions of spec issues raised at kickoff. Each gets an ADR when its mileston
     Cloudflare plan and the brief Oracle plan (ADR 0018). `radiance.enigmatica.app`, Debian 13 x86_64, 4 GB
     RAM, 2 CPUs, 80 GB. Docker and a shared Caddy run from `/opt/hosting`; Radiance goes in
     `/opt/hosting/radiance` and joins that Caddy. SQLite in production, GHCR images built in CI, backups to
-    R2 (ADR 0019). No deploy or server change without asking R. M9's new AC: with R's computer off, the
+    R2 (ADR 0019). M9's new AC: with R's computer off, the
     nightly batch runs and R opens the app on his phone to a ready day; the server is never the only
     copy of the database, and a restore has been tested.
 

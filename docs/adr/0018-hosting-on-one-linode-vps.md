@@ -10,8 +10,8 @@ Debian 13 on x86_64 with 4 GB of RAM, 2 CPUs and 80 GB of disk, with Docker and 
 running from `/opt/hosting`. `radiance.enigmatica.app` is on Cloudflare DNS, proxied.
 
 ## Decision
-- **One always-on container** per app, in the `hosting` Docker network. Radiance lives in
-  `/opt/hosting/radiance`: its compose file, `.env` and `data/`.
+- **One always-on container** per app. Radiance is its own Compose project in `/opt/hosting/radiance` (its compose
+  file, `.env` and `data/`), joined to the shared `hosting_default` network, so updating it touches nothing else.
 - **SQLite on local disk is the production database.** No D1, Worker, `/sql/batch` gateway or `D1Sql`.
   The `Sql` port and `JdbcSql` stay as they are, and so do the D1-friendly SQL rules: they cost little and
   keep the door open.
@@ -19,7 +19,7 @@ running from `/opt/hosting`. `radiance.enigmatica.app` is on Cloudflare DNS, pro
   and ships no second Caddy. Caddy's mounts stay untouched, so **the app serves the SPA itself** from
   the jar: the same origin for pages, API and cookies.
 - **Images are built in CI and pulled.** GitHub Actions publishes `ghcr.io/revoo/radiance` on pushes to
-  `main`. The server never builds: Gradle and npm use more memory than the app. Build stages run on the
+  `main` and milestone branches, tagged by branch and commit. The server never builds: Gradle and npm use more memory than the app. Build stages run on the
   CI runner's own architecture and only the runtime stage is per-platform, so `linux/amd64` and
   `linux/arm64` both stay cheap and safe.
 - **The nightly batch runs in-process** on the existing scheduler with overdue detection, inside a
