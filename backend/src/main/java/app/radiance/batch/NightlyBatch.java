@@ -63,6 +63,7 @@ public final class NightlyBatch {
   private static final Logger log = LoggerFactory.getLogger(NightlyBatch.class);
   static final long HOUR = 3_600_000L;
   static final long DAY = 24 * HOUR;
+  static final long SAME_NIGHT = 12 * HOUR;
 
   private final Sql sql;
   private final SqlAdmin admin;
@@ -114,6 +115,18 @@ public final class NightlyBatch {
       if (n != null) best = Math.min(best, n.toInstant().toEpochMilli());
     }
     return best == Long.MAX_VALUE ? wallMs + DAY : best;
+  }
+
+  /**
+   * The first run of the next night, wall time. A run soon after another only finishes that night's work
+   * (SPEC §5.1), so a script has to reach past it. With no such gap in the schedule, it's just the next run.
+   */
+  public long nextNight(long wallMs) {
+    long first = nextRun(wallMs);
+    for (long run = first; run <= wallMs + 2 * DAY; run = nextRun(run)) {
+      if (lastRun(run - 1) <= run - SAME_NIGHT) return run;
+    }
+    return first;
   }
 
   /** The most recent scheduled run at or before {@code wallMs}, wall time. */
@@ -210,7 +223,7 @@ public final class NightlyBatch {
     // 4–5. the next script, at the fidelity R's idle time calls for
     var fidelity = Fidelities.forIdle(w.lastSessionAt, now, engine.knobs());
     long from = Math.max(now, scriptedUntil());
-    long to = nextRun(wallStart) + offset + (long) (engine.knobs().scriptSlackHours() * HOUR);
+    long to = nextNight(wallStart) + offset + (long) (engine.knobs().scriptSlackHours() * HOUR);
     String hash;
     var usable = headlines.stream().filter(h -> h.publishedAt() <= now).toList();
     if (from < to) {

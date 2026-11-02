@@ -607,7 +607,7 @@ Validation is a safety net for the cases where live play changed something the s
 2. Fetch and classify headlines (§5.12).
 3. `advanceTo(now)`; if the script ran out before now (missed nights), backfill the gap first.
 4. Pick the fidelity from R's idle time (below).
-5. **Write the next script:** copy the committed world, apply the not-yet-aired rest of the current script to the copy, then plan slices from `scripted_until` to the next scheduled batch plus `script-slack` (default 6 h, so a failed run still leaves content). Intents that land past the end go to `scheduled_intent` for the next run.
+5. **Write the next script:** copy the committed world, apply the not-yet-aired rest of the current script to the copy, then plan slices from `scripted_until` to the next night's first scheduled batch plus `script-slack` (default 6 h, so a failed run still leaves content). Intents that land past the end go to `scheduled_intent` for the next run.
 6. **Render** in air-time order (§5.10), generate images (§5.13), and pre-render recap lines for important events (§5.14).
 7. Maintenance: memory compaction, and relationship and impression summaries.
 8. Write the `batch_run` report and release the lease.

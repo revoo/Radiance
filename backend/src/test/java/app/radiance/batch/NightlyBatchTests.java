@@ -24,6 +24,7 @@ import app.radiance.sim.WorldEngine;
 import app.radiance.world.genesis.SeedImporter;
 import app.radiance.world.genesis.SkeletonGenerator;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,7 +39,8 @@ class NightlyBatchTests {
 
   static final ContentLibrary LIB = ClasspathContent.load(List.of(
       new ContentProperties.BlacklistEntry("pregnancy", List.of("pregnant"))));
-  static final long DAY = 86_400_000L;
+  static final long HOUR = 3_600_000L;
+  static final long DAY = 24 * HOUR;
   static final List<String> CRONS = List.of("0 9 * * *", "0 11 * * *");
 
   @TempDir Path dir;
@@ -101,6 +103,61 @@ class NightlyBatchTests {
     assertThat(count("SELECT COUNT(*) AS n FROM post")).isEqualTo(posts);
     assertThat(meter.totals().values().stream().mapToInt(t -> t.calls).sum()).isEqualTo(calls);
     assertThat(count("SELECT COUNT(*) AS n FROM batch_run WHERE status = 'DONE'")).isEqualTo(2);
+  }
+
+  /** Regression: the 09:00 run scripted only as far as 11:00's slack, leaving the night's work to the second run. */
+  @Test
+  void theFirstRunOfTheNightScriptsTheWholeDayAndTheSecondFindsNothingToDo() {
+    long now = db.clock.nowMs();
+    long nine = now - now % DAY + 9 * HOUR;
+    if (nine <= now) nine += DAY;
+    var scheduler = new BatchScheduler(batch(offline(), db.holder), db.sql, db.holder, db.clock, false);
+
+    db.clock.set(nine + 53_000);
+    assertThat(scheduler.tick()).isTrue();
+    long offset = db.sql.queryOne("SELECT time_offset_ms AS o FROM world", List.of(), r -> r.lng("o")).orElseThrow();
+    long reach = nine + DAY + 6 * HOUR + offset;
+    assertThat(scriptedUntil()).as("past tomorrow's first run, by the slack").isEqualTo(reach);
+    long posts = count("SELECT COUNT(*) AS n FROM post");
+
+    db.clock.set(nine + 2 * HOUR + 53_000);
+    assertThat(scheduler.tick()).as("the second cron still checks in").isTrue();
+    assertThat(scriptedUntil()).isEqualTo(reach);
+    assertThat(count("SELECT COUNT(*) AS n FROM post")).isEqualTo(posts);
+    assertThat(count("SELECT COUNT(*) AS n FROM batch_run WHERE status = 'DONE' AND items_planned = 0 AND items_rendered = 0"))
+        .as("the second run planned and rendered nothing").isEqualTo(1);
+    assertThat(scheduler.overdue()).isFalse();
+  }
+
+  @Test
+  void theNextNightSkipsRunsThatOnlyFinishThisOne() {
+    var batch = batch(offline(), db.holder);
+    long nine = Instant.parse("2026-11-02T09:00:00Z").toEpochMilli();
+    long tomorrow = nine + DAY;
+    assertThat(batch.nextNight(nine - 7 * HOUR)).as("before tonight's first run").isEqualTo(nine);
+    assertThat(batch.nextNight(nine)).as("at the first run").isEqualTo(tomorrow);
+    assertThat(batch.nextNight(nine + HOUR)).as("between the two").isEqualTo(tomorrow);
+    assertThat(batch.nextNight(nine + 2 * HOUR)).as("at the second run").isEqualTo(tomorrow);
+    assertThat(batch.nextNight(nine + 14 * HOUR)).as("late in the evening").isEqualTo(tomorrow);
+  }
+
+  @Test
+  void theNextNightOnOtherSchedules() {
+    long nine = Instant.parse("2026-11-02T09:00:00Z").toEpochMilli();
+    assertThat(withCrons("0 9 * * *").nextNight(nine)).as("one run a night").isEqualTo(nine + DAY);
+    assertThat(withCrons("0 9 * * *", "0 21 * * *").nextNight(nine)).as("two far apart are two nights")
+        .isEqualTo(nine + 12 * HOUR);
+    assertThat(withCrons("0 * * * *").nextNight(nine)).as("no gap: the next run, not a hang").isEqualTo(nine + HOUR);
+    assertThat(withCrons().nextNight(nine)).as("no schedule").isEqualTo(nine + DAY);
+  }
+
+  NightlyBatch withCrons(String... crons) {
+    return new NightlyBatch(db.sql, db.admin, db.lane, db.holder, db.clock, LIB, engine, writer, offline(), "Radiance",
+        List.of(crons), true);
+  }
+
+  long scriptedUntil() {
+    return db.sql.queryOne("SELECT scripted_until AS s FROM world", List.of(), r -> r.lng("s")).orElseThrow();
   }
 
   /** Dies like a killed process: an Error isn't a job failure. */

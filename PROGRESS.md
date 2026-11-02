@@ -11,10 +11,8 @@
   Linode free trial, and R2 must work before the move; the $5/month target waits for that purchase).
 - Proven 2026-11-02: the nightly batch and the backup ran on the server with R's computer off. Still to prove: a
   real R2 upload and restore once the keys are in, and real prose in the batch (both runs so far used FakeLlm).
-- Open bug, not fixed: `NightlyBatch` sets `script_to` from `nextRun()`, the next cron of either kind, so the 09:00
-  run scripts only to 17:00 (2 hours) and the 11:00 run scripts the other 22 (`batch_run` rows, 2026-11-02). The
-  docs say the second run "does nothing", and the 6-hour slack doesn't protect a failed 11:00 run: the script ends at
-  17:00 UTC, not 15:00 the next day. `NightlyBatchTests` reruns without moving the clock, which hides it.
+- Fixed on `m9-hosting`, not yet on `main`: the 09:00 run scripted only 2 hours, leaving the rest to the 11:00 run,
+  because the window ended at the next cron of either kind. It now ends at the next night's first run plus the slack.
 - Server rule from R (2026-11-02): changes allowed while there's no production load, carefully; don't duplicate
   what's there. One shared Caddy routes to all app containers: graceful reloads only, no second Caddy.
 - To play offline: `./gradlew genesis --args='--seed 7 --import' -Pprofile=offline` (once), then
