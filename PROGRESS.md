@@ -3,18 +3,17 @@
 ## Resume here
 - **M9 accepted by R (2026-11-02) and merged**: `main` fast-forwarded to `m9-hosting`. Live at
   https://radiance.enigmatica.app, on image `:main`.
-- **M10 in progress on `m10-news`** (R said go, 2026-11-02; token budget is tight, so small green steps).
-  - Done: `RssFeeds` (parse, safe XML, dedupe; not wired in yet); batch retry delay; `OpenMeteoWeather` wired into the batch (`radiance.weather.source`: fake by default,
-    open-meteo in prod; a failed call falls back to FakeWeather, and fake hours never replace real ones).
-  - Before deploying M10: the "Weather data by Open-Meteo.com" footer must ship with real weather (CC BY 4.0).
-  - Feeds: all 13 in `radiance.news.sources` parsed live (532 stories, 511 after dedupe). The Tribune (403) and Daily
-    Herald (empty) have no usable feed; Google News · Chicago stands in. Google items carry no snippet.
-  - Done too: real headlines in the batch (ingest top 12 per feed, classify, select; `radiance.news.source`: fixtures by
-    default, rss in prod). Flaky once on Windows: `LivePlayTests.responsesThePacerNeverReleasedStillAirLater` failed in
-    teardown ("Failed to close extension context") when a render outlived the test; passed 6 of 6 alone.
-  - Left: ingest
-    hourly in live play; live takes; debates; link cards; "talked about" rail; weather refresh at login and hourly;
-    weather chip and attribution; the M10 AC tests. Nothing deployed from this branch yet.
+- **M10 built on `m10-news`, waiting for R's review and merge.** Not merged, not deployed. Don't start M11 until R
+  says go.
+  - What's in it is listed under "M10 steps" below. Prod reads real feeds and real weather (`radiance.news.source`,
+    `radiance.weather.source`); everything else defaults to fixtures and fake weather, and never calls out.
+  - AC not fully proven, for R to know:
+    - Debates: one every two days holds on average (25 in a simulated month), but seed 42 of fixture news leaves one
+      empty two-day window. `NewsAcceptanceTests` allows that one, which is looser than the AC. Recheck on real news.
+    - "Over a week of real headlines": the 20-30% and region split hold on fixtures (`FeelBandsTests`). A real week can
+      only be measured once this is deployed. Real classification hasn't run without an LLM key: offline it's a fake.
+  - Flaky once on Windows: `LivePlayTests.responsesThePacerNeverReleasedStillAirLater` failed in teardown ("Failed to
+    close extension context") when a render outlived the test; passed 6 of 6 alone. Not chased down.
 - Half-done: nothing.
 - The live world is a test world, and R will nuke it: acceptance testing comes later, with real LLM keys, on a
   fresh world (`docs/ops/hosting.md`, "Real prose"). The declarative `hosting` repo is deferred until R asks.
@@ -32,6 +31,17 @@
   `./gradlew bootRun --args='--spring.profiles.active=offline'` and `cd frontend && npm run dev`.
 - Open for tuning (from M7): a post of R's right after onboarding draws ~3 reactions and under one comment
   inside the 5-minute burst; `user-salience` and `theta_comment` are the knobs. Real voices need keys.
+
+## M10 steps (all ✔ unless noted)
+1. ✔ A failed batch waits 15 minutes before trying again (`BatchScheduler.FAILED_RETRY`).
+2. ✔ `OpenMeteoWeather`, in the batch; fake hours never replace real ones (`saveKeepingReal`). Snowfall is in inches with `precipitation_unit=inch`, checked against the live API.
+3. ✔ `RssFeeds`: RSS and Atom, entities refused, responses capped, dedupe by URL and normalized title. 13 feeds parsed live on 2026-11-02 (532 stories, 511 after dedupe). The Tribune (403) and Daily Herald (empty) have no usable feed; Google News · Chicago stands in.
+4. ✔ `HeadlineIngest` (top 12 per feed, which bounds the cost) and `HeadlineClassifier` (batches of 40, output checked here, budget pauses leave headlines for later).
+5. ✔ Hourly news and weather in a session, off the loop thread; `Planner.liveTakes`, two takes at most per refresh, from online residents.
+6. ✔ Link cards, `GET /api/rail`, the weather chip, "Talked about", the Open-Meteo credit on every page.
+7. ✔ `Planner.backlash`: a joke on a tragedy draws anger and replies, for residents and for R (`humor` ≥ 0.5). New rule `backlash_comment`.
+8. ✔ More debates: readers who oppose a controversial take are likelier to answer and disagree (`OPPOSED_ENGAGE`, `OPPOSED_PULL`, `NEWS_DEBATE_PULL`). A month went from 3 threads to 25; above these values the troll band breaks.
+9. Partly: AC tests in `NewsAcceptanceTests`, `RealHeadlinesBatchTests`, `LiveNewsTests`, `AiringTests`, `ContextPacketTests`; see the two caveats in Resume here.
 
 ## M9 steps (all ✔)
 1. Inspect the server (read-only); decision 19; ADRs 0018 and 0019

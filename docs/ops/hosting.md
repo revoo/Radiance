@@ -129,6 +129,16 @@ docker compose run --rm radiance batch nightly
 
 It records `DEFERRED` if the app is running, and the app then runs it. Each run leaves a row in `batch_run`.
 
+## News and weather
+
+In production, the app reads real news feeds (the list is `radiance.news.sources` in `application.yml`) and Chicago
+weather from Open-Meteo, at every batch and hourly while you're playing. Neither needs a key. Open-Meteo's license
+requires the credit at the bottom of each page, so keep it.
+
+If a feed or Open-Meteo is down, the app logs a warning and carries on: other feeds still work, and weather falls
+back to simulated hours until the next good fetch. Without an LLM key, headlines get a rough placeholder
+classification, and with one, classifying costs about 4 calls per batch. If a budget runs out, headlines wait.
+
 ## Backups
 
 Every night at 08:30 UTC, the app takes a consistent snapshot (`VACUUM INTO`), checks it, gzips it and uploads

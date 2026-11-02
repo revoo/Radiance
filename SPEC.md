@@ -963,7 +963,7 @@ Live contract tests (§10) verify what each alias in use declares.
 
 **Headlines**
 
-- **Sources** (config): Google News US topic feeds (top stories, nation, world, business, technology, entertainment, sports, science, health); a set of outlet feeds deliberately balanced across the political spectrum; a local search feed built from `home-metro`; and the Chicago outlets in §6.1. Verify every URL in M10.
+- **Sources** (config): Google News US topic feeds (top stories, nation, world, business, technology, entertainment, sports, science, health); a set of outlet feeds deliberately balanced across the political spectrum; a local search feed built from `home-metro`; and the Chicago outlets in §6.1. Checked in M10 (2026-11-02): the Tribune and the Daily Herald have no usable feed, so the local search feed stands in for them; the list is `radiance.news.sources`.
 - **Store only** title, link, source, publish time and a ≤ 300-character snippet. Never fetch or store articles. Posts show a link card and link out.
 - **Ingestion:** at the start of every nightly batch, and every 60 minutes during a live session; dedupe by URL and normalized title. Because the batch runs every night, each day's news is ingested even while R is away.
 - **Classification** (the `headline-classify` route, batches of 40, structured): region (LOCAL for Chicago and Illinois, NATIONAL for US national and federal news, WORLD for everything abroad), topics, controversy, salience, sensitivity (NORMAL/SENSITIVE/TRAGIC), and an axis signal per political axis (which side is likelier to cheer, −1…1, with confidence).
