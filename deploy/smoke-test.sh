@@ -30,7 +30,8 @@ fail() {
     msg=${msg//'%'/'%25'}
     msg=${msg//$'\r'/'%0D'}
     msg=${msg//$'\n'/'%0A'}
-    echo "::error title=Smoke test failed at: $STEP::${msg: -6000}"
+    if [ "${#msg}" -gt 6000 ]; then msg=${msg: -6000}; fi
+    echo "::error title=Smoke test failed at: $STEP::$msg"
   fi
   exit 1
 }
