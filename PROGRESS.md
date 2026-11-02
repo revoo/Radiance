@@ -9,7 +9,10 @@
   - Before deploying M10: the "Weather data by Open-Meteo.com" footer must ship with real weather (CC BY 4.0).
   - Feeds: all 13 in `radiance.news.sources` parsed live (532 stories, 511 after dedupe). The Tribune (403) and Daily
     Herald (empty) have no usable feed; Google News · Chicago stands in. Google items carry no snippet.
-  - Left: read that config; ingest in the batch; `headline-classify`; selection on real headlines; ingest
+  - Done too: real headlines in the batch (ingest top 12 per feed, classify, select; `radiance.news.source`: fixtures by
+    default, rss in prod). Flaky once on Windows: `LivePlayTests.responsesThePacerNeverReleasedStillAirLater` failed in
+    teardown ("Failed to close extension context") when a render outlived the test; passed 6 of 6 alone.
+  - Left: ingest
     hourly in live play; live takes; debates; link cards; "talked about" rail; weather refresh at login and hourly;
     weather chip and attribution; the M10 AC tests. Nothing deployed from this branch yet.
 - Half-done: nothing.

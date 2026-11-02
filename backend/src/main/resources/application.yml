@@ -104,6 +104,7 @@ radiance:
     trait-half-life: 60d
     max-trait-drift: 10
   news:
+    source: fixtures                   # rss in prod; tests and offline never call out
     sources:
       - { name: "Google News · Top (US)", url: "https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en" }
       - { name: "Google News · Nation",   url: "https://news.google.com/rss/headlines/section/topic/NATION?hl=en-US&gl=US&ceid=US:en" }

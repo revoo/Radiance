@@ -26,6 +26,7 @@ public final class FakeRender {
 
   public static void register(FakeResponses fakes) {
     fakes.register(RenderBatch.class, call -> render(call.allContent()));
+    fakes.register(HeadlineClassifier.Batch.class, call -> HeadlineClassifier.fake(call.allContent()));
     fakes.register(JudgeAnswer.class, call -> new JudgeAnswer(false));
     fakes.register(Compacted.class, call -> new Compacted(java.util.List.of("A quiet stretch: work, friends, the usual."),
         "Keeping busy lately."));

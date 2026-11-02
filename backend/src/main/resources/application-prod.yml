@@ -8,6 +8,8 @@ server:
       cookie:
         secure: true
 radiance:
+  news:
+    source: rss
   weather:
     source: open-meteo
   backup:

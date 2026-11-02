@@ -46,10 +46,15 @@ public final class RssFeeds {
 
   /** Every source's items, deduped; a source that fails is logged and skipped. */
   public List<Item> fetch(List<Source> sources, long now) {
+    return fetch(sources, now, Integer.MAX_VALUE);
+  }
+
+  /** The same, keeping only the first {@code maxPerSource} of each feed: the ones it ranks highest. */
+  public List<Item> fetch(List<Source> sources, long now, int maxPerSource) {
     var out = new ArrayList<Item>();
     for (var source : sources) {
       try {
-        out.addAll(parse(get(source.url()), source.name(), now));
+        out.addAll(parse(get(source.url()), source.name(), now).stream().limit(maxPerSource).toList());
       } catch (Exception e) {
         if (e instanceof InterruptedException) Thread.currentThread().interrupt();
         log.warn("Feed '{}' failed: {}", source.name(), e.toString());
@@ -83,12 +88,15 @@ public final class RssFeeds {
     var out = new ArrayList<Item>();
     for (var entry : entries(root)) {
       String title = clean(text(entry, "title"));
+      // aggregators name the real outlet, and add it to the end of the title too
+      String outlet = clean(text(entry, "source"));
+      if (!outlet.isEmpty() && title.endsWith(" - " + outlet)) title = title.substring(0, title.length() - outlet.length() - 3);
       String url = link(entry);
       if (title.isEmpty() || url == null) continue;
       String snippet = clean(firstNonBlank(text(entry, "description"), text(entry, "summary"), text(entry, "content")));
       if (normalize(snippet).startsWith(normalize(title))) snippet = "";
       if (snippet.length() > MAX_SNIPPET) snippet = snippet.substring(0, MAX_SNIPPET - 1).stripTrailing() + "…";
-      out.add(new Item(url, source, title, snippet.isEmpty() ? null : snippet, published(entry, now)));
+      out.add(new Item(url, outlet.isEmpty() ? source : outlet, title, snippet.isEmpty() ? null : snippet, published(entry, now)));
     }
     return out;
   }

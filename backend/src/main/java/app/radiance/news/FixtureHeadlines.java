@@ -19,7 +19,7 @@ import tools.jackson.dataformat.yaml.YAMLMapper;
  * {@code news/fixture-headlines.yaml}, published through the day and already classified, so the news
  * path runs end to end without feeds or a model.
  */
-public final class FixtureHeadlines {
+public final class FixtureHeadlines implements HeadlineFeed {
 
   record Template(String title, String region, List<String> topics, double controversy, double salience,
       String sensitivity, Map<String, Double> axis) {}
@@ -37,6 +37,7 @@ public final class FixtureHeadlines {
   }
 
   /** Headlines published on {@code date}; the same seed and date always give the same list. */
+  @Override
   public List<Headline> on(LocalDate date) {
     var rng = RandomSource.seeded(seed).derive("headlines:" + date);
     var pool = new ArrayList<>(TEMPLATES);

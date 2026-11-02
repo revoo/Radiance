@@ -60,10 +60,10 @@ class RssFeedsTests {
   @Test
   void readsAGoogleNewsItemAndDropsASnippetThatOnlyRepeatsTheTitle() throws Exception {
     var item = parse(GOOGLE).getFirst();
-    assertThat(item.title()).isEqualTo("Senate passes the budget - The Hill");
+    assertThat(item.title()).as("the outlet comes off the end").isEqualTo("Senate passes the budget");
     assertThat(item.url()).isEqualTo("https://news.google.com/rss/articles/abc?oc=5");
     assertThat(item.publishedAt()).isEqualTo(Instant.parse("2026-11-02T10:30:00Z").toEpochMilli());
-    assertThat(item.source()).isEqualTo("Test");
+    assertThat(item.source()).as("the real outlet, not the aggregator").isEqualTo("The Hill");
     assertThat(item.snippet()).isNull();
   }
 

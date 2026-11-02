@@ -14,6 +14,8 @@ import app.radiance.llm.Priority;
 import app.radiance.narrative.Maintenance;
 import app.radiance.narrative.Renderer;
 import app.radiance.news.FixtureHeadlines;
+import app.radiance.news.HeadlineFeed;
+import app.radiance.news.HeadlineFeeds;
 import app.radiance.news.Headline;
 import app.radiance.news.HeadlineRepository;
 import app.radiance.news.HeadlineSelection;
@@ -29,9 +31,8 @@ import app.radiance.sim.WorldEngine;
 import app.radiance.weather.FakeWeather;
 import app.radiance.weather.WeatherBook;
 import app.radiance.weather.WeatherRepository;
-import app.radiance.weather.WeatherSource;
+import app.radiance.weather.WeatherSources;
 import java.time.Instant;
-import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -40,7 +41,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.support.CronExpression;
@@ -80,19 +80,21 @@ public final class NightlyBatch {
   private final String networkName;
   private final List<CronExpression> crons;
   private final boolean softeningCheck;
-  private final BiFunction<Long, ZoneId, WeatherSource> weatherSources;
+  private final WeatherSources weatherSources;
+  private final HeadlineFeeds headlineFeeds;
   private final AtomicInteger running = new AtomicInteger();
 
   public NightlyBatch(Sql sql, SqlAdmin admin, WriterLane lane, LeaseHolder lease, WallClock clock, ContentLibrary lib,
       WorldEngine engine, ScriptWriter writer, LlmGateway gateway, String networkName, List<String> crons,
       boolean softeningCheck) {
-    this(sql, admin, lane, lease, clock, lib, engine, writer, gateway, networkName, crons, softeningCheck, FakeWeather::new);
+    this(sql, admin, lane, lease, clock, lib, engine, writer, gateway, networkName, crons, softeningCheck, FakeWeather::new,
+        (seed, zone) -> new FixtureHeadlines(seed, zone, 100));
   }
 
   public NightlyBatch(Sql sql, SqlAdmin admin, WriterLane lane, LeaseHolder lease, WallClock clock, ContentLibrary lib,
       WorldEngine engine, ScriptWriter writer, LlmGateway gateway, String networkName, List<String> crons,
       boolean softeningCheck,
-      BiFunction<Long, ZoneId, WeatherSource> weatherSources) {
+      WeatherSources weatherSources, HeadlineFeeds headlineFeeds) {
     this.sql = sql;
     this.admin = admin;
     this.lane = lane;
@@ -106,6 +108,7 @@ public final class NightlyBatch {
     this.crons = crons.stream().map(NightlyBatch::cron).toList();
     this.softeningCheck = softeningCheck;
     this.weatherSources = weatherSources;
+    this.headlineFeeds = headlineFeeds;
   }
 
   /** Spring's cron has a seconds field; the config uses Unix five-field crons (SPEC §9). */
@@ -208,10 +211,12 @@ public final class NightlyBatch {
     // 2. headlines and weather (fixtures and FakeWeather until M10)
     long scripted = row[2];
     long historyFrom = Math.min(scripted, now) - DAY;
-    var headlines = headlines(w.seed, w.zone, w.date(historyFrom), w.date(now));
+    var feed = headlineFeeds.forWorld(w.seed, w.zone);
+    feed.refresh(wallStart);
+    var headlines = headlines(feed, w.date(historyFrom), w.date(now));
     long weatherFrom = historyFrom - historyFrom % HOUR - 8 * DAY;
     long weatherTo = now - now % HOUR + 3 * DAY;
-    var hours = weatherSources.apply(w.seed, w.zone).hours(weatherFrom, weatherTo);
+    var hours = weatherSources.forWorld(w.seed, w.zone).hours(weatherFrom, weatherTo);
     var uow = new UnitOfWork();
     new WeatherRepository(sql).saveKeepingReal(uow, hours);
     new HeadlineRepository(sql).save(uow, headlines);
@@ -292,11 +297,10 @@ public final class NightlyBatch {
   }
 
   /** Headlines published from {@code from} to {@code to} (dates), selected per day by region mix. */
-  private List<Headline> headlines(long seed, java.time.ZoneId zone, java.time.LocalDate from, java.time.LocalDate to) {
-    var fixtures = new FixtureHeadlines(seed, zone, 100);
+  private List<Headline> headlines(HeadlineFeed feed, java.time.LocalDate from, java.time.LocalDate to) {
     var out = new ArrayList<Headline>();
     for (var d = from; !d.isAfter(to); d = d.plusDays(1)) {
-      out.addAll(HeadlineSelection.select(fixtures.on(d), engine.knobs().headlinesPerDay(), engine.knobs().regionMix()));
+      out.addAll(HeadlineSelection.select(feed.on(d), engine.knobs().headlinesPerDay(), engine.knobs().regionMix()));
     }
     return out;
   }

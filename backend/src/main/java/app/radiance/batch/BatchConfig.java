@@ -9,8 +9,15 @@ import app.radiance.persistence.SqlAdmin;
 import app.radiance.persistence.WriterLane;
 import app.radiance.sim.ScriptWriter;
 import app.radiance.sim.WorldEngine;
+import app.radiance.narrative.HeadlineClassifier;
+import app.radiance.narrative.RealHeadlines;
+import app.radiance.news.FixtureHeadlines;
+import app.radiance.news.HeadlineFeeds;
+import app.radiance.news.HeadlineIngest;
+import app.radiance.news.RssFeeds;
 import app.radiance.weather.FakeWeather;
 import app.radiance.weather.OpenMeteoWeather;
+import app.radiance.weather.WeatherSources;
 import app.radiance.world.WorldProperties;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,20 +36,38 @@ class BatchConfig {
   NightlyBatch nightlyBatch(Sql sql, SqlAdmin admin, WriterLane lane, LeaseHolder lease, WallClock clock, ContentLibrary lib,
       WorldEngine engine, ScriptWriter writer, LlmGateway gateway, WorldProperties world,
       org.springframework.core.env.Environment env,
-      @Value("${radiance.content.softening-check:true}") boolean softening,
-      @Value("${radiance.weather.source:fake}") String weatherSource,
-      @Value("${radiance.weather.latitude:41.88}") double latitude,
-      @Value("${radiance.weather.longitude:-87.63}") double longitude) {
+      @Value("${radiance.content.softening-check:true}") boolean softening, WeatherSources weather,
+      HeadlineFeeds headlines) {
     // a YAML list, so bind it rather than @Value it (SPEC §9: UTC Unix crons)
     List<String> crons = org.springframework.boot.context.properties.bind.Binder.get(env)
         .bind("radiance.batch.crons", org.springframework.boot.context.properties.bind.Bindable.listOf(String.class))
         .orElse(List.of("0 9 * * *", "0 11 * * *"));
     return new NightlyBatch(sql, admin, lane, lease, clock, lib, engine, writer, gateway, world.networkName(), crons,
-        softening, (seed, zone) -> {
-          var fake = new FakeWeather(seed, zone);
-          if (!"open-meteo".equals(weatherSource)) return fake;
-          return new OpenMeteoWeather(OpenMeteoWeather.ENDPOINT, latitude, longitude, zone, clock, fake);
-        });
+        softening, weather, headlines);
+  }
+
+  @Bean
+  WeatherSources weatherSources(WallClock clock, @Value("${radiance.weather.source:fake}") String source,
+      @Value("${radiance.weather.latitude:41.88}") double latitude,
+      @Value("${radiance.weather.longitude:-87.63}") double longitude) {
+    return (seed, zone) -> {
+      var fake = new FakeWeather(seed, zone);
+      if (!"open-meteo".equals(source)) return fake;
+      return new OpenMeteoWeather(OpenMeteoWeather.ENDPOINT, latitude, longitude, zone, clock, fake);
+    };
+  }
+
+  @Bean
+  HeadlineFeeds headlineFeeds(Sql sql, WriterLane lane, ContentLibrary lib, LlmGateway gateway,
+      org.springframework.core.env.Environment env, @Value("${radiance.news.source:fixtures}") String source) {
+    List<RssFeeds.Source> sources = org.springframework.boot.context.properties.bind.Binder.get(env)
+        .bind("radiance.news.sources", org.springframework.boot.context.properties.bind.Bindable.listOf(RssFeeds.Source.class))
+        .orElse(List.of());
+    return (seed, zone) -> {
+      if (!"rss".equals(source)) return new FixtureHeadlines(seed, zone, 100);
+      return new RealHeadlines(sql, new HeadlineIngest(sql, lane, new RssFeeds(), sources),
+          new HeadlineClassifier(sql, lane, lib, gateway), zone);
+    };
   }
 
   @Bean

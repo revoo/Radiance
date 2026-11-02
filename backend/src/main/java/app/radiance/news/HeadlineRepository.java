@@ -54,6 +54,21 @@ public final class HeadlineRepository {
         + " ORDER BY published_at, id", from, to);
   }
 
+  /** Every headline published since {@code from}, classified or not. */
+  public List<Headline> publishedSince(long from) {
+    return TABLE.where(sql, "published_at >= ?", from);
+  }
+
+  /** Headlines still waiting to be classified, oldest first. */
+  public List<Headline> unclassifiedSince(long from) {
+    return TABLE.where(sql, "published_at >= ? AND classified_at IS NULL ORDER BY published_at, id", from);
+  }
+
+  /** Writes a classification over the stored row. */
+  public UnitOfWork saveClassified(UnitOfWork uow, Collection<Headline> rows) {
+    return TABLE.upsert(uow, rows);
+  }
+
   /** Dedupes by id; the URL is unique too. */
   public UnitOfWork save(UnitOfWork uow, Collection<Headline> rows) {
     return TABLE.insert(uow, rows);
