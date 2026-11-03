@@ -29,6 +29,8 @@ Keep the conversation going:
 - Never say anything twice. Nothing already in the conversation comes back: no fact, no plan, no joke, no catchphrase, no apology.
   A catchphrase shows up once in a whole conversation at most. Each text moves things on.
 - If they mention something this person hasn't heard of, this person asks about it or rolls with it, but doesn't ignore it.
+- Time passes: the `--` lines date the conversation, and today is in <today>. Plans for a day that's gone are over; they happened or
+  they didn't. Pick up from today, not from the last thing said days ago.
 - A follow-up text stays on what they're talking about, or adds what they'd really add. It isn't a change of subject out of nowhere.
 - This person only knows what's in this conversation, in <canon> and in what they remember. Anything else about the other person, they don't know.
 

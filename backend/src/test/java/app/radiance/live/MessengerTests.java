@@ -470,6 +470,46 @@ class MessengerTests {
     assertThat(thread.substring(thread.indexOf("<today>"), thread.indexOf("</today>"))).as("the thread itself is in <thread>").doesNotContain("gist-of-this-thread");
   }
 
+  /** Regression: with no dates, a dinner "tonight" stayed tonight for three weeks, and a tooth was lost seven times. */
+  @Test
+  void aConversationAndCanonSayWhenThingsHappened_AndOnlyOnce() {
+    var someone = residents().get(4);
+    String thread = actions.thread(someone);
+    String me = engine.world().userId;
+    long t = db.clock.nowMs();
+    long days = 3 * 86_400_000L;
+    db.commit(new UnitOfWork()
+        .add("INSERT INTO dm_message (id, thread_id, sender_id, created_at, air_status, body, render_status, brief_json) VALUES ('a', ?, ?, ?, 'AIRED', 'dinner tonight?', 'RENDERED', '{}')", thread, me, t - days)
+        .add("INSERT INTO dm_message (id, thread_id, sender_id, created_at, air_status, body, render_status, brief_json) VALUES ('c', ?, ?, ?, 'AIRED', 'how was your weekend', 'RENDERED', '{}')", thread, me, t - 1_000)
+        .add("INSERT INTO dm_message (id, thread_id, sender_id, created_at, air_status, body, render_status, brief_json) VALUES ('d', ?, ?, ?, 'SCRIPTED', NULL, 'PLANNED', '{}')", thread, someone, t + 1_000)
+        .add("INSERT INTO fact (id, subject_id, statement, weight, source, status, visibility, valid_from, origin_ref) VALUES ('f1', ?, 'lost a tooth', 'MINOR', 'PROSE', 'ACTIVE', 'PUBLIC', ?, 'x')", someone, t - days)
+        .add("INSERT INTO fact (id, subject_id, statement, weight, source, status, visibility, valid_from, origin_ref) VALUES ('f2', ?, 'Lost a tooth ', 'MINOR', 'PROSE', 'ACTIVE', 'PUBLIC', ?, 'y')", someone, t - 2_000));
+    var w = engine.world();
+    var content = new ContextPacketBuilder(db.sql, LivePlayTests.LIB, "Radiance", w)
+        .dms(thread, LivePlayTests.gateway(null).budgetFor(app.radiance.llm.Purpose.RENDER_DM)).content();
+    var format = java.time.format.DateTimeFormatter.ofPattern("EEEE, MMM d", java.util.Locale.US);
+    assertThat(content).contains("-- " + w.date(t - days).format(format) + " --\n@").contains("-- " + w.date(t).format(format) + " --\n@");
+    assertThat(content.toLowerCase(java.util.Locale.ROOT)).containsOnlyOnce("lost a tooth");
+    assertThat(content).containsPattern("ost a tooth *\\([A-Z][a-z]{2} \\d+\\)");
+  }
+
+  /** Regression: "I have receipts" in 92 of one person's items in a month, and "sorry not sorry" closing every text. */
+  @Test
+  void aCatchphraseJustUsedComesOffTheirCard() {
+    String[] who = {residents().get(4)};
+    String used = "I have receipts", resting = "Tell me I'm wrong";
+    db.commit(new UnitOfWork().add("UPDATE persona SET voice_json = ? WHERE actor_id = ?", "{\"catchphrases\":[\"" + used + "\",\"" + resting + "\"]}", who[0]));
+    String thread = actions.thread(who[0]);
+    long t = db.clock.nowMs();
+    db.commit(new UnitOfWork()
+        .add("INSERT INTO dm_message (id, thread_id, sender_id, created_at, air_status, body, render_status, brief_json) VALUES ('a', ?, ?, ?, 'AIRED', ?, 'RENDERED', '{}')", thread, who[0], t - 1_000, "well. " + used.toUpperCase(java.util.Locale.ROOT))
+        .add("INSERT INTO dm_message (id, thread_id, sender_id, created_at, air_status, body, render_status, brief_json) VALUES ('b', ?, ?, ?, 'SCRIPTED', NULL, 'PLANNED', '{}')", thread, who[0], t + 1_000));
+    var content = new ContextPacketBuilder(db.sql, LivePlayTests.LIB, "Radiance", engine.world())
+        .dms(thread, LivePlayTests.gateway(null).budgetFor(app.radiance.llm.Purpose.RENDER_DM)).content();
+    var card = content.lines().filter(l -> l.startsWith("Catchphrases")).findFirst().orElseThrow();
+    assertThat(card).contains(resting).doesNotContain(used);
+  }
+
   /** Regression: asked "how was your day?", Jessica answered "where do you live?" again. The brief now holds what it answers. */
   @Test
   void aReplysBriefSaysWhatItAnswers_AndAFollowUpsDoesnt() {

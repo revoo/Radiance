@@ -55,6 +55,10 @@ public final class ContextPacketBuilder {
 
   static final long DAY = 86_400_000L;
   static final int MEMORIES = 6;
+  private static final java.time.format.DateTimeFormatter FACT_DATE = java.time.format.DateTimeFormatter.ofPattern("MMM d", Locale.US);
+  private static final java.time.format.DateTimeFormatter DAY_MARKER = java.time.format.DateTimeFormatter.ofPattern("EEEE, MMM d", Locale.US);
+  /** A catchphrase they've used in this many of their latest items stays off their card for now. */
+  static final int CATCHPHRASE_REST = 12;
   /** How much of what a brief answers is repeated in it, right where the writer looks. */
   static final int ANSWERING_CHARS = 300;
   static final int THREAD_TAIL = 20;
@@ -199,10 +203,17 @@ public final class ContextPacketBuilder {
       convo.append("(earlier: ").append(thread.summary()).append(")\n");
     }
     String last = null;
+    java.time.LocalDate day = null;
     for (var m : dms) {
       if (m.body() != null) {
         if (m.createdAt() > until) continue;
-        if (recent.contains(m)) convo.append(handle(m.senderId())).append(": ").append(m.body()).append('\n');
+        if (recent.contains(m)) {
+          // Regression: with no dates, Rick's dinner "tonight" stayed tonight for three weeks
+          var said = world.date(m.createdAt());
+          if (!said.equals(day)) convo.append("-- ").append(said.format(DAY_MARKER)).append(" --\n");
+          day = said;
+          convo.append(handle(m.senderId())).append(": ").append(m.body()).append('\n');
+        }
         t = m.createdAt();
         last = m.body();
       } else if (!m.airStatus().name().equals("DROPPED")) {
@@ -334,7 +345,8 @@ public final class ContextPacketBuilder {
         .append("; ").append(v.path("punctuation").asString("")).append("; typos ")
         .append(Math.round(v.path("typoRate").asDouble(0) * 100)).append("%.\n");
     list(sb, "Slang", v.path("slang"));
-    list(sb, "Catchphrases (rarely, most posts have none)", v.path("catchphrases"));
+    var catchphrases = restedCatchphrases(p.id);
+    if (!catchphrases.isEmpty()) sb.append("Catchphrases (rarely, most posts have none): ").append(String.join(", ", catchphrases)).append('\n');
     list(sb, "Talks about", v.path("signatureTopics"));
     list(sb, "Never", v.path("neverDoes"));
     list(sb, "Sample posts", v.path("samplePosts"));
@@ -431,6 +443,15 @@ public final class ContextPacketBuilder {
     return sql.queryOne("SELECT gist FROM post WHERE event_id = ? AND gist IS NOT NULL LIMIT 1", List.of(m.eventId()), r -> r.str("gist")).orElse(null);
   }
 
+  /** Their catchphrases, less any they've used lately. Regression: "I have receipts" in 92 of one person's items in a month. */
+  private List<String> restedCatchphrases(String id) {
+    var said = String.join(" ", sql.query("SELECT body FROM (SELECT body, created_at FROM post WHERE author_id = ? AND body IS NOT NULL AND air_status = 'AIRED'"
+        + " UNION ALL SELECT body, created_at FROM comment WHERE author_id = ? AND body IS NOT NULL AND air_status = 'AIRED'"
+        + " UNION ALL SELECT body, created_at FROM dm_message WHERE sender_id = ? AND body IS NOT NULL AND air_status = 'AIRED')"
+        + " ORDER BY created_at DESC LIMIT " + CATCHPHRASE_REST, List.of(id, id, id), r -> r.str("body"))).toLowerCase(Locale.ROOT);
+    return catchphrases(id).stream().filter(x -> !said.contains(x.toLowerCase(Locale.ROOT))).toList();
+  }
+
   /** A voice card's catchphrases. */
   List<String> catchphrases(String id) {
     var out = new ArrayList<String>();
@@ -470,17 +491,22 @@ public final class ContextPacketBuilder {
     var sb = new StringBuilder();
     // what came up in a DM stays in that DM. Regression: R told Amanda he read a book, and Daniel teased him for it;
     // Jessica brought their private toast and eggs up in public
-    var facts = sql.query("SELECT f.subject_id, f.statement, f.status, m.thread_id FROM fact f LEFT JOIN dm_message m ON m.id = f.origin_ref"
+    var facts = sql.query("SELECT f.subject_id, f.statement, f.status, m.thread_id, f.source, f.valid_from FROM fact f LEFT JOIN dm_message m ON m.id = f.origin_ref"
         + " WHERE f.status <> 'VOID' AND f.valid_from <= ? ORDER BY f.valid_from DESC", List.of(t), r -> new String[] {r.str("subject_id"),
-        r.str("statement"), r.str("status"), r.isNull("thread_id") ? null : r.str("thread_id")});
+        r.str("statement"), r.str("status"), r.isNull("thread_id") ? null : r.str("thread_id"), r.str("source"), String.valueOf(r.lng("valid_from"))});
     var per = new HashMap<String, Integer>();
+    var seen = new java.util.HashSet<String>();
     for (var f : facts) {
       if (!ids.contains(f[0])) continue;
       if (f[3] != null && !f[3].equals(dmThread)) continue;
+      // Regression: Ellie lost the same tooth seven times in a month. Each telling became a new fact, with no date to say it was over
+      if (!seen.add(f[0] + "|" + f[1].strip().toLowerCase(Locale.ROOT))) continue;
       if (per.merge(f[0], 1, Integer::sum) > FACTS_PER_SUBJECT) continue;
       var p = world.people.get(f[0]);
-      sb.append("- @").append(p == null ? f[0] : p.handle).append(" ").append(f[1])
-          .append(FactRow.Status.PENDING.name().equals(f[2]) ? " (earlier today)" : "").append('\n');
+      sb.append("- @").append(p == null ? f[0] : p.handle).append(" ").append(f[1]);
+      if (FactRow.Status.PENDING.name().equals(f[2])) sb.append(" (earlier today)");
+      else if (FactRow.Source.PROSE.name().equals(f[4])) sb.append(" (").append(world.date(Long.parseLong(f[5])).format(FACT_DATE)).append(')');
+      sb.append('\n');
     }
     return sb.isEmpty() ? "(nothing beyond the cast directory)" : sb.toString().strip();
   }

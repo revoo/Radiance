@@ -162,9 +162,11 @@ public final class Renderer {
       String band = packets.lengthBand(t.authorId());
       long when = packets.timeOf(t);
       var ps = new ArrayList<>(checks.check(t, item, author, band, involved, when));
-      // asked once: a slightly repetitive text beats no text
-      String again = !firstTry || author == null || item.text() == null ? null
-          : ProseChecks.repeats(item.text(), packet.content(), "@" + author.handle, packets.catchphrases(author.id));
+      // asked once: a slightly repetitive text beats no text. A text sent word for word again doesn't
+      String handle = author == null ? null : "@" + author.handle;
+      String again = author == null || item.text() == null ? null
+          : firstTry ? ProseChecks.repeats(item.text(), packet.content(), handle, packets.catchphrases(author.id))
+          : ProseChecks.sentAlready(item.text(), packet.content(), handle) ? "this exact text" : null;
       if (again != null) {
         ps.add(new ProseChecks.Problem("repeat", "they already said \"" + again + "\" in this conversation: don't say it again; answer what was just said, with something new"));
       }
@@ -175,7 +177,8 @@ public final class Renderer {
 
   private app.radiance.llm.LlmResult<RenderBatch> call(Purpose purpose, List<app.radiance.llm.Block> prefix, String content,
       int briefs) {
-    int max = Math.min(8_000, 200 + 160 * briefs);
+    // the gist and facts count too: at 160 a brief, one call in fifteen was cut off and paid for twice
+    int max = Math.min(8_000, 300 + 240 * briefs);
     var req = new LlmRequest<>(purpose, prefix, List.of(new Part.Text(content)), RenderBatch.class, max,
         Duration.ofSeconds(90), priority);
     var r = gateway.call(req);

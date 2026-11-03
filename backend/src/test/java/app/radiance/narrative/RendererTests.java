@@ -187,6 +187,14 @@ class RendererTests {
     assertThat(ProseChecks.repeats("I am so proud of you all", "<thread>\n  @a.b: I am so proud of you\n</thread>", "@a.b", java.util.List.of())).isEqualTo("i am so proud of");
   }
 
+  @Test
+  void aTextSentWordForWordAgainIsCaught_ButAShortOneIsJustTalking() {
+    String packet = "<conversation>\n@r.ocampo: ok bro, six o'clock, got it\n@r.ocampo: ok bro\n</conversation>\n<briefs>[]</briefs>";
+    assertThat(ProseChecks.sentAlready("Ok bro, six o'clock, got it!", packet, "@r.ocampo")).isTrue();
+    assertThat(ProseChecks.sentAlready("ok bro", packet, "@r.ocampo")).isFalse();
+    assertThat(ProseChecks.sentAlready("ok bro, seven o'clock, got it", packet, "@r.ocampo")).isFalse();
+  }
+
   /** Regression: "I'm at 3-something Rockwell... no wait, you're asking where I live." */
   @Test
   void catchingYourselfMidTextIsASlip() {

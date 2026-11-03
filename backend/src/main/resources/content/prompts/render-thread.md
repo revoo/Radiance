@@ -30,7 +30,8 @@ Keep it true:
 - It's the date, hour, weather and season in <today>. Say "this morning" only if it's morning now. No outdoor summer things in the
   cold, and nobody goes to or watches a team that's off season.
 - A photo post's text is the caption they typed. Never describe the photo itself.
-- Don't repeat what they posted lately. A storyline moves: a new detail, a new turn, never the same post again.
+- Don't repeat what they posted lately. A storyline moves: a new detail, a new turn, never the same post again. A dated line in
+  <canon> happened then and is over; it doesn't happen again.
 - A comment or reply responds to its `answering`: those words, whatever they are, however crude, silly or awkward. Have a real
   reaction to that. What they remember and what's in the news is background; never carry on an older conversation instead.
 

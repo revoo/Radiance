@@ -44,15 +44,8 @@ public final class ProseChecks {
    * sorry" and gave R her address three times, whatever he said.
    */
   static String repeats(String text, String packet, String handle, List<String> catchphrases) {
-    var own = new StringBuilder();
-    int from = Math.max(packet.indexOf("<conversation>"), packet.indexOf("<thread>"));
-    if (from < 0) return null;
-    int to = packet.indexOf("<briefs>", from);
-    for (String line : packet.substring(from, to < 0 ? packet.length() : to).split("\\R")) {
-      String l = line.strip();
-      if (l.startsWith(handle + ": ")) own.append(' ').append(plain(l.substring(handle.length() + 2)));
-    }
-    String said = own + " ";
+    String said = ownLines(packet, handle);
+    if (said.isBlank()) return null;
     String mine = " " + plain(text) + " ";
     for (String phrase : catchphrases) {
       String p = " " + plain(phrase) + " ";
@@ -64,6 +57,25 @@ public final class ProseChecks {
       if (said.contains(" " + run + " ")) return run;
     }
     return null;
+  }
+
+  /** Whether this is, whole, something {@code handle} already sent. Regression: Rick sent the same text word for word, again and again, for weeks. */
+  static boolean sentAlready(String text, String packet, String handle) {
+    String mine = plain(text);
+    return mine.split(" ").length >= REPEAT_RUN && ownLines(packet, handle).contains(" " + mine + " ");
+  }
+
+  /** Everything {@code handle} has said in this packet's conversation, in plain words, space-delimited. */
+  private static String ownLines(String packet, String handle) {
+    int from = Math.max(packet.indexOf("<conversation>"), packet.indexOf("<thread>"));
+    if (from < 0) return "";
+    int to = packet.indexOf("<briefs>", from);
+    var own = new StringBuilder();
+    for (String line : packet.substring(from, to < 0 ? packet.length() : to).split("\\R")) {
+      String l = line.strip();
+      if (l.startsWith(handle + ": ")) own.append(' ').append(plain(l.substring(handle.length() + 2)));
+    }
+    return own + " ";
   }
 
   private static String plain(String text) {
