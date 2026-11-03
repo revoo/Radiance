@@ -218,7 +218,12 @@ public final class Renderer {
       if (f == null || f.major() || f.statement() == null) continue;
       String h = f.subject() == null ? "" : f.subject().replace("@", "").strip();
       var subject = byHandle.get(h);
-      if (subject == null) continue;
+      // the model often names them instead: "Lukas Petrauskas", not @lukas.petrauskas
+      if (subject == null) subject = world.people.values().stream().filter(p -> p.name.equalsIgnoreCase(h)).findFirst().orElse(null);
+      if (subject == null) {
+        log.warn("A fact about someone we can't find, \"{}\": {}", h, f.statement());
+        continue;
+      }
       String id = Ulid.next(at, RandomSource.seeded(world.seed).derive("fact:" + t.id() + ":" + i++));
       uow.add("INSERT INTO fact (id, subject_id, statement, weight, source, status, visibility, valid_from, origin_ref)"
           + " VALUES (?, ?, ?, 'MINOR', 'PROSE', ?, ?, ?, ?) ON CONFLICT DO NOTHING", id, subject.id, f.statement().strip(),

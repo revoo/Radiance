@@ -37,7 +37,7 @@ For every brief return one item with:
 - `gist`: what happened, in 15 words or fewer, plain and neutral ("Jake mocked Jesse's new car").
 - `recapLine`: if the brief's `recapLine` is true, one gossipy line a friend would text about it;
   otherwise an empty string.
-- `introducedFacts`: any new detail you made up about a person or their things that later posts should
+- `introducedFacts`: each with the person's @handle as `subject`: any new detail you made up about a person or their things that later posts should
   keep ("bought a used tile saw for $80"). Always include every newly named person and how they're related
   ("nephew Marcus, 7"). Mark one `major` if it changes a life — a job, a move, a
   relationship, a death, money that matters. Don't introduce major facts; small ones are fine.

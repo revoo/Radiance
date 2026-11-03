@@ -17,9 +17,12 @@ public final class PhotoPrompts {
   public record Photo(String prompt, long seed, String entityId) {}
 
   private static final String ENTITY = "{entity.visual_description}";
-  /** The look, and the rules: no identifiable faces except avatars, no children, no real people, no logos or text. */
+  /**
+   * The look. Say what you want rather than what you don't: told "no faces" the models blurred them, and told "no text" they kept
+   * drawing it. R would rather have an odd sign than a fake-looking photo. The one rule left is the project's adults-only line.
+   */
   static final String RULES = ". Amateur smartphone photo, natural light, slightly imperfect framing."
-      + " No identifiable faces, no children, no real people, no logos, no text.";
+      + " No children.";
   private static final int CAPTION_CHARS = 400;
   private static final Pattern OUTDOORS = Pattern.compile(
       "(?i)\\b(street|outdoor|outside|patio|park|path|lakefront|skyline|driveway|bridge|river|rooftops?|porch|parking|tow truck)\\b");
@@ -33,14 +36,16 @@ public final class PhotoPrompts {
    * @param sky the weather in plain words at the photo's time, or null
    */
   public static Optional<Photo> of(SimWorld w, ContentLibrary lib, String postId, String authorId, String arcId, Brief b, String sky) {
-    return of(w, lib, postId, authorId, arcId, b, sky, null);
+    return of(w, lib, postId, authorId, arcId, b, sky, null, null);
   }
 
   /**
    * The same, once the post is written: the picture shows what the caption says, so the salmon in the post is salmon in the
    * photo. An entity keeps its description too, so it still looks like itself.
+   *
+   * @param look how the author looks, so that if they're in the picture they look like their avatar
    */
-  public static Optional<Photo> of(SimWorld w, ContentLibrary lib, String postId, String authorId, String arcId, Brief b, String sky, String caption) {
+  public static Optional<Photo> of(SimWorld w, ContentLibrary lib, String postId, String authorId, String arcId, Brief b, String sky, String caption, String look) {
     String template = b.extra().get("media") instanceof String s && !s.isBlank() ? s : b.text();
     if (template == null || template.isBlank()) return Optional.empty();
     Thing thing = null;
@@ -55,8 +60,8 @@ public final class PhotoPrompts {
     boolean outdoors = OUTDOORS.matcher(scene + " " + words).find();
     if (!words.isEmpty()) {
       // "caption" gets the words painted onto the picture
-      scene = (thing == null ? "" : scene + ". ") + "A snapshot of the moment this person is describing, in their words: " + words
-          + " Picture only what's happening: a plain photo with no words, captions or overlays on it";
+      scene = (thing == null ? "" : scene + ". ") + "An ordinary phone snapshot of the moment this person is describing: " + words
+          + (thing == null && look != null && !look.isBlank() ? " If the person posting is in it, they look like this: " + look.split(";")[0] : "");
     }
     if (sky != null && outdoors) scene += ", in this weather: " + sky;
     long seed = thing == null ? postId.hashCode() : thing.imageSeed != null ? thing.imageSeed : thing.id.hashCode();

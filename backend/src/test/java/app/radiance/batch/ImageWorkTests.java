@@ -158,7 +158,7 @@ class ImageWorkTests {
     String prompt = stub.prompts.stream().filter(x -> x.contains("Salmon")).findFirst().orElseThrow();
     assertThat(prompt).contains("Salmon and broccoli off the sheet pan, thanks a friend").doesNotContain("a meal on a table", "@jake");
     // Regression: asked for "the photo with this caption", FLUX 3 painted the caption across the picture.
-    assertThat(prompt).contains("no words, captions or overlays").doesNotContain("with this caption");
+    assertThat(prompt).doesNotContain("caption");
   }
 
   ImageWork.Report runWithPremium(Stub everyday, ImageGenerator better, int perRun) {
@@ -174,6 +174,30 @@ class ImageWorkTests {
     assertThat(runWithPremium(everyday, better, 100).premium()).isEqualTo(better.prompts.size());
     assertThat(better.prompts).anyMatch(x -> x.contains("a big lasting moment")).noneMatch(x -> x.contains("a plain meal"));
     assertThat(everyday.prompts).anyMatch(x -> x.contains("a plain meal")).noneMatch(x -> x.contains("a big lasting moment"));
+  }
+
+  /** Found in a real run: Klein 4B's filter refused a post about a table saw. */
+  @Test
+  void aPictureTheEverydayModelRefusesGoesToTheOtherOne() {
+    photoPost("saw", 1, null, Fidelity.FULL, "a table saw in a garage");
+    var everyday = new Stub();
+    everyday.broken = true;
+    var better = new Stub();
+    var report = runWithPremium(everyday, better, 100);
+    assertThat(mediaStatus("saw")).isEqualTo("READY");
+    assertThat(better.prompts).anyMatch(x -> x.contains("a table saw"));
+    assertThat(report.failed()).isZero();
+  }
+
+  /** Regression: Lisa's anniversary photo showed a woman who looked nothing like her avatar. */
+  @Test
+  void aPhotoKnowsWhatItsPosterLooksLike() {
+    photoPost("p", 3, null, Fidelity.FULL, "a dinner out");
+    db.commit(new UnitOfWork().add("UPDATE post SET body = ? WHERE id = ?", "26 years today, dinner on Harlem", "p"));
+    db.commit(new UnitOfWork().add("UPDATE persona SET identity_json = ? WHERE actor_id = ?", "{\"appearance\":\"tall, a frosted blonde bob; usually in a kitchen\"}", author));
+    var stub = new Stub();
+    run(stub, 12, 9000);
+    assertThat(stub.prompts).anyMatch(x -> x.contains("26 years today") && x.contains("a frosted blonde bob") && !x.contains("usually in a kitchen"));
   }
 
   @Test
@@ -196,7 +220,8 @@ class ImageWorkTests {
     assertThat(report.photos()).isEqualTo(1);
     assertThat(mediaStatus("p")).isEqualTo("READY");
     String prompt = stub.prompts.stream().filter(x -> x.contains("houseplants")).findFirst().orElseThrow();
-    assertThat(prompt).contains("No identifiable faces", "no children", "no real people", "no logos", "no text");
+    // Regression: told "no faces" the models blurred faces, and told "no text" they drew it. R prefers an odd sign to a fake photo.
+    assertThat(prompt).contains("Amateur smartphone photo", "No children").doesNotContain("identifiable", "logos", "no text", "overlays");
   }
 
   /** SPEC §12 M12 AC: Jesse's car is recognizably the same car across three posts. */

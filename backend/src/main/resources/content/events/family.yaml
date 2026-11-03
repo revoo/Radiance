@@ -6,7 +6,7 @@
   modifiers: { has_kids: 6.0, quirk.oversharer: 2.0 }
   importance: 3
   tags: [ parenting ]
-  output: { post: STATUS, brief: "a kid milestone or a kid quote; no photos of children" }
+  output: { post: STATUS, brief: "a milestone or a funny line from a child in their life: their own, or if they have none a niece, a nephew or a neighbor's kid, named once and not as a pet" }
 
 - id: parent_visit
   category: FAMILY

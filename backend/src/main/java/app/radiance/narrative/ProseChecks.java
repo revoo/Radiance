@@ -27,6 +27,12 @@ public final class ProseChecks {
   public record Problem(String kind, String detail) {}
 
   /** "no wait, I'm Lisa and I went to my parents'": the model catching itself, in the post. */
+  static boolean slipped(String author, String text) {
+    if (SLIP.matcher(text).find()) return true;
+    if (author == null || author.isBlank()) return false;
+    return Pattern.compile("(?i)(^|\\balso )" + Pattern.quote(author.split(" ")[0]) + ",").matcher(text).find();
+  }
+
   static final Pattern SLIP = Pattern.compile("(?i)\\bno wait,? i'?m\\b");
   static final Pattern LLM_ISMS = Pattern.compile("(?i)\\b(delve|delving|tapestry|a testament to|navigating the|"
       + "it'?s important to|as someone who|in today'?s world|let'?s all be kind|everyone'?s valid|just my two cents,? "
@@ -108,7 +114,7 @@ public final class ProseChecks {
     for (var f : item.introducedFacts() == null ? List.<RenderBatch.Fact>of() : item.introducedFacts()) {
       if (f.major()) out.add(new Problem("major-fact", "don't introduce major life facts (\"" + f.statement() + "\")"));
     }
-    if (SLIP.matcher(text).find()) out.add(new Problem("slip", "the writing lost track of who's talking; just write it as them"));
+    if (slipped(author == null ? null : author.name, text)) out.add(new Problem("slip", "the writing lost track of who's talking; just write it as them"));
     var isms = LLM_ISMS.matcher(text);
     if (isms.find()) out.add(new Problem("llm-ism", "sounds like a chatbot (\"" + isms.group() + "\"); write like a person"));
     if (softeningCheck && target.stance() != null && Set.of("MOCK", "HOSTILE", "TROLL").contains(target.stance())

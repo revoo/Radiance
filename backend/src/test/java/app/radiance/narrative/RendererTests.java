@@ -152,6 +152,29 @@ class RendererTests {
     }
   }
 
+  /** Regression: Amra answered Deepa as "Noted. Also Amra, Lucy is not a team captain", and Lisa wrote "no wait, I'm Lisa". */
+  @Test
+  void aModelLosingTrackOfWhoIsTalkingIsCaught() {
+    assertThat(ProseChecks.slipped("Lisa Marchetti", "my mother's recipe... no wait, I'm Lisa and I went home")).isTrue();
+    assertThat(ProseChecks.slipped("Amra Hodzic", "Noted. Also Amra, Lucy is not a team captain.")).isTrue();
+    assertThat(ProseChecks.slipped("Amra Hodzic", "Amra, you of all people")).isTrue();
+    assertThat(ProseChecks.slipped("Amra Hodzic", "Deepa, Lucy is fine. Amra out.")).isFalse();
+  }
+
+  /** Regression: the model names people "Lukas Petrauskas", we only knew @lukas.petrauskas, and nearly every invented detail was lost: Andre's nephew became his son. */
+  @Test
+  void aFactNamingSomeoneByTheirNameIsStillKept() {
+    try (var sim = new Simulation(Simulation.Options.of(7, 1, Persona.WARM, dir)).run()) {
+      var person = sim.engine.world().residents().getFirst();
+      Function<String, RenderBatch> facts = text -> new RenderBatch(FakeRender.render(text).items().stream().map(i -> new RenderBatch.Item(i.briefId(), i.text(), i.gist(), i.recapLine(),
+          List.of(new RenderBatch.Fact(person.name, "has a nephew, Marcus, 7", false)))).toList());
+      var renderer = new Renderer(sim.sql, sim.sqlLane(), sim.lib, new StubGateway(facts, t -> false), sim.engine.world(), "Radiance", true, Priority.SCRIPT);
+      String future = sim.sql.queryOne("SELECT id FROM post WHERE air_status = 'SCRIPTED' AND body IS NULL ORDER BY created_at LIMIT 1", List.of(), r -> r.str("id")).orElseThrow();
+      renderer.renderThread(future);
+      assertThat(sim.sql.queryOne("SELECT COUNT(*) AS n FROM fact WHERE subject_id = ? AND statement = 'has a nephew, Marcus, 7'", List.of(person.id), r -> r.lng("n")).orElseThrow()).isPositive();
+    }
+  }
+
   @Test
   void minorFactsArePendingUntilTheirItemAirs() {
     try (var sim = new Simulation(Simulation.Options.of(7, 1, Persona.WARM, dir)).run()) {

@@ -58,6 +58,7 @@
   category: DAILY
   base_rate: 0.05
   modifiers: { quirk.sports_diehard: 5.0, interest.sports: 3.0 }
+  cooldown_days: 3
   importance: 2
   tags: [ sports ]
   output: { post: STATUS, brief: "a reaction to last night's Bears, Cubs, Sox, Bulls or Hawks game; suffering is communal" }
