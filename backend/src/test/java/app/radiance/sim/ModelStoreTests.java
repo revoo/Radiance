@@ -42,6 +42,18 @@ class ModelStoreTests {
     db.close();
   }
 
+  /** Regression: "avoids:{b}" went on both sides of a feud, so the second one was told she was avoiding herself. */
+  @Test
+  void bothSidesOfAFeudAvoidEachOther_AndNobodyAvoidsThemselves() {
+    var w = store.load();
+    var feud = w.arcs.values().stream().filter(a -> a.defId.equals("feud") && a.active()).findFirst().orElseThrow();
+    var a = feud.roles.get("a");
+    var b = feud.roles.get("b");
+    assertThat(w.activeTags(a, w.time, LIB)).contains("avoids:" + b);
+    assertThat(w.activeTags(b, w.time, LIB)).contains("avoids:" + a);
+    for (var r : w.residents()) assertThat(w.activeTags(r.id, w.time, LIB)).doesNotContain("avoids:" + r.id);
+  }
+
   @Test
   void loadsTheImportedWorld() {
     var w = store.load();

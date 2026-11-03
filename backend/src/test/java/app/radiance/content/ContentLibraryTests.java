@@ -27,6 +27,14 @@ class ContentLibraryTests {
     return ContentLoader.load(files, BLACKLIST);
   }
 
+  /** Regression: a feud's "avoids:{b}" also went on b, who then avoided herself. */
+  @Test
+  void aPhaseConstraintCantNameARole() {
+    var files = new java.util.HashMap<>(shipped());
+    files.put("arcs/feud.yaml", files.get("arcs/feud.yaml").replace("avoids:{partner}", "avoids:{b}"));
+    assertThatThrownBy(() -> load(files)).hasMessageContaining("constraint 'avoids:{b}' names a role: use {partner}");
+  }
+
   /** The shipped files with one file replaced or added. */
   static Map<String, String> with(String path, String text) {
     var files = new HashMap<>(shipped());

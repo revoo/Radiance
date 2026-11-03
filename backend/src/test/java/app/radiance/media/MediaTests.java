@@ -181,8 +181,9 @@ class MediaTests {
     return server;
   }
 
+  /** Regression: the real API answers 400 to a {@code seed}, so every picture would have failed. Found on the first real call. */
   @Test
-  void workersAiSendsThePromptAndSeed_AndDecodesTheImage() throws Exception {
+  void workersAiSendsOnlyWhatTheModelAccepts_AndDecodesTheImage() throws Exception {
     var seen = new java.util.ArrayList<String>();
     var image = Base64.getEncoder().encodeToString(JPEG);
     var server = server(200, "{\"success\":true,\"result\":{\"image\":\"" + image + "\"}}", seen, new AtomicInteger());
@@ -192,21 +193,7 @@ class MediaTests {
       assertThat(out.mime()).isEqualTo("image/jpeg");
       assertThat(seen.get(0)).isEqualTo("/client/v4/accounts/acct/ai/run/@cf/model/x");
       assertThat(seen.get(1)).isEqualTo("Bearer secret");
-      assertThat(seen.get(2)).contains("\"prompt\":\"a red car\"", "\"seed\":1234");
-    } finally {
-      server.stop(0);
-    }
-  }
-
-  @Test
-  void aSeedTooBigForTheModelStaysTheSameSmallerOne() throws Exception {
-    var seen = new java.util.ArrayList<String>();
-    var image = Base64.getEncoder().encodeToString(JPEG);
-    var server = server(200, "{\"result\":{\"image\":\"" + image + "\"}}", seen, new AtomicInteger());
-    try {
-      workers(server).generate("x", -5);
-      workers(server).generate("x", -5);
-      assertThat(seen.get(2)).isEqualTo(seen.get(5)).contains("\"seed\":2147483642");
+      assertThat(seen.get(2)).contains("\"prompt\":\"a red car\"", "\"steps\":4").doesNotContain("seed");
     } finally {
       server.stop(0);
     }

@@ -24,13 +24,13 @@ phases:
       importance: 7
       post: STATUS
       effects: { add_relationship_tags: [ "a <-> b: feud" ], tension: 6, "a <-> b": { affinity: -15, respect: -10 } }
-    constraints: [ "avoids:{b}" ]
+    constraints: [ "avoids:{partner}" ]
     beats: [ { kind: REACTIONS, brief: "friends take sides in the comments" } ]
     next: cold_war
   - id: cold_war
     duration_days: [14, 45]
     visibility: PUBLIC
-    constraints: [ "avoids:{b}" ]
+    constraints: [ "avoids:{partner}" ]
     beats: [ { kind: MENTION, brief: "a pointed jab in someone else's thread" } ]
     transitions: [ { to: truce, p: 0.5 }, { to: unfriended, p: 0.5 } ]
   - id: truce

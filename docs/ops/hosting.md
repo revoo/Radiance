@@ -123,7 +123,8 @@ docker compose up -d
 R's photos work as they are. Generated avatars and photos need a Cloudflare Workers AI token: put `CF_AI_API_TOKEN` in `.env`
 next to `CF_ACCOUNT_ID`, then `docker compose up -d`. Without it residents keep their initials and their photo posts have no
 picture. Images stay on `./data` and in R2 (ADR 0021). The batch stops at `images-per-sim-day` and `daily-neuron-budget`, both
-under the free allocation, and picks up what's left the next day.
+under the free allocation, and picks up what's left the next day. FLUX schnell on Workers AI refuses a `seed`, so two photos of
+the same car match only as far as its `visual_description` makes them.
 
 ## The Director's console
 

@@ -1,6 +1,11 @@
 # Progress
 
 ## Resume here
+- **First real calls, 2026-11-03.** Bake-off on the server with a throwaway data dir: 10 threads, Haiku 5.5, $0.0044, all
+  valid. Its fixtures come from `Simulation`, which has no persona rows, so their voice cards are blank: it proves the plumbing
+  and the cost floor, not voice. One real FLUX image worked. Found and fixed: Workers AI answers 400 to `seed` (every picture
+  would have failed), and `avoids:{b}` made the second side of a feud avoid herself. SPEC's `image_seed` continuity can't
+  hold on this model. Next: fresh world, per hosting.md "Real prose".
 - **M10 merged and live (2026-11-02)**: `main` at 6095374, deployed to https://radiance.enigmatica.app with real feeds and
   real weather. R gave standing approval to merge when CI is green.
   - AC not fully proven, for R to know:

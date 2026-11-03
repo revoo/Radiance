@@ -25,11 +25,10 @@ public final class WorkersAiImageGenerator implements ImageGenerator {
 
   @Override
   public Generated generate(String prompt, long seed) {
-    // the model's seed is a 32-bit integer or less
-    long small = Math.floorMod(seed, 2_147_483_647L);
+    // no seed: the model answers 400 to one
     var request = HttpRequest.newBuilder(endpoint).timeout(Duration.ofSeconds(60))
         .header("Authorization", "Bearer " + token).header("Content-Type", "application/json")
-        .POST(HttpRequest.BodyPublishers.ofString(Json.write(Map.of("prompt", prompt, "seed", small, "steps", STEPS))))
+        .POST(HttpRequest.BodyPublishers.ofString(Json.write(Map.of("prompt", prompt, "steps", STEPS))))
         .build();
     HttpResponse<String> response;
     try {

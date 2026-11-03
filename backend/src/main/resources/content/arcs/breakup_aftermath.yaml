@@ -12,7 +12,7 @@ phases:
   - id: raw
     duration_days: [5, 14]
     visibility: PUBLIC
-    constraints: [ "avoids:{ex}" ]
+    constraints: [ "avoids:{partner}" ]
     beats:
       - { kind: STATUS, brief: "a vague post about people showing who they really are", max_per_week: 2 }
       - { kind: REACTIONS, brief: "close friends rally in the comments" }
@@ -20,7 +20,7 @@ phases:
   - id: healing
     duration_days: [14, 45]
     visibility: PUBLIC
-    constraints: [ "avoids:{ex}" ]
+    constraints: [ "avoids:{partner}" ]
     beats:
       - { kind: STATUS, brief: "self-care, new routines, a girls'/guys' night out" }
       - { kind: PHOTO, brief: "a fresh start: new haircut, rearranged apartment, a solo trip to the lake" }

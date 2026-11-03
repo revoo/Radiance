@@ -328,7 +328,13 @@ final class ContentValidator {
         String role = k.startsWith("closest_friend_of:") ? k.substring(18) : k;
         if (!arc.roles().containsKey(role)) problem(pw, "knower names unknown role '" + k + "'");
       }
-      for (String c : p.constraints()) constraintRef(pw, c.replaceAll("\\{[a-z_]+}", "x"));
+      for (String c : p.constraints()) {
+        constraintRef(pw, c.replaceAll("\\{[a-z_]+}", "x"));
+        // phase constraints go on everyone in the arc, so a role's holder would get this about themselves
+        for (String role : arc.roles().keySet()) {
+          if (c.contains("{" + role + "}")) problem(pw, "constraint '" + c + "' names a role: use {partner}");
+        }
+      }
       if (p.entryEvent() != null) {
         var ce = p.entryEvent().createsEntity();
         if (ce != null && (ce.fromTable() == null || !lib.tables().containsKey(ce.fromTable()))) {
