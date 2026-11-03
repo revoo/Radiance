@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
  */
 public final class ImageWork {
 
-  public record Report(int photos, int avatars, int deferred, int failed) {
+  public record Report(int photos, int avatars, int deferred, int failed, int premium) {
     public boolean any() {
       return photos + avatars + deferred + failed > 0;
     }
@@ -103,7 +103,7 @@ public final class ImageWork {
     int[] count = {0, 0, 0, 0, neurons, 0}; // photos, avatars, deferred, failed, neurons used, premium images
     boolean open = avatars(w, worldNow, count);
     if (open) photos(w, worldNow, today, count);
-    var report = new Report(count[0], count[1], count[2], count[3]);
+    var report = new Report(count[0], count[1], count[2], count[3], count[5]);
     if (report.any()) log.info("Images: {}", report);
     return report;
   }

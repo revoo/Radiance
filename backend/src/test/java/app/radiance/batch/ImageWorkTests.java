@@ -171,7 +171,7 @@ class ImageWorkTests {
     photoPost("big", 5, null, Fidelity.FULL, "a big lasting moment");
     var everyday = new Stub();
     var better = new Stub();
-    runWithPremium(everyday, better, 100);
+    assertThat(runWithPremium(everyday, better, 100).premium()).isEqualTo(better.prompts.size());
     assertThat(better.prompts).anyMatch(x -> x.contains("a big lasting moment")).noneMatch(x -> x.contains("a plain meal"));
     assertThat(everyday.prompts).anyMatch(x -> x.contains("a plain meal")).noneMatch(x -> x.contains("a big lasting moment"));
   }

@@ -121,6 +121,9 @@ public final class LivePlay {
   // guarded by this
   private String sessionId;
   private long sessionStart, lastBeat, lastAir, lastProgress;
+  private long lastRenderRetry;
+  private static final long RENDER_RETRY_EVERY = 60_000;
+  private static final int RENDERS_RETRIED = 5;
   private Pacer pacer;
   private final Map<String, Slot> typing = new LinkedHashMap<>();
   private final List<DmSlot> dmSlots = new ArrayList<>();
@@ -641,10 +644,26 @@ public final class LivePlay {
 
   // ----------------------------------------------------------------------------------------- loop
 
+  /**
+   * A render that failed, because the provider was down or refused us, tries again here rather than leaving R unanswered until
+   * tonight's batch. A failure queues it again, and restarting loses nothing.
+   */
+  void retryFailedRenders(long wall) {
+    if (wall - lastRenderRetry < RENDER_RETRY_EVERY) return;
+    lastRenderRetry = wall;
+    var jobs = new JobRepository(sql);
+    for (var job : jobs.ready(wall, RENDERS_RETRIED, List.of(JobKinds.RENDER_THREAD, JobKinds.RENDER_DM))) {
+      lane.run(() -> sql.commit(jobs.done(new UnitOfWork(), job.id())));
+      if (JobKinds.RENDER_DM.equals(job.kind())) renderDms(job.refId());
+      else render(job.refId());
+    }
+  }
+
   private void run() {
     while (!stopped) {
       long sleep;
       try {
+        retryFailedRenders(clock.nowMs());
         sleep = tick();
       } catch (RuntimeException e) {
         log.warn("Live loop turn failed", e);

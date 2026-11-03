@@ -118,6 +118,8 @@ export function OnboardingPage({ network }: { network: string }) {
             <label className="mt-4 block text-sm font-semibold" htmlFor="ob-bio">Bio</label>
             <textarea id="ob-bio" rows={3} value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Coffee, code, and pretending I'll run a marathon." className={`${field} resize-none`} />
             <p className="mt-2 text-xs text-faint">Residents read this. First impressions count.</p>
+            {/* the grey examples look filled in, so say why Next isn't lit */}
+            {!canNext && <p className="mt-1 text-xs font-semibold text-accent">Add your name and where you live to continue.</p>}
           </>
         )}
         {step === 1 && (

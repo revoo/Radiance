@@ -17,6 +17,8 @@ describe("App", () => {
     );
     renderWith(<App />);
     expect(await screen.findByRole("heading", { name: "Who are you?" })).toBeInTheDocument();
+    // Found while onboarding: the grey examples look filled in, and Next just stayed dark with no reason given.
+    expect(screen.getByText("Add your name and where you live to continue.")).toBeInTheDocument();
   });
 
   it("shows the feed straight away for an onboarded R", async () => {

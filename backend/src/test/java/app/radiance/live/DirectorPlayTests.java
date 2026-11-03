@@ -135,6 +135,26 @@ class DirectorPlayTests {
     assertThatThrownBy(() -> incidents.breakup(pair.a(), pair.b(), live.now())).isInstanceOf(Incidents.Refused.class);
   }
 
+  /** Found by running with a refused key: a failed live render sat waiting for the nightly batch, leaving R unanswered for hours. */
+  @Test
+  void aFailedLiveRenderIsTriedAgain_NotLeftForTheBatch() throws Exception {
+    var pair = couple();
+    var script = incidents.breakup(pair.a(), pair.b(), live.now());
+    live.injected(script);
+    assertThat(live.awaitIdle(Duration.ofSeconds(10))).isTrue();
+    String post = script.posts.getFirst().id();
+    db.commit(new app.radiance.persistence.UnitOfWork().add("UPDATE post SET body = NULL, render_status = 'PLANNED' WHERE id = ?", post));
+    long wall = db.clock.nowMs();
+    db.commit(new app.radiance.jobs.JobRepository(db.sql).enqueue(new app.radiance.persistence.UnitOfWork(), app.radiance.jobs.JobKinds.RENDER_THREAD, post,
+        app.radiance.jobs.JobKinds.BACKFILL, wall, wall, wall));
+
+    live.retryFailedRenders(wall + 120_000);
+    assertThat(live.awaitIdle(Duration.ofSeconds(10))).isTrue();
+
+    assertThat(one("SELECT render_status AS v FROM post WHERE id = ?", post)).isEqualTo("RENDERED");
+    assertThat(new app.radiance.jobs.JobRepository(db.sql).active(app.radiance.jobs.JobKinds.RENDER_THREAD, post)).isEmpty();
+  }
+
   @Test
   void onlyACoupleCanBreakUp() {
     var pair = couple();
