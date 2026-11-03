@@ -93,3 +93,15 @@ describe("LiveCams", () => {
     expect(screen.getByRole("img", { name: "River West skyline" })).toBeInTheDocument();
   });
 });
+
+describe("seeing a camera bigger", () => {
+  it("opens over everything: regression, it used to open inside the sticky rail and sit under the feed", async () => {
+    setup();
+    fireEvent.click(await screen.findByRole("button", { name: /bigger/ }));
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.closest("section")).toBeNull();
+    expect(dialog.parentElement!.parentElement).toBe(document.body);
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+});

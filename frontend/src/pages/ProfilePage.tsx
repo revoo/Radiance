@@ -186,7 +186,7 @@ function Photos({ handle }: { handle: string }) {
         ))}
       </ul>
       {open && (
-        <Modal title="Photo" onClose={() => setOpen(null)}>
+        <Modal wide title="Photo" onClose={() => setOpen(null)}>
           <img src={open.url ?? undefined} alt={open.description ?? "A photo"} className="max-h-[75vh] w-full rounded-xl object-contain" />
         </Modal>
       )}

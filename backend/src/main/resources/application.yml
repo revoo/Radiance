@@ -47,16 +47,24 @@ radiance:
     images-per-sim-day: 12             # live-tunable
     daily-neuron-budget: 9000          # stays under Workers AI's 10k/day free allocation; resets 00:00 UTC
     neurons-per-image: 60              # about what a 1024px, 4-step flux-1-schnell image costs
-  cameras:                             # ADR 0020; on in prod. Picked by eye, 2026-11-02
+  cameras:                             # ADR 0020; on in prod. Picked by eye, 2026-11-02 and 11-03
     enabled: false
     dataset: https://services2.arcgis.com/aIrBD8yn1TDTEXoz/arcgis/rest/services/TrafficCamerasTM_Public/FeatureServer/0/query
     image-origin: https://cctv.travelmidwest.com
-    spots:
-      - { id: loop,    name: "The Loop from UIC",        match: "Cook__I-290_4187397" }
-      - { id: river,   name: "River West skyline",       match: "Cook_NWB_I-90_4189262" }
-      - { id: circle,  name: "The Circle Interchange",   match: "Cook__I-290_4187371" }
-      - { id: lake,    name: "Toward the lake on I-55",  match: "Cook_WB_I-55_4184816" }
-      - { id: ike,     name: "The Ike and the Blue Line", match: "Cook_WB_I-290_4187610" }
+    spots:                             # match on the camera's position in the file name: IDOT re-files cameras under other roads
+      - { id: loop,    name: "The Loop from UIC",        match: "_4187397_" }
+      - { id: river,   name: "River West skyline",       match: "_4189262_" }
+      - { id: circle,  name: "The Circle Interchange",   match: "_4187371_" }
+      - { id: lake,    name: "Toward the lake on I-55",  match: "_4184816_" }
+      - { id: ike,     name: "The Ike and the Blue Line", match: "_4187610_" }
+      - { id: mccormick, name: "Lake Shore Drive at McCormick", match: "_4184799_" }
+      - { id: jefferson, name: "Downtown from Jefferson St.", match: "_4187576_-8764263_2_" }
+      - { id: halsted,   name: "The West Loop at Halsted",  match: "_4187504_" }
+      - { id: division,  name: "The Kennedy at Division",   match: "_4190334_" }
+      - { id: ryan35,    name: "The Dan Ryan at 35th",      match: "_4183094_" }
+      - { id: redline,   name: "The Dan Ryan and the Red Line", match: "_4174667_" }
+      - { id: desplaines, name: "The Ike over the Des Plaines", match: "_4187166_" }
+      - { id: rosemont,  name: "Rosemont and the Blue Line", match: "_4198302_" }
   ui:
     like-meters: true                  # Sims-style meters and pulses (SPEC §5.9); false for full immersion
   weather:

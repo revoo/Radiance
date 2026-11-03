@@ -353,3 +353,15 @@ body {
     transition-duration: 1ms !important;
   }
 }
+
+/* On a big screen everything comes up a size, not just the columns: it's all in rem, so it scales together. */
+@media (min-width: 120rem) {
+  html {
+    font-size: 17px;
+  }
+}
+@media (min-width: 150rem) {
+  html {
+    font-size: 19px;
+  }
+}

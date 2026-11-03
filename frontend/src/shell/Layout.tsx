@@ -11,6 +11,10 @@ import { TalkedAbout, WeatherCard, WeatherChip, WeatherCredit } from "./Rail.tsx
 
 type Theme = "system" | "light" | "dark";
 
+/** Most of a desktop screen, short of lines of text too long to read. */
+const PAGE_WIDTH = "w-full max-w-[2300px]";
+const FEED_WIDTH = "max-w-[40rem] xl:max-w-[45rem] 2xl:max-w-[51rem] min-[120rem]:max-w-[54rem]";
+
 function readTheme(): Theme {
   try {
     const t = localStorage.getItem("theme");
@@ -184,7 +188,7 @@ function TopBar({ me, network }: { me: Actor; network: string }) {
   }, [unread, dms, network]);
   return (
     <header className="fixed inset-x-0 top-0 z-40 h-16 border-b border-line bg-panel/85 backdrop-blur-xl">
-      <div className="mx-auto flex h-full max-w-[1320px] items-center justify-between gap-3 px-4">
+      <div className={`mx-auto flex h-full ${PAGE_WIDTH} items-center justify-between gap-3 px-4 lg:px-6`}>
         <Link to="/" aria-label={`${network} home`}>
           <Logo name={network} />
         </Link>
@@ -257,7 +261,7 @@ function LeftRail({ me }: { me: Actor }) {
   const director = useDirector();
   const likeMeters = useMe().data?.likeMeters !== false;
   return (
-    <aside className="sticky top-20 hidden h-[calc(100vh-6rem)] w-64 shrink-0 flex-col gap-1 lg:flex">
+    <aside className="sticky top-20 hidden h-[calc(100vh-6rem)] w-64 shrink-0 flex-col gap-1 lg:flex xl:w-72 2xl:w-80 min-[120rem]:w-96">
       <Shortcut to={`/people/${me.handle}`} icon={<Avatar actor={me} size="sm" ring link={false} />} label={me.name} />
       <Shortcut
         to="/"
@@ -343,7 +347,7 @@ function RightRail() {
   const birthdays = rail?.birthdays ?? [];
   const contacts = [...(friends.data ?? [])].sort((a, b) => Number(online.has(b.id)) - Number(online.has(a.id)));
   return (
-    <aside className="sticky top-20 hidden h-[calc(100vh-6rem)] w-72 shrink-0 flex-col gap-3 overflow-y-auto [scrollbar-width:thin] xl:flex">
+    <aside className="sticky top-20 hidden h-[calc(100vh-6rem)] w-72 shrink-0 flex-col gap-3 overflow-y-auto 2xl:w-80 min-[120rem]:w-96 [scrollbar-width:thin] xl:flex">
       {hasWeather ? <WeatherCard /> : <WorldClock />}
       {birthdays.length > 0 && (
         <Card className="p-3">
@@ -472,9 +476,9 @@ export function Layout({ me, network, children }: { me: Actor; network: string; 
   return (
     <div className="min-h-screen pb-20 pt-16 sm:pb-8">
       <TopBar me={me} network={network} />
-      <div className="mx-auto flex max-w-[1320px] gap-6 px-3 pt-4 sm:px-4">
+      <div className={`mx-auto flex ${PAGE_WIDTH} gap-6 px-3 pt-4 sm:px-4 lg:px-6`}>
         {!directing && <LeftRail me={me} />}
-        <main className={`mx-auto w-full min-w-0 flex-1 space-y-4 ${directing ? "max-w-[1280px]" : wide ? "max-w-[980px]" : "max-w-[640px]"}`}>
+        <main className={`mx-auto w-full min-w-0 flex-1 space-y-4 ${directing ? "max-w-none" : wide ? "max-w-[1400px]" : FEED_WIDTH}`}>
           <BackupBanner />
           <BackfillBanner />
           <PausedBanner />

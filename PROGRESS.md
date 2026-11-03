@@ -10,8 +10,10 @@
       only be measured once this is deployed. Real classification hasn't run without an LLM key: offline it's a fake.
 - **M11 merged (2026-11-02)**, see "M11 steps" below. R gave standing approval to merge when CI is green.
 - Rail redesign, after M11: one sky card (clock, weather, forecast strip, animated skies), news rail with faces and heat.
-- Live Chicago cameras on the left rail (R's idea, ADR 0020): five hand-picked IDOT cameras, proxied and cached by the
-  server, on in `prod` only. To add or change one: `radiance.cameras.spots`, matching part of its `SnapShot` file name.
+- Live Chicago cameras on the left rail (R's idea, ADR 0020): thirteen hand-picked IDOT cameras, proxied and cached by the
+  server, on in `prod` only. To add or change one: `radiance.cameras.spots`, matching the position in its `SnapShot` file name
+  (`_4189262_`), because IDOT re-files cameras under other roads. The eight added 2026-11-03 were picked by eye at night in the
+  rain, so their daytime views are unchecked. FOX 32's cameras are out without their permission (their terms forbid it).
 - **M12 Media and M13 Director's console done** (ADR 0021, ADR 0022), see "M13 steps" below. R's direction for the final stretch: finish M13, test thoroughly, polish, merge and deploy without pausing at milestones.
 - For real pictures, `CF_AI_API_TOKEN` still has to go in the server `.env` (`docs/ops/hosting.md`, "Pictures").
 - Next: **R's acceptance test of V1** on a fresh world with real LLM keys (`docs/ops/hosting.md`, "Real prose"). Real prose, real vision and the M2 live contract tests have never run: they need a key.

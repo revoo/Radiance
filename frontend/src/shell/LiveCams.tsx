@@ -91,10 +91,10 @@ export function LiveCams() {
           <span className="block text-[10px] font-medium tabular-nums text-white/75">{camAge(camera.takenAt, now)}</span>
         </span>
       </button>
-      <div className="flex items-center justify-between gap-2 px-1 pt-1.5">
+      <div className="flex flex-wrap items-center justify-between gap-x-2 px-1 pt-1.5">
         <Credit />
         {up.length > 1 && (
-          <div className="flex gap-0.5">
+          <div className="flex flex-wrap justify-end">
             {up.map((c, i) => (
               <button
                 key={c.id}
@@ -111,8 +111,8 @@ export function LiveCams() {
         )}
       </div>
       {open && (
-        <Modal title={camera.name} onClose={() => setOpen(false)}>
-          <img src={src} alt={camera.name} className="w-full rounded-xl bg-black" />
+        <Modal wide title={camera.name} onClose={() => setOpen(false)}>
+          <img src={src} alt={camera.name} className="max-h-[75vh] w-full rounded-xl bg-black object-contain" />
           <div className="flex items-center justify-between gap-2 pt-2 text-sm text-muted">
             <span>{camAge(camera.takenAt, now)}</span>
             <Credit />

@@ -30,7 +30,7 @@ export function PostPhoto({ media, previewUrl }: { media: Media | null | undefin
         />
       </button>
       {open && (
-        <Modal title="Photo" onClose={() => setOpen(false)}>
+        <Modal wide title="Photo" onClose={() => setOpen(false)}>
           <img src={src} alt={alt} className="max-h-[75vh] w-full rounded-xl object-contain" />
         </Modal>
       )}

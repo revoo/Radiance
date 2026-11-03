@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
  */
 public final class CameraFeed {
 
-  /** A camera we show: {@code match} is part of its snapshot's file name, the one stable thing about it. */
+  /** A camera we show: {@code match} is its position in the snapshot's file name; the road in that name can change. */
   public record Spot(String id, String name, String match) {}
 
   /** A camera that's up, and when its picture was taken. */
@@ -60,6 +60,7 @@ public final class CameraFeed {
   private final Map<String, Cached> images = new ConcurrentHashMap<>();
   private volatile Map<String, Listed> listed = Map.of();
   private volatile long listedAt = Long.MIN_VALUE / 2;
+  private List<String> lastMissing = List.of();
 
   /** {@code imageOrigin} is the only place images may come from, such as {@code https://cctv.travelmidwest.com}. */
   public CameraFeed(boolean enabled, URI dataset, String imageOrigin, List<Spot> spots, WallClock clock) {
@@ -126,6 +127,7 @@ public final class CameraFeed {
       listedAt = now; // a failure waits its turn too: the source isn't asked again and again
       try {
         listed = parseList(new String(get(listUri()), StandardCharsets.UTF_8), now);
+        reportMissing();
       } catch (Exception e) {
         if (e instanceof InterruptedException) Thread.currentThread().interrupt();
         log.warn("Camera list failed; keeping the last one: {}", e.toString());
@@ -133,6 +135,13 @@ public final class CameraFeed {
     } finally {
       listLock.unlock();
     }
+  }
+
+  /** A picked camera can drop off the list when the source re-files it, and nothing else would say so. Says it once per change. */
+  private void reportMissing() {
+    var missing = spots.stream().map(Spot::id).filter(id -> !listed.containsKey(id)).toList();
+    if (!missing.equals(lastMissing) && !missing.isEmpty()) log.warn("Picked cameras missing or too old at the source: {}", missing);
+    lastMissing = missing;
   }
 
   private URI listUri() {

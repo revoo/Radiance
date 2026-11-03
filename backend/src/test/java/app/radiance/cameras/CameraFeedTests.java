@@ -176,6 +176,17 @@ class CameraFeedTests {
     assertThat(feed.image("roof")).isEmpty();
   }
 
+  /** Regression: IDOT re-filed a camera under another road, our match stopped finding it, and it just vanished from the tile. */
+  @Test
+  @org.junit.jupiter.api.extension.ExtendWith(org.springframework.boot.test.system.OutputCaptureExtension.class)
+  void aPickedCameraThatDropsOffTheListIsReported_Once(org.springframework.boot.test.system.CapturedOutput output) {
+    var feed = feed(true);
+    feed.cameras();
+    now.addAndGet(CameraFeed.LIST_EVERY);
+    feed.cameras();
+    assertThat(output.toString()).containsOnlyOnce("Picked cameras missing or too old at the source: [gone]");
+  }
+
   @Test
   void offMeansNoCallsAtAll() {
     var feed = feed(false);

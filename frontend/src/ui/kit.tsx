@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import { type ButtonHTMLAttributes, type ReactNode, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router";
 import type { Actor } from "../api/types.ts";
 import { useLive } from "../live/store.ts";
@@ -152,7 +153,11 @@ export function Segmented<T extends string>({ value, options, onChange, label }:
   );
 }
 
-export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+/**
+ * A dialog over everything. It renders at the top of the page, so it can't end up under other things when it's opened from
+ * inside something with its own stacking, like the sticky rails. {@code wide} gives a picture room.
+ */
+export function Modal({ title, onClose, children, wide = false }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -160,7 +165,7 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
     ref.current?.querySelector<HTMLElement>("input, textarea, button")?.focus();
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
       <div
         ref={ref}
@@ -168,7 +173,7 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
         aria-modal="true"
         aria-label={title}
         onClick={(e) => e.stopPropagation()}
-        className="animate-rise w-full max-w-lg rounded-t-3xl border border-line bg-panel p-5 shadow-lift sm:rounded-3xl"
+        className={`animate-rise max-h-[95vh] w-full overflow-y-auto rounded-t-3xl border border-line bg-panel p-5 shadow-lift sm:rounded-3xl ${wide ? "max-w-5xl" : "max-w-lg"}`}
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-bold">{title}</h2>
@@ -178,7 +183,8 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
