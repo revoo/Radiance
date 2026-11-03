@@ -29,7 +29,9 @@ public final class LiveResponder {
   private static final double LIVE_PULL = 0.4;
   /** Generous attention (SPEC P3): while R has friends, a post is never met with silence. */
   private static final int MIN_REACTIONS = 3;
-  private static final int MIN_COMMENTS = 1;
+  private static final int MIN_COMMENTS = 2;
+  /** The floor's comments come from among this many of R's closest, so it isn't the same friend answering every time. */
+  private static final int FLOOR_COMMENTERS = 5;
 
   private final ContentLibrary lib;
   private final Knobs k;
@@ -63,7 +65,10 @@ public final class LiveResponder {
           Stances.reaction(null, b, post, w.edge(b.id, user.id).affinity, rng));
       reactions++;
     }
-    for (var b : friends) {
+    var close = new java.util.ArrayList<>(friends.subList(0, Math.min(FLOOR_COMMENTERS, friends.size())));
+    var shuffle = RandomSource.forSlice(w.seed, t).derive("floor-order:" + post.id);
+    for (int i = close.size() - 1; i > 0; i--) java.util.Collections.swap(close, i, shuffle.nextInt(i + 1));
+    for (var b : close) {
       if (commenters >= MIN_COMMENTS) break;
       if (wrote.contains(b.id)) continue;
       var rng = RandomSource.forActor(w.seed, b.id, t).derive("floor-comment:" + post.id);

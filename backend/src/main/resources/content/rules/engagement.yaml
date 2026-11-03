@@ -11,8 +11,8 @@ w_mood: 0.1
 w_fat: 0.8
 w_sat: 0.5
 steepness: 1.5            # k in P = σ(k·(U − θ))
-theta_react: 2.0
-theta_comment: 3.35        # must exceed theta_react
+theta_react: 2.15
+theta_comment: 3.5         # must exceed theta_react
 theta_react_friends: 1.1   # on residents' posts: R's salience doesn't lift these, so at R's thresholds nearly nobody answered anyone
 theta_comment_friends: 2.3 # must exceed theta_react_friends
 noise_sd: 0.08            # ε

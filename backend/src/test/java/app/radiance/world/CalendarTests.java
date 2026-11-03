@@ -9,6 +9,16 @@ import org.junit.jupiter.api.Test;
 
 class CalendarTests {
 
+  /** Regression: residents went to Cubs games in November. */
+  @org.junit.jupiter.api.Test
+  void baseballIsOffSeasonInNovember_AndFootballIsOn() {
+    String november = Calendar.sports(java.time.LocalDate.of(2026, 11, 3));
+    org.assertj.core.api.Assertions.assertThat(november.substring(0, november.indexOf(';'))).contains("Bears", "Bulls").doesNotContain("Cubs", "White Sox");
+    org.assertj.core.api.Assertions.assertThat(november.substring(november.indexOf(';'))).contains("Cubs", "White Sox");
+    String july = Calendar.sports(java.time.LocalDate.of(2026, 7, 4));
+    org.assertj.core.api.Assertions.assertThat(july.substring(0, july.indexOf(';'))).contains("Cubs").doesNotContain("Bears");
+  }
+
   @Test
   void knownDates() {
     assertThat(Calendar.easter(2026)).isEqualTo(LocalDate.of(2026, 4, 5));

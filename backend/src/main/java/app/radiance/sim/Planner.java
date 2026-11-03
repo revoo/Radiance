@@ -43,6 +43,11 @@ final class Planner {
   static final long DAY = 86_400_000L;
   private static final int MAX_DEBATE_ROUNDS = 4;
   private static final int BACKLASH_REPLIES = 2;
+  private static final java.util.Set<Category> SPACED = java.util.Set.of(Category.LIFE, Category.HOBBY, Category.FAMILY);
+  /** Things a person does rarely, a big purchase or a trip, are also rare across the cast. */
+  static double spacingDays(EventDef def) {
+    return def.cooldownDays() != null && def.cooldownDays() >= 14 ? 5 : 0;
+  }
   private static final double NEWS_DEBATE_PULL = 1.0;
   private static final double OPPOSED_ENGAGE = 2.5;
 
@@ -102,7 +107,7 @@ final class Planner {
         if (!fidelityAllows(p, def)) continue;
         if (!calendarAllows(def, a, date, triggers, w)) continue;
         if (!Eligibility.holds(def, a, w, lib, p.in.weather(), t0)) continue;
-        if (onCooldown(w, a, def, t0) || overCap(p, def, a, t0)) continue;
+        if (onCooldown(w, a, def, t0) || overCap(p, def, a, t0) || someoneJustDid(w, def, t0)) continue;
         if (posts(def) && postsOn(p, a, t0) >= STORYTELLER_POSTS_PER_DAY) continue;
         double lambda = rate(p, def, a, date) * share;
         var rng = p.rng.derive("incident:" + def.id() + ":" + a.id);
@@ -112,6 +117,8 @@ final class Planner {
         Long t = Presence.momentIn(curve, dayStart, t0, p.slice.end(), rng);
         if (t == null) continue;
         fire(p, def, a, participants, t);
+        // airing records this for later runs; later residents in this very slice need to know too
+        if (SPACED.contains(def.category()) && spacingDays(def) > 0) w.fired.computeIfAbsent(a.id + "|" + def.id(), x -> new java.util.TreeSet<>()).add(t);
       }
     }
   }
@@ -174,6 +181,19 @@ final class Planner {
     if (times == null || times.isEmpty()) return false;
     double cd = def.cooldownDays() != null ? def.cooldownDays() : def.when() != null ? 0.9 : 0;
     return cd > 0 && t - times.last() < cd * DAY;
+  }
+
+  /**
+   * One neighbor buying something doesn't make the whole block buy one that week, and a real feed doesn't have seven of them in a
+   * fortnight. Holidays are the exception: everyone does those together.
+   */
+  static boolean someoneJustDid(SimWorld w, EventDef def, long t) {
+    if (def.when() != null || !SPACED.contains(def.category()) || spacingDays(def) == 0) return false;
+    for (var b : w.residents()) {
+      var times = w.fired.get(b.id + "|" + def.id());
+      if (times != null && !times.isEmpty() && t - times.last() < spacingDays(def) * DAY) return true;
+    }
+    return false;
   }
 
   private boolean overCap(Plan p, EventDef def, Person a, long t) {

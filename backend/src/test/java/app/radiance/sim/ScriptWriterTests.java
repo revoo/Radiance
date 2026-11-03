@@ -100,7 +100,7 @@ class ScriptWriterTests {
     }
   }
 
-  static final String GOLDEN = "2e69e012841820da";
+  static final String GOLDEN = "47ecca7f84dd91ef";
 
   @Test
   void anArcBlacklistedMidWorldTakesItsAbandonExit() {

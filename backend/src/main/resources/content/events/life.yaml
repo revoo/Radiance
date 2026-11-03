@@ -18,8 +18,8 @@
   cooldown_days: 60
   importance: 5
   tags: [ big_purchase, expensive ]
-  output: { post: PHOTO, brief: "a new couch, TV, grill, bike or e-bike; proud or sheepish about the price",
-            media: "a new purchase still half in its box in a living room" }
+  output: { post: PHOTO, brief: "a new purchase that's really them, like a grill, a bike, a guitar, power tools or a TV; proud or sheepish about the price",
+            media: "the new purchase, just unpacked, at home" }
   effects: { mood: 0.2 }
 
 - id: anniversary_post
@@ -68,7 +68,7 @@
   cooldown_days: 45
   importance: 4
   tags: [ travel, expensive ]
-  output: { post: STATUS, brief: "booked a trip: a weekend in Michigan, a wedding out of state, or a bucket-list flight" }
+  output: { post: STATUS, brief: "booked a trip they'd really take, somewhere that fits them: a family visit, a wedding, a getaway, a bucket-list flight" }
   effects: { mood: 0.3 }
 
 - id: home_milestone
@@ -79,7 +79,7 @@
   cooldown_days: 40
   importance: 4
   tags: [ home_improvement ]
-  output: { post: PHOTO, brief: "a home milestone: the lease renewed, the room finally finished, the mortgage paid down",
+  output: { post: PHOTO, brief: "a home milestone that fits whether they rent or own: a lease renewed, a room finally finished, or a mortgage paid down",
             media: "a tidy room with afternoon light coming through a window" }
   effects: { mood: 0.2 }
 

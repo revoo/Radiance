@@ -23,8 +23,8 @@
   importance: 3
   tags: [ outing, social_outing ]
   excludes: { tags: [ homebound, grieving ] }
-  output: { post: PHOTO, brief: "out with @with: a bar, a Cubs game, a beer garden, a backyard",
-            media: "two or three people from behind at a bar counter or bleachers, no faces" }
+  output: { post: PHOTO, brief: "out with @with: a bar, a restaurant, a show, a game if a team's in season, whatever suits the two of them and the weather",
+            media: "two people from behind on a night out, no faces" }
 
 - id: throwback
   category: SOCIAL

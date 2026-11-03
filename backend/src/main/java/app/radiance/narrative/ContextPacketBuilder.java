@@ -92,6 +92,10 @@ public final class ContextPacketBuilder {
       if (p.birthDate != null) dir.append(", ").append(Period.between(LocalDate.parse(p.birthDate), ref).getYears());
       if (row[0] != null) dir.append(", ").append(row[0]);
       if (row[1] != null) dir.append(", ").append(row[1]);
+      if (!p.user) {
+        String heritage = Json.tree(personas.get(p.id).identityJson()).path("heritage").asString("");
+        if (!heritage.isBlank()) dir.append(", ").append(heritage);
+      }
       if (p.user) {
         dir.append("; the newest member (R)");
       } else {
@@ -233,7 +237,7 @@ public final class ContextPacketBuilder {
     var sb = new StringBuilder();
     sb.append(date.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.US)).append(", ").append(date).append(", ")
         .append(part).append(" (").append(String.format("%02d:%02d", h, local.getMinute())).append("), ")
-        .append(Calendar.season(date)).append(".\n");
+        .append(Calendar.season(date)).append(".\n").append("Chicago sports: ").append(Calendar.sports(date)).append(".\n");
     var weather = new WeatherBook(world.zone, lib.weather())
         .putAll(new WeatherRepository(sql).between(t - t % 3_600_000L - DAY, t + DAY));
     weather.at(t).ifPresent(w -> sb.append("Weather: ").append(w.describe()).append(".\n"));
@@ -297,7 +301,7 @@ public final class ContextPacketBuilder {
         .append("; ").append(v.path("punctuation").asString("")).append("; typos ")
         .append(Math.round(v.path("typoRate").asDouble(0) * 100)).append("%.\n");
     list(sb, "Slang", v.path("slang"));
-    list(sb, "Catchphrases", v.path("catchphrases"));
+    list(sb, "Catchphrases (rarely, most posts have none)", v.path("catchphrases"));
     list(sb, "Talks about", v.path("signatureTopics"));
     list(sb, "Never", v.path("neverDoes"));
     list(sb, "Sample posts", v.path("samplePosts"));

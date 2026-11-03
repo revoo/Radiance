@@ -27,8 +27,8 @@
 
 - id: gaming_session
   category: HOBBY
-  base_rate: 0.02
-  modifiers: { interest.gaming: 4.0 }
+  base_rate: 0.005
+  modifiers: { interest.gaming: 16.0 }
   importance: 1
   output: { post: STATUS, brief: "a gaming win, a rage-quit, or staying up too late on a new release" }
 

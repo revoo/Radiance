@@ -485,7 +485,9 @@ final class ArcEngine {
     // the copy's fired map counts beats for max_per_week; airing rebuilds it from the event log
     p.w.fired.computeIfAbsent(arc.id + "|beat:" + index, k -> new java.util.TreeSet<>()).add(t);
     if (post && (p.slice.fidelity() != app.radiance.kernel.Fidelity.SUMMARY)) {
-      var brief = new Brief(def.id(), def.category().name(), text, null, null, null, topics(def), 0.1, 0.1,
+      // a friend passing on someone else's story must not write it as their own
+      String told = author.equals(subject) ? text : "talking about @" + person.handle + "'s storyline, which is theirs and not the writer's: " + text;
+      var brief = new Brief(def.id(), def.category().name(), told, null, null, null, topics(def), 0.1, 0.1,
           Plan.extra("arcPhase", arc.phase, "beat", kind.name(), "secret", arc.visibility == Visibility.SECRET ? true : null,
               "mentions", kind == BeatKind.MENTION ? List.of(subject) : null, "data", arc.data));
       var postKind = kind == BeatKind.MENTION ? PostRow.Kind.STATUS : PostRow.Kind.valueOf(kind.name());

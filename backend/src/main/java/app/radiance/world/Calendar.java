@@ -34,6 +34,18 @@ public final class Calendar {
     };
   }
 
+  /** Who's playing, so nobody goes to a Cubs game in November. */
+  public static String sports(LocalDate d) {
+    int m = d.getMonthValue();
+    var on = new java.util.ArrayList<String>();
+    var off = new java.util.ArrayList<String>();
+    (m >= 4 && m <= 9 ? on : off).addAll(java.util.List.of("Cubs", "White Sox"));
+    (m >= 9 || m == 1 ? on : off).add("Bears");
+    (m >= 10 || m <= 4 ? on : off).addAll(java.util.List.of("Bulls", "Blackhawks"));
+    (m >= 3 && m <= 10 ? on : off).addAll(java.util.List.of("Fire", "Red Stars"));
+    return "in season " + String.join(", ", on) + "; off season, not playing at all: " + String.join(", ", off);
+  }
+
   public static boolean isBirthday(String birthDate, LocalDate d) {
     if (birthDate == null) return false;
     var b = LocalDate.parse(birthDate);
