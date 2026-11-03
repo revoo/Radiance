@@ -406,4 +406,17 @@ class ApiTests {
         .add("UPDATE actor SET birth_date = ? WHERE id = ?", today.plusDays(2).withYear(1990).toString(), friend)));
     mvc.perform(get("/api/rail").with(R)).andExpect(jsonPath("$.birthdays[?(@.id == '" + friend + "')]").doesNotExist());
   }
+
+  @Test
+  @Order(17)
+  void pagesCarryAContentSecurityPolicy_AndGeneratedPicturesKeepTheirTighterOne() throws Exception {
+    var header = mvc.perform(get("/")).andReturn().getResponse().getHeader("Content-Security-Policy");
+    assertThat(header).contains("default-src 'self'", "frame-ancestors 'none'", "img-src 'self' data: blob:");
+    assertThat(mvc.perform(get("/api/me").with(R)).andReturn().getResponse().getHeader("Content-Security-Policy")).isEqualTo(header);
+    var row = sql.queryOne("SELECT COUNT(*) AS n FROM media WHERE mime = 'image/svg+xml' AND status = 'READY'", java.util.List.of(), r -> r.lng("n")).orElse(0L);
+    if (row > 0) {
+      String svg = sql.queryOne("SELECT id FROM media WHERE mime = 'image/svg+xml' AND status = 'READY' LIMIT 1", java.util.List.of(), r -> r.str("id")).orElseThrow();
+      assertThat(mvc.perform(get("/api/media/" + svg).with(R)).andReturn().getResponse().getHeaders("Content-Security-Policy")).singleElement().asString().contains("sandbox");
+    }
+  }
 }

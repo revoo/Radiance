@@ -38,6 +38,10 @@ class WebSecurityConfig {
 
   private static final Logger log = LoggerFactory.getLogger(WebSecurityConfig.class);
 
+  /** Everything comes from here: blob and data are for a photo's preview and the icon, inline styles for React's style props. */
+  static final String CSP = "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; object-src 'none';"
+      + " base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
+
   @Bean
   PasswordEncoder passwordEncoder() {
     return new BCryptPasswordEncoder();
@@ -80,6 +84,7 @@ class WebSecurityConfig {
                     .permitAll())
         // no session for anonymous requests: on a public host, bots would otherwise fill the heap
         .requestCache(cache -> cache.disable())
+        .headers(h -> h.contentSecurityPolicy(csp -> csp.policyDirectives(CSP)))
         .csrf(csrf -> csrf.spa())
         .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
         .addFilterBefore(limiter, UsernamePasswordAuthenticationFilter.class)
