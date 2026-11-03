@@ -54,6 +54,16 @@ class ModelStoreTests {
     for (var r : w.residents()) assertThat(w.activeTags(r.id, w.time, LIB)).doesNotContain("avoids:" + r.id);
   }
 
+  /** Regression: Gary, retired for years, kept posting about long days at the shop and meetings that could have been emails. */
+  @Test
+  void theRetiredAndStayAtHomeHaveNoWorkday() {
+    var w = store.load();
+    var h = w.byHandle();
+    assertThat(w.activeTags(h.get("gary.moran").id, w.time, LIB)).contains("not_working");
+    assertThat(w.activeTags(h.get("jessica.vogel").id, w.time, LIB)).doesNotContain("not_working");
+    assertThat(app.radiance.sim.Eligibility.blocked(LIB.events().get("work_gripe"), w.activeTags(h.get("gary.moran").id, w.time, LIB), LIB)).isTrue();
+  }
+
   @Test
   void loadsTheImportedWorld() {
     var w = store.load();

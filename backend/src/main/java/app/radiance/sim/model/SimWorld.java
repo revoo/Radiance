@@ -137,6 +137,8 @@ public final class SimWorld {
    * tags of every active arc they're in ({@code {role}} and {@code {partner}} resolved to actor ids),
    * and {@code single} / {@code in_relationship:<partner>} from their status.
    */
+  private static final java.util.regex.Pattern NOT_WORKING = java.util.regex.Pattern.compile("(?i)\\b(retired|stay-at-home)\\b");
+
   public TreeSet<String> activeTags(String actorId, long t, ContentLibrary lib) {
     var out = new TreeSet<String>();
     var stored = tags.get(actorId);
@@ -156,6 +158,7 @@ public final class SimWorld {
         out.add("single");
       }
       if (p.partnerId != null) out.add("in_relationship:" + p.partnerId);
+      if (p.occupation != null && NOT_WORKING.matcher(p.occupation).find()) out.add("not_working");
     }
     return out;
   }

@@ -13,7 +13,7 @@
   base_rate: 0.01
   importance: 2
   tags: [ family_visit ]
-  output: { post: STATUS, brief: "a visit with their parents: a dish from their own family's background, a family argument, an old neighborhood" }
+  output: { post: STATUS, brief: "a visit with their parents: a dish from their own family's background (pierogi only if they're Polish or Ukrainian), a family argument, an old neighborhood" }
 
 - id: family_birth_announcement
   category: FAMILY

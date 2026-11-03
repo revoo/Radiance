@@ -157,6 +157,8 @@ class ImageWorkTests {
     run(stub, 12, 9000);
     String prompt = stub.prompts.stream().filter(x -> x.contains("Salmon")).findFirst().orElseThrow();
     assertThat(prompt).contains("Salmon and broccoli off the sheet pan, thanks a friend").doesNotContain("a meal on a table", "@jake");
+    // Regression: asked for "the photo with this caption", FLUX 3 painted the caption across the picture.
+    assertThat(prompt).contains("no words, captions or overlays").doesNotContain("with this caption");
   }
 
   ImageWork.Report runWithPremium(Stub everyday, ImageGenerator better, int perRun) {

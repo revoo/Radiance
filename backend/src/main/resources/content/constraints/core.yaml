@@ -93,6 +93,14 @@
     lexicon: [ "single life", "dating apps", "on the apps", "bumble", "hinge", "tinder", "forever alone" ]
     judge: "Does this text present {name} as single and looking?"
 
+- id: not_working
+  planner: { excludes_event_tags: [ work ] }
+  prose: "{name} doesn't have a job to go to: no workdays, meetings, bosses or coworkers."
+  reason_public: true
+  linter:
+    lexicon: [ "my boss", "coworker", "at the office", "meeting ran long" ]
+    judge: "Does this text show {name} going to a job they currently have?"
+
 - id: single
   planner: { excludes_event_tags: [ couple ] }
   prose: "{name} is single."

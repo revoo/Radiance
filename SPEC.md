@@ -752,7 +752,7 @@ The weight multiplier for LIFE/DRAMA defs is a function of `target − tension`.
 - The `pregnancy` entry means no resident is ever pregnant and pregnancy talk stays out of prose. Births in a resident's off-network family are still welcome FAMILY news, written as birth announcements ("Welcome to the world, Nora!"), which don't trip its theme terms.
 - Blacklisting an arc mid-world (Director's console) stops new instances at once; active ones take the def's `abandon` exit if it has one and otherwise run to their end, so nothing disappears silently.
 
-**Constraint tags** — a fixed vocabulary with parameters: `no_alcohol`, `no_travel`, `no_long_travel`, `budget_tight`, `homebound`, `low_energy`, `sleep_deprived`, `grieving`, `injured:<part>`, `secret:<topic>`, `in_relationship:<actor>`, `single`, `avoids:<actor>`, `busy_weekends`, `new_job`, `unemployed`. Each tag (YAML in `content/constraints/`) defines:
+**Constraint tags** — a fixed vocabulary with parameters: `no_alcohol`, `no_travel`, `no_long_travel`, `budget_tight`, `homebound`, `low_energy`, `sleep_deprived`, `grieving`, `injured:<part>`, `secret:<topic>`, `in_relationship:<actor>`, `single`, `avoids:<actor>`, `busy_weekends`, `new_job`, `unemployed`, `not_working`. Each tag (YAML in `content/constraints/`) defines:
 1. planner semantics — events declare `excludes`/`requires` against tags;
 2. a prose line injected into briefs ("Jesse is broke after overpaying for the Civic and is skipping anything that costs real money.");
 3. a linter lexicon and a yes/no judge question (§5.10);

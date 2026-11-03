@@ -66,7 +66,7 @@ class ContentLibraryTests {
     assertThat(lib.constraints().keySet()).containsExactlyInAnyOrder("no_alcohol", "no_travel",
         "no_long_travel", "budget_tight", "homebound", "low_energy", "sleep_deprived", "grieving",
         "injured", "secret", "in_relationship", "single", "avoids", "busy_weekends", "new_job",
-        "unemployed");
+        "unemployed", "not_working");
     assertThat(lib.weather().keySet()).containsExactlyInAnyOrder("snow_day", "first_warm_day",
         "brutal_cold", "heat_wave", "thunderstorm", "washout", "perfect_day");
     assertThat(lib.temperament().presets()).hasSize(3);

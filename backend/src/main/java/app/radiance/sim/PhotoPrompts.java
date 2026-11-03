@@ -54,8 +54,9 @@ public final class PhotoPrompts {
     if (words.length() > CAPTION_CHARS) words = words.substring(0, CAPTION_CHARS);
     boolean outdoors = OUTDOORS.matcher(scene + " " + words).find();
     if (!words.isEmpty()) {
-      scene = (thing == null ? "" : scene + ". ") + "The photo someone posted with this caption: \"" + words
-          + "\" Show what the caption describes, as they'd really have snapped it";
+      // "caption" gets the words painted onto the picture
+      scene = (thing == null ? "" : scene + ". ") + "A snapshot of the moment this person is describing, in their words: " + words
+          + " Picture only what's happening: a plain photo with no words, captions or overlays on it";
     }
     if (sky != null && outdoors) scene += ", in this weather: " + sky;
     long seed = thing == null ? postId.hashCode() : thing.imageSeed != null ? thing.imageSeed : thing.id.hashCode();
