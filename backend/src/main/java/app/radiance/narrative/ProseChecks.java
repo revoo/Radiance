@@ -33,7 +33,43 @@ public final class ProseChecks {
     return Pattern.compile("(?i)(^|\\balso )" + Pattern.quote(author.split(" ")[0]) + ",").matcher(text).find();
   }
 
-  static final Pattern SLIP = Pattern.compile("(?i)\\bno wait,? i'?m\\b|\\.\\.\\.\\s*(wait no|i mean)\\b");
+  static final Pattern SLIP = Pattern.compile("(?i)\\bno wait,? i'?m\\b|\\.\\.\\.\\s*(no wait|wait no|i mean)\\b");
+
+  /** Five words in a row is saying it again; shorter runs are just how people talk. */
+  private static final int REPEAT_RUN = 5;
+
+  /**
+   * What {@code handle} is saying again from their own earlier lines in this packet's conversation: a run of
+   * words, or one of their catchphrases. Null if nothing. Regression: Jessica signed off every text "sorry not
+   * sorry" and gave R her address three times, whatever he said.
+   */
+  static String repeats(String text, String packet, String handle, List<String> catchphrases) {
+    var own = new StringBuilder();
+    int from = Math.max(packet.indexOf("<conversation>"), packet.indexOf("<thread>"));
+    if (from < 0) return null;
+    int to = packet.indexOf("<briefs>", from);
+    for (String line : packet.substring(from, to < 0 ? packet.length() : to).split("\\R")) {
+      String l = line.strip();
+      if (l.startsWith(handle + ": ")) own.append(' ').append(plain(l.substring(handle.length() + 2)));
+    }
+    String said = own + " ";
+    String mine = " " + plain(text) + " ";
+    for (String phrase : catchphrases) {
+      String p = " " + plain(phrase) + " ";
+      if (!p.isBlank() && mine.contains(p) && said.contains(p)) return phrase;
+    }
+    var words = plain(text).split(" ");
+    for (int i = 0; i + REPEAT_RUN <= words.length; i++) {
+      String run = String.join(" ", java.util.Arrays.copyOfRange(words, i, i + REPEAT_RUN));
+      if (said.contains(" " + run + " ")) return run;
+    }
+    return null;
+  }
+
+  private static String plain(String text) {
+    return text.toLowerCase(java.util.Locale.ROOT).replaceAll("[^\\p{L}\\p{N}' ]+", " ").replaceAll("\\s+", " ").strip();
+  }
+
   /** "Sox lost AGAIN last night", in November. */
   static final Pattern BASEBALL_GAME = Pattern.compile("(?i)\\b(cubs|sox)\\b[^.!?]{0,30}\\b(lost|won|blew|beat|bullpen|game)\\b|\\b(cubs|sox)\\s+(bullpen|game)\\b");
 

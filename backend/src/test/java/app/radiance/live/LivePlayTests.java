@@ -485,6 +485,80 @@ class LivePlayTests {
     assertThat(actions.mentioned("No handles here")).isEmpty();
   }
 
+  /** Regression: three of R's first four comments got no answer and no reaction, and he took it as the app ignoring him. */
+  @Test
+  void talkedToOnTheirOwnPost_APersonAlmostAlwaysAnswers_AndNeverLeavesRInSilence() {
+    var heard = heard(fixture("their-post", "kristen.wagner", null), null, 30);
+    assertThat(heard[0]).as("answers out of 40").isGreaterThanOrEqualTo(34);
+    assertThat(heard[0] + heard[1]).as("answers and reactions out of 40").isEqualTo(40);
+    assertThat(heard[2]).as("the slowest answer, in minutes past the horizon").isLessThanOrEqualTo(20);
+  }
+
+  @Test
+  void rReplyingOnHisOwnPost_OftenGetsAnAnswer_AndAtLeastAReaction() {
+    String theirs = fixture("his-post", null, "kristen.wagner");
+    var heard = heard(theirs, "his-post-c", 30);
+    assertThat(heard[0]).as("answers out of 40").isGreaterThanOrEqualTo(10);
+    assertThat(heard[0] + heard[1]).as("answers and reactions out of 40").isEqualTo(40);
+  }
+
+  @Test
+  void someoneWhoCantStandRMayStillLeaveHimHanging() {
+    var heard = heard(fixture("cold-post", "kristen.wagner", null), null, -80);
+    assertThat(heard[0] + heard[1]).as("answers and reactions out of 40").isLessThan(40);
+  }
+
+  /** {answers, reactions, slowest answer in minutes past the horizon} from Kristen across 40 of R's comments. */
+  private long[] heard(String post, String parent, double affinity) {
+    var actions = new UserActions(db.sql, db.lane, engine);
+    String kristen = engine.world().byHandle().get("kristen.wagner").id;
+    engine.locked(w -> {
+      w.edge(kristen, w.userId).affinity = affinity;
+      return null;
+    });
+    var reading = app.radiance.live.Appraiser.reading(app.radiance.live.Appraiser.heuristic("oh nice", true));
+    long answers = 0, reactions = 0, slowest = 0;
+    for (int i = 0; i < 40; i++) {
+      db.clock.advance(Duration.ofMinutes(1));
+      long t = db.clock.nowMs();
+      String comment = actions.comment(post, parent, "oh nice " + i, reading, t).orElseThrow();
+      var script = actions.considered(comment, reading, t);
+      for (var c : script.comments) {
+        if (c.authorId().equals(kristen) && comment.equals(c.parentId())) {
+          answers++;
+          slowest = Math.max(slowest, (c.createdAt() - t - UserActions.HORIZON) / 60_000);
+        }
+      }
+      reactions += script.reactions.stream().filter(r -> r.actorId().equals(kristen) && r.targetId().equals(comment)).count();
+    }
+    return new long[] {answers, reactions, slowest};
+  }
+
+  /** An aired post by {@code author} (R if null), with a comment from {@code commenter} if given. */
+  private String fixture(String id, String author, String commenter) {
+    var byHandle = engine.world().byHandle();
+    long t = db.clock.nowMs();
+    var brief = new app.radiance.sim.Brief(null, "DAILY", null, null, null, null, List.of("food"), 0.2, 0, java.util.Map.of());
+    var post = new app.radiance.social.PostRow(id, author == null ? engine.world().userId : byHandle.get(author).id, t, app.radiance.social.PostRow.Kind.STATUS,
+        app.radiance.social.PostRow.Audience.FRIENDS, app.radiance.kernel.ContentOrigin.SCRIPT, app.radiance.kernel.AirStatus.SCRIPTED,
+        "Tried a new recipe tonight.", app.radiance.kernel.RenderStatus.RENDERED, brief.json(), null, null, null, null, null, 3,
+        app.radiance.kernel.Fidelity.FULL, "{}", 0);
+    var social = new app.radiance.social.SocialRepository(db.sql);
+    var uow = new app.radiance.persistence.UnitOfWork();
+    social.savePosts(uow, List.of(post));
+    if (commenter != null) {
+      social.saveComments(uow, List.of(new app.radiance.social.CommentRow(id + "-c", id, null, byHandle.get(commenter).id, t + 1,
+          app.radiance.kernel.ContentOrigin.SCRIPT, app.radiance.kernel.AirStatus.SCRIPTED, "Looks great!", null,
+          app.radiance.kernel.RenderStatus.RENDERED, new app.radiance.sim.Brief(null, "DAILY", null, "SUPPORT", null,
+              "supportive_comment", List.of("food"), 0.2, 0, java.util.Map.of()).json(), null, "{}")));
+    }
+    db.commit(uow);
+    db.clock.advance(Duration.ofSeconds(5));
+    engine.reload();
+    engine.advanceTo(db.clock.nowMs());
+    return id;
+  }
+
   @Test
   void someoneWhoCantStandRDoesntAnswerBeingNamed() {
     var actions = new UserActions(db.sql, db.lane, engine);

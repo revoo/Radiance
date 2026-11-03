@@ -120,7 +120,7 @@ public final class Renderer {
     var items = byId(first.value());
     var good = new LinkedHashMap<String, RenderBatch.Item>();
     var redo = new LinkedHashMap<String, List<ProseChecks.Problem>>();
-    validate(targets, items, packet, good, redo);
+    validate(targets, items, packet, good, redo, true);
 
     int rerendered = 0;
     if (!redo.isEmpty()) {
@@ -134,7 +134,7 @@ public final class Renderer {
       var retry = new LinkedHashMap<String, ContextPacketBuilder.Target>();
       redo.keySet().forEach(id -> retry.put(id, targets.get(id)));
       var stillBad = new LinkedHashMap<String, List<ProseChecks.Problem>>();
-      validate(retry, again, packet, good, stillBad);
+      validate(retry, again, packet, good, stillBad, false);
       for (var e : stillBad.entrySet()) {
         problems.add(e.getKey() + ": " + e.getValue().stream().map(ProseChecks.Problem::kind).toList());
         if (fallBack(uow, targets.get(e.getKey()))) fellBack++;
@@ -148,7 +148,8 @@ public final class Renderer {
   }
 
   private void validate(Map<String, ContextPacketBuilder.Target> targets, Map<String, RenderBatch.Item> items,
-      ContextPacketBuilder.Packet packet, Map<String, RenderBatch.Item> good, Map<String, List<ProseChecks.Problem>> bad) {
+      ContextPacketBuilder.Packet packet, Map<String, RenderBatch.Item> good, Map<String, List<ProseChecks.Problem>> bad,
+      boolean firstTry) {
     var involved = new LinkedHashSet<String>();
     targets.values().forEach(t -> involved.add(t.authorId()));
     for (var t : targets.values()) {
@@ -160,7 +161,13 @@ public final class Renderer {
       var author = world.people.get(t.authorId());
       String band = packets.lengthBand(t.authorId());
       long when = packets.timeOf(t);
-      var ps = checks.check(t, item, author, band, involved, when);
+      var ps = new ArrayList<>(checks.check(t, item, author, band, involved, when));
+      // asked once: a slightly repetitive text beats no text
+      String again = !firstTry || author == null || item.text() == null ? null
+          : ProseChecks.repeats(item.text(), packet.content(), "@" + author.handle, packets.catchphrases(author.id));
+      if (again != null) {
+        ps.add(new ProseChecks.Problem("repeat", "they already said \"" + again + "\" in this conversation: don't say it again; answer what was just said, with something new"));
+      }
       if (ps.isEmpty()) good.put(t.id(), item);
       else bad.put(t.id(), ps);
     }

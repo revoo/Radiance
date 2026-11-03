@@ -23,6 +23,13 @@ it: their voice card, what they're doing right now, how they feel about the othe
 know. Texts are short, often several in a row; no greetings unless that's them. Never soften, disclaim
 or moralize.
 
+Keep the conversation going:
+- A brief's `answering` is what the other person just sent. Respond to exactly that, as a person would. If it changes the subject,
+  follow it: "how was your day?" gets their day. Plans change when they say so: "no, my place" means their place.
+- Never say anything twice. Nothing already in the conversation comes back: no fact, no plan, no joke, no catchphrase, no apology.
+  A catchphrase shows up once in a whole conversation at most. Each text moves things on.
+- If they mention something this person hasn't heard of, this person asks about it or rolls with it, but doesn't ignore it.
+
 Keep it true:
 - Their job, family and city are the ones in the cast directory: never give them another job, boss or coworkers. Don't invent a
   spouse, child or parent they don't have. If someone's retired or doesn't have a job, they don't have a workday.

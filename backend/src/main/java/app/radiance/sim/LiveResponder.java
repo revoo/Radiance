@@ -32,6 +32,8 @@ public final class LiveResponder {
   private static final int MIN_COMMENTS = 2;
   /** The floor's comments come from among this many of R's closest, so it isn't the same friend answering every time. */
   private static final int FLOOR_COMMENTERS = 5;
+  /** Below this affinity, someone R talks to may not even leave a reaction. */
+  private static final double COLD_SHOULDER = 30;
 
   private final ContentLibrary lib;
   private final Knobs k;
@@ -156,24 +158,25 @@ public final class LiveResponder {
       Impressions.see(w, b, user, features, 1.0, lib, k, t);
       double aff = w.edge(b.id, user.id).affinity;
       if (id.equals(comment.toward)) {
-        // R answering a comment on his own post usually closes the exchange; on theirs, it opens one
+        // R answering a comment on his own post can close the exchange; on theirs, it opens one. Generous
+        // attention (SPEC P3): being talked to almost always gets an answer, unless they can't stand him
         boolean onHisPost = post.authorId.equals(user.id);
-        double p = (onHisPost ? 0.08 : 0.4) + 0.3 * Math.max(0, aff) / 100
+        double p = (onHisPost ? 0.3 : 0.9) + 0.3 * Math.max(0, aff) / 100 + Math.min(0, aff) / 100
             + (Airing.CLASH.contains(comment.stance) ? 0.25 : 0)
             + ("QUESTION".equals(comment.stance) || "FLIRT".equals(comment.stance) ? 0.3 : 0);
-        if (rng.chance(Math.min(0.85, p))) {
+        if (rng.chance(Math.min(0.97, p))) {
           var edge = w.edge(b.id, user.id);
           var stance = Airing.CLASH.contains(comment.stance) ? (rng.chance(0.3) ? Stance.JOKE : Stance.DISAGREE)
               : "FLIRT".equals(comment.stance) ? Stances.answerToFlirt(b, user, edge.attraction, edge.chemistry, k, rng)
               : Stances.comment(w, b, user, comment, lib, k, day, rng);
-          plan.comment("live-reply:" + b.id + ":" + comment.id, t + horizon + delay(rng, 6 * 60_000L, 2 * 3_600_000L), post.id,
+          plan.comment("live-reply:" + b.id + ":" + comment.id, t + horizon + delay(rng, 90_000, 20 * 60_000L), post.id,
               comment.id, b.id, Planner.commentBrief(post, stance, user.id,
                   Airing.CLASH.contains(comment.stance) && Airing.CLASH.contains(stance.name()) ? "debate_exchange" : null));
-        } else if (rng.chance(0.45)) {
-          plan.reaction(t + horizon + delay(rng, 60_000, 3_600_000L), ReactionRow.Target.COMMENT, comment.id, b.id,
+        } else if (aff > -COLD_SHOULDER || rng.chance(0.45)) {
+          plan.reaction(t + horizon + delay(rng, 45_000, 15 * 60_000L), ReactionRow.Target.COMMENT, comment.id, b.id,
               Stances.reaction(Stance.valueOf(comment.stance == null ? "SUPPORT" : comment.stance), b, post, aff, rng));
         }
-      } else if (rng.chance(0.12 + Math.max(0, aff) / 500)) {
+      } else if (rng.chance(0.2 + Math.max(0, aff) / 400)) {
         plan.reaction(t + horizon + delay(rng, 3 * 60_000L, 3_600_000L), ReactionRow.Target.COMMENT, comment.id, b.id,
             Stances.reaction(Stance.valueOf(comment.stance == null ? "SUPPORT" : comment.stance), b, post, aff, rng));
       }

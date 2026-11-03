@@ -226,9 +226,6 @@ body {
   0% {
     background-color: var(--accent-soft);
   }
-  100% {
-    background-color: transparent;
-  }
 }
 @keyframes bob {
   0%,

@@ -230,6 +230,10 @@ class ApiTests {
     var posts = sql.query("SELECT id FROM post WHERE air_status = 'AIRED' AND render_status = 'RENDERED' AND body IS NOT NULL"
         + " AND headline_id IS NULL ORDER BY id LIMIT 3", java.util.List.of(), r -> r.str("id"));
     assertThat(posts).hasSize(3);
+    String stranger = sql.queryOne("SELECT id FROM post WHERE air_status = 'AIRED' AND render_status = 'RENDERED' AND body IS NOT NULL"
+        + " AND headline_id IS NULL AND audience = 'FRIENDS' AND author_id NOT IN (SELECT id FROM actor WHERE kind = 'USER')"
+        + " AND author_id NOT IN (SELECT to_id FROM relationship WHERE from_id = (SELECT id FROM actor WHERE kind = 'USER') AND connected = 1)"
+        + " AND id NOT IN (?, ?, ?) LIMIT 1", java.util.List.of(posts.get(0), posts.get(1), posts.get(2)), r -> r.str("id")).orElseThrow();
     String insert = "INSERT INTO headline (id, url, source, title, published_at, fetched_at, classified_at)"
         + " VALUES (?, ?, ?, ?, ?, ?, ?)";
     writer.run(() -> sql.commit(new app.radiance.persistence.UnitOfWork()
@@ -239,6 +243,8 @@ class ApiTests {
         .add("UPDATE post SET headline_id = 'real', created_at = ?, comment_count = 1000, audience = 'PUBLIC' WHERE id = ?", now - 60_000, posts.get(0))
         .add("UPDATE post SET headline_id = 'fake', created_at = ?, audience = 'PUBLIC' WHERE id = ?", now - 60_000, posts.get(1))
         .add("UPDATE post SET headline_id = 'hidden', created_at = ?, air_status = 'SCRIPTED' WHERE id = ?", now - 60_000, posts.get(2))
+        .add(insert, "strangers", "https://example.com/strangers", "Wire", "A story only strangers posted", now, now, now)
+        .add("UPDATE post SET headline_id = 'strangers', created_at = ?, comment_count = 5000 WHERE id = ?", now - 60_000, stranger)
         .add("INSERT INTO weather_hour (hour, temp_f, feels_like_f, precip_in, snow_in, wind_mph, wmo_code, kind, fetched_at)"
             + " VALUES (?, 34.4, 27, 0, 0.1, 5, 71, 'FORECAST', ?) ON CONFLICT (hour) DO UPDATE SET temp_f = 34.4,"
             + " feels_like_f = 27, snow_in = 0.1, wmo_code = 71", now - now % 3_600_000L, now)
@@ -265,7 +271,10 @@ class ApiTests {
         .andExpect(jsonPath("$.talkedAbout[0].title").value("Senate passes the budget"))
         .andExpect(jsonPath("$.talkedAbout[0].posts").value(1))
         .andExpect(jsonPath("$.talkedAbout[0].comments").value(1000))
-        .andExpect(jsonPath("$.talkedAbout[?(@.title == 'A story nobody has posted yet')]").isEmpty());
+        .andExpect(jsonPath("$.talkedAbout[?(@.title == 'A story nobody has posted yet')]").isEmpty())
+        // regression: R clicked a story from a non-friend's post and got a 404 behind a spinner
+        .andExpect(jsonPath("$.talkedAbout[?(@.title == 'A story only strangers posted')]").isEmpty());
+    mvc.perform(get("/api/posts/" + stranger).with(R)).andExpect(status().isNotFound());
   }
 
   @Test

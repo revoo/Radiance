@@ -163,6 +163,36 @@ class RendererTests {
     assertThat(ProseChecks.slipped("Jessica Vogel", "Home in Des Plaines... wait no, Mount Prospect")).isTrue();
   }
 
+  /** Regression: every text from Jessica ended "sorry not sorry", and she gave R her address three times. */
+  @Test
+  void someoneSayingItAgainIsCaught() {
+    String packet = """
+        <people>sorry not sorry about the pasta wait, in a sample post</people>
+        <conversation>
+        @russ.rose: where do you live? sorry not sorry about the pasta wait
+        @jessica.vogel: West Loop, the Fulton side. Buzz me when you get here.
+        @jessica.vogel: Mabel says hi. Sorry not sorry.
+        </conversation>
+        <briefs>[]</briefs>
+        """;
+    var jessica = "@jessica.vogel";
+    var phrases = java.util.List.of("sorry not sorry");
+    assertThat(ProseChecks.repeats("lol. Buzz me when you get here, ok", packet, jessica, phrases)).isEqualTo("buzz me when you get");
+    assertThat(ProseChecks.repeats("toast is going, SORRY not sorry!", packet, jessica, phrases)).isEqualTo("sorry not sorry");
+    assertThat(ProseChecks.repeats("my day was long. Nick is annoying me.", packet, jessica, phrases)).isNull();
+    // R's words and her sample posts aren't her saying it again
+    assertThat(ProseChecks.repeats("where do you live? tell me", packet, jessica, java.util.List.of())).isNull();
+    assertThat(ProseChecks.repeats("about the pasta wait last week", packet, jessica, java.util.List.of())).isNull();
+    // and a thread's comments count, indented as they are
+    assertThat(ProseChecks.repeats("I am so proud of you all", "<thread>\n  @a.b: I am so proud of you\n</thread>", "@a.b", java.util.List.of())).isEqualTo("i am so proud of");
+  }
+
+  /** Regression: "I'm at 3-something Rockwell... no wait, you're asking where I live." */
+  @Test
+  void catchingYourselfMidTextIsASlip() {
+    assertThat(ProseChecks.slipped("Jessica Vogel", "I'm at 3-something Rockwell... no wait, you're asking where I live.")).isTrue();
+  }
+
   /** Regression: "Sox lost AGAIN last night", on the first of November. */
   @Test
   void nobodyWatchesBaseballOutOfSeason() {

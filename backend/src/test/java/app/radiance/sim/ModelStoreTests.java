@@ -79,6 +79,9 @@ class ModelStoreTests {
     assertThat(h.get("sarah.brennan").partnerId).isEqualTo(h.get("ryan.kessler").id);
     // the secret romance's phase tags are derived from the arc, not stored
     assertThat(w.activeTags(jessica.id, w.time, LIB)).contains("in_relationship:" + nick.id, "secret:relationship", "single");
+    // regression: her writer was told "in a relationship with Nick" and "is single" in the same breath
+    var written = String.join(" ", new app.radiance.narrative.ContextPacketBuilder(db.sql, LIB, "Radiance", w).constraintLines(jessica, w.time));
+    assertThat(written).contains("is in a relationship with").doesNotContain(jessica.name + " is single");
     assertThat(w.tags).isEmpty();
     var romance = w.arcs.values().stream().filter(a -> a.defId.equals("romance") && a.involves(jessica.id)).findFirst()
         .orElseThrow();

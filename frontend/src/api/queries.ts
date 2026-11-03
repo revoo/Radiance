@@ -146,7 +146,12 @@ export function useFeed(mode: FeedMode) {
 }
 
 export function usePost(id: string) {
-  return useQuery({ queryKey: keys.post(id), queryFn: () => api<Post>(`/api/posts/${id}`) });
+  return useQuery({
+    queryKey: keys.post(id),
+    queryFn: () => api<Post>(`/api/posts/${id}`),
+    // a post that isn't there won't appear on a retry: say so now, rather than spinning for seconds
+    retry: (failures, error) => !(error instanceof ApiError && error.status === 404) && failures < 3,
+  });
 }
 
 export function useComments(postId: string, enabled = true) {

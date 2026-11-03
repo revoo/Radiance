@@ -337,6 +337,23 @@ class MessengerTests {
     assertThat(packet.content()).contains("where do you get a glove").doesNotContain("got a minute about my job");
   }
 
+  /** Regression: asked "how was your day?", Jessica answered "where do you live?" again. The brief now holds what it answers. */
+  @Test
+  void aReplysBriefSaysWhatItAnswers_AndAFollowUpsDoesnt() {
+    var someone = residents().get(4);
+    String thread = actions.thread(someone);
+    String me = engine.world().userId;
+    long t = db.clock.nowMs();
+    db.commit(new UnitOfWork()
+        .add("INSERT INTO dm_message (id, thread_id, sender_id, created_at, air_status, body, render_status, brief_json) VALUES ('a', ?, ?, ?, 'AIRED', 'anyway, how was your day?', 'RENDERED', '{}')", thread, me, t - 1_000)
+        .add("INSERT INTO dm_message (id, thread_id, sender_id, created_at, air_status, body, render_status, brief_json) VALUES ('b', ?, ?, ?, 'SCRIPTED', NULL, 'PLANNED', ?)", thread, someone, t + 1_000, "{\"text\":\"answer R's last message\"}")
+        .add("INSERT INTO dm_message (id, thread_id, sender_id, created_at, air_status, body, render_status, brief_json) VALUES ('c', ?, ?, ?, 'SCRIPTED', NULL, 'PLANNED', ?)", thread, someone, t + 2_000, "{\"text\":\"a quick follow-up text in the same burst\"}"));
+    var packet = new ContextPacketBuilder(db.sql, LivePlayTests.LIB, "Radiance", engine.world())
+        .dms(thread, LivePlayTests.gateway(null).budgetFor(app.radiance.llm.Purpose.RENDER_DM));
+    var briefs = packet.content().substring(packet.content().indexOf("<briefs>"));
+    assertThat(briefs).containsOnlyOnce("\"answering\":\"anyway, how was your day?\"");
+  }
+
   @Test
   void summariesComeDueEveryThirtyMessagesPastSixty() {
     assertThat(Maintenance.dmSummaryDue(60, 0)).isFalse();

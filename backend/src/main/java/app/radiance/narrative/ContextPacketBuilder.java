@@ -55,6 +55,8 @@ public final class ContextPacketBuilder {
 
   static final long DAY = 86_400_000L;
   static final int MEMORIES = 6;
+  /** How much of what a brief answers is repeated in it, right where the writer looks. */
+  static final int ANSWERING_CHARS = 300;
   static final int THREAD_TAIL = 20;
   static final int FACTS_PER_SUBJECT = 30;
 
@@ -151,7 +153,7 @@ public final class ContextPacketBuilder {
     for (var c : comments) {
       if (c.body() != null || !renderable(c.renderStatus().name()) || c.airStatus().name().equals("DROPPED")) continue;
       var b = Brief.parse(c.briefJson());
-      briefs.add(commentBrief(c, b));
+      briefs.add(commentBrief(c, b, answered(post, comments, c)));
       targets.put(c.id(), new Target(c.parentId() == null ? "COMMENT" : "REPLY", c.id(), c.authorId(), b.stance(), null,
           false, c.createdAt()));
       authors.add(c.authorId());
@@ -164,6 +166,16 @@ public final class ContextPacketBuilder {
         canon(authors, t), threadText, briefsJson(briefs, targets, authors));
     content = trim(content, budget);
     return new Packet(prefix(), content, briefs, targets);
+  }
+
+  /** What a comment answers: the words of its parent, or of the post. Null if those aren't written yet. */
+  private static String answered(PostRow post, List<CommentRow> comments, CommentRow c) {
+    if (c.parentId() == null) return post.body() == null || post.body().isBlank() ? null : quote(post.body());
+    return comments.stream().filter(x -> x.id().equals(c.parentId()) && x.body() != null).findFirst().map(x -> quote(x.body())).orElse(null);
+  }
+
+  private static String quote(String text) {
+    return text.length() <= ANSWERING_CHARS ? text : text.substring(0, ANSWERING_CHARS) + "…";
   }
 
   /** DM history in a render packet; older messages are in the thread summary. */
@@ -186,16 +198,20 @@ public final class ContextPacketBuilder {
     if (thread.summary() != null && written.size() > HISTORY) {
       convo.append("(earlier: ").append(thread.summary()).append(")\n");
     }
+    String last = null;
     for (var m : dms) {
       if (m.body() != null) {
         if (m.createdAt() > until) continue;
         if (recent.contains(m)) convo.append(handle(m.senderId())).append(": ").append(m.body()).append('\n');
         t = m.createdAt();
+        last = m.body();
       } else if (!m.airStatus().name().equals("DROPPED")) {
         t = Math.max(t, m.createdAt());
         var b = Brief.parse(m.briefJson());
+        boolean answers = b.text() != null && b.text().startsWith("answer") && last != null;
         briefs.add(new Brief(b.defId(), b.category(), b.text(), b.stance(), b.toward(), b.interaction(), b.topics(),
-            b.controversy(), b.drama(), extraWith(b.extra(), "briefId", m.id(), "kind", "DM", "author", handle(m.senderId()))));
+            b.controversy(), b.drama(), extraWith(b.extra(), "briefId", m.id(), "kind", "DM", "author", handle(m.senderId()),
+                "answering", answers ? quote(last) : null)));
         targets.put(m.id(), new Target("DM", m.id(), m.senderId(), b.stance(), null, false, m.createdAt()));
       }
     }
@@ -220,10 +236,10 @@ public final class ContextPacketBuilder {
             handle(post.authorId()), "recapLine", recap));
   }
 
-  private Brief commentBrief(CommentRow c, Brief b) {
+  private Brief commentBrief(CommentRow c, Brief b, String answering) {
     return new Brief(b.defId(), b.category(), b.text(), b.stance(), b.toward(), b.interaction(), b.topics(),
         b.controversy(), b.drama(), extraWith(b.extra(), "briefId", c.id(), "kind", c.parentId() == null ? "COMMENT" : "REPLY",
-            "author", handle(c.authorId()), "replyTo", c.parentId() != null ? c.parentId() : c.postId()));
+            "author", handle(c.authorId()), "replyTo", c.parentId() != null ? c.parentId() : c.postId(), "answering", answering));
   }
 
   private static Map<String, Object> extraWith(Map<String, Object> extra, Object... kv) {
@@ -331,10 +347,11 @@ public final class ContextPacketBuilder {
         .map(x -> x.name + (x.visualDescription == null ? "" : " (" + x.visualDescription + ")")).toList();
     if (!things.isEmpty()) sb.append("Their things: ").append(String.join("; ", things)).append(".\n");
     var arcIds = world.arcsOf(p.id).stream().map(a -> a.id).collect(Collectors.toSet());
-    var memories = new MemoryRetrieval(sql).top(p.id, t, involved, arcIds, Set.of(), MEMORIES);
+    var memories = new MemoryRetrieval(sql).top(p.id, t, involved, arcIds, Set.of(), 2 * MEMORIES).stream()
+        .map(this::remembered).filter(x -> x != null).limit(MEMORIES).toList();
     if (!memories.isEmpty()) {
       sb.append("Remembers:\n");
-      for (var m : memories) sb.append("- ").append(m.text()).append('\n');
+      for (String m : memories) sb.append("- ").append(m).append('\n');
     }
     for (String other : involved) {
       if (other.equals(p.id)) continue;
@@ -394,10 +411,30 @@ public final class ContextPacketBuilder {
     return String.join(", ", out);
   }
 
-  /** Each active tag's prose line (SPEC §5.5). */
-  List<String> constraintLines(Person p, long t) {
+  /**
+   * A memory in words. An event's own text is the template it was planned from ("a promotion announcement,
+   * humble or not"), not what happened: use what its post turned out to say, and leave out one that never got written.
+   */
+  private String remembered(app.radiance.memory.MemoryRow m) {
+    if (m.eventId() == null) return m.text();
+    return sql.queryOne("SELECT gist FROM post WHERE event_id = ? AND gist IS NOT NULL LIMIT 1", List.of(m.eventId()), r -> r.str("gist")).orElse(null);
+  }
+
+  /** A voice card's catchphrases. */
+  List<String> catchphrases(String id) {
     var out = new ArrayList<String>();
-    for (String tag : world.activeTags(p.id, t, lib)) {
+    voice(id).path("catchphrases").forEach(x -> out.add(x.asString("")));
+    return out;
+  }
+
+  /** Each active tag's prose line (SPEC §5.5). */
+  public List<String> constraintLines(Person p, long t) {
+    var out = new ArrayList<String>();
+    var tags = world.activeTags(p.id, t, lib);
+    // single to everyone else, maybe, but a writer told both at once takes neither seriously
+    boolean together = tags.stream().anyMatch(x -> x.startsWith("in_relationship:"));
+    for (String tag : tags) {
+      if (together && tag.equals("single")) continue;
       int i = tag.indexOf(':');
       String base = i < 0 ? tag : tag.substring(0, i);
       String param = i < 0 ? "" : tag.substring(i + 1);
@@ -469,6 +506,7 @@ public final class ContextPacketBuilder {
       m.put("kind", x.get("kind"));
       m.put("author", x.get("author"));
       if (x.containsKey("replyTo")) m.put("replyTo", x.get("replyTo"));
+      if (x.get("answering") != null) m.put("answering", x.get("answering"));
       if (b.stance() != null) m.put("stance", b.stance());
       if (b.toward() != null) m.put("addressing", handle(b.toward()));
       if (b.text() != null) m.put("beats", List.of(b.text()));
