@@ -337,6 +337,80 @@ class MessengerTests {
     assertThat(packet.content()).contains("where do you get a glove").doesNotContain("got a minute about my job");
   }
 
+  private double meter(String id) {
+    return engine.world().edge(id, engine.world().userId).affinity;
+  }
+
+  /** Regression: "yo, btw, you're kinda lame" counted as a warm message, and raised Daniel's meter by five. */
+  @Test
+  void aMockingDmLowersTheirMeter_TheyReactToIt_AndRememberIt() {
+    var someone = residents().get(4);
+    String thread = actions.thread(someone);
+    long t = db.clock.nowMs();
+    double before = meter(someone);
+    var guess = new UserActions.Reading(java.util.Map.of(), List.of(), 0, "SUPPORT", "{}");
+    String id = actions.dm(thread, "yo, btw, you're kinda lame", guess, t).orElseThrow();
+    assertThat(meter(someone)).as("nothing yet, on a keyword guess").isCloseTo(before, org.assertj.core.data.Offset.offset(0.5));
+
+    var real = new UserActions.Reading(java.util.Map.of("edginess", 0.7, "warmth", 0.1), List.of(), 0.4, "MOCK", "{}");
+    actions.reappraised(id, "yo, btw, you're kinda lame", real, t);
+
+    assertThat(meter(someone)).as("the real reading").isLessThan(before - 1);
+    assertThat(engine.item(id).stance).isEqualTo("MOCK");
+    assertThat(app.radiance.sim.Brief.parse(db.sql.queryOne("SELECT brief_json FROM dm_message WHERE id = ?", List.of(id), r -> r.str("brief_json")).orElseThrow()).interaction())
+        .isEqualTo("dm_mock");
+    assertThat(db.sql.query("SELECT text FROM memory WHERE owner_id = ?", List.of(someone), r -> r.str("text")))
+        .anyMatch(x -> x.contains("kinda lame"));
+
+    var reply = actions.dmReply(thread, id, 1.0, t);
+    assertThat(reply.script().dms).hasSize(1);
+    var brief = app.radiance.sim.Brief.parse(reply.script().dms.getFirst().briefJson());
+    assertThat(brief.stance()).isIn("MOCK", "JOKE", "DISAGREE");
+    assertThat(brief.text()).contains("insulted");
+
+    // read twice, it lands once
+    double after = meter(someone);
+    actions.reappraised(id, "yo, btw, you're kinda lame", real, t);
+    assertThat(meter(someone)).isEqualTo(after);
+  }
+
+  @Test
+  void aWarmDmRaisesTheirMeterOnce_AndIsntAnInsult() {
+    var someone = residents().get(4);
+    String thread = actions.thread(someone);
+    long t = db.clock.nowMs();
+    var warm = new UserActions.Reading(java.util.Map.of(), List.of(), 0, "SUPPORT", "{}");
+    double before = meter(someone);
+    String id = actions.dm(thread, "hey, thanks for yesterday", warm, t).orElseThrow();
+    actions.reappraised(id, "hey, thanks for yesterday", warm, t);
+    double after = meter(someone);
+    assertThat(after).isGreaterThan(before);
+    actions.reappraised(id, "hey, thanks for yesterday", warm, t);
+    assertThat(meter(someone)).isEqualTo(after);
+    assertThat(db.sql.query("SELECT text FROM memory WHERE owner_id = ? AND text LIKE '%took a shot%'", List.of(someone), r -> r.str("text"))).isEmpty();
+  }
+
+  /** Regression: R told Amanda he read a book, and Daniel, who heard no such thing, teased him for it. */
+  @Test
+  void whatComesUpInADmStaysBetweenThoseTwo() {
+    var amanda = residents().get(4);
+    var daniel = residents().get(5);
+    String me = engine.world().userId;
+    String theirs = actions.thread(amanda);
+    String other = actions.thread(daniel);
+    long t = db.clock.nowMs();
+    db.commit(new UnitOfWork()
+        .add("INSERT INTO dm_message (id, thread_id, sender_id, created_at, air_status, body, render_status, brief_json) VALUES ('a', ?, ?, ?, 'AIRED', 'a book is nice', 'RENDERED', '{}')", theirs, amanda, t - 2_000)
+        .add("INSERT INTO fact (id, subject_id, statement, weight, source, status, visibility, valid_from, origin_ref) VALUES ('f1', ?, 'read a book this week', 'MINOR', 'PROSE', 'ACTIVE', 'PUBLIC', ?, 'a')", me, t - 2_000)
+        .add("INSERT INTO fact (id, subject_id, statement, weight, source, status, visibility, valid_from, origin_ref) VALUES ('f2', ?, 'plays softball badly', 'MINOR', 'PROSE', 'ACTIVE', 'PUBLIC', ?, 'some-post')", me, t - 2_000)
+        .add("INSERT INTO dm_message (id, thread_id, sender_id, created_at, air_status, body, render_status, brief_json) VALUES ('b', ?, ?, ?, 'SCRIPTED', NULL, 'PLANNED', '{}')", theirs, amanda, t + 1_000)
+        .add("INSERT INTO dm_message (id, thread_id, sender_id, created_at, air_status, body, render_status, brief_json) VALUES ('c', ?, ?, ?, 'SCRIPTED', NULL, 'PLANNED', '{}')", other, daniel, t + 1_000));
+    var builder = new ContextPacketBuilder(db.sql, LivePlayTests.LIB, "Radiance", engine.world());
+    var budget = LivePlayTests.gateway(null).budgetFor(app.radiance.llm.Purpose.RENDER_DM);
+    assertThat(builder.dms(theirs, budget).content()).contains("read a book this week", "plays softball badly");
+    assertThat(builder.dms(other, budget).content()).contains("plays softball badly").doesNotContain("read a book this week");
+  }
+
   /** Regression: asked "how was your day?", Jessica answered "where do you live?" again. The brief now holds what it answers. */
   @Test
   void aReplysBriefSaysWhatItAnswers_AndAFollowUpsDoesnt() {

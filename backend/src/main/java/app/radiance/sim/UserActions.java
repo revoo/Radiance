@@ -99,7 +99,7 @@ public final class UserActions {
       String toward = parent != null ? parent.authorId : post.authorId;
       if (toward.equals(w.userId)) toward = null;
       String stance = r.stance() == null ? Stance.SUPPORT.name() : r.stance();
-      var brief = new Brief(post.defId, post.category, null, stance, toward, Airing.interactionFor(stance), post.topics,
+      var brief = new Brief(post.defId, post.category, null, stance, toward, BEING_READ, post.topics,
           Math.max(post.controversy, r.controversy()), post.drama, Plan.extra("on", post.id));
       String id = Ulid.next(t, RandomSource.seeded(w.seed).derive("r-comment:" + t + ":" + postId + ":" + text));
       var row = new CommentRow(id, post.id, parent == null ? null : parent.id, w.userId, t, ContentOrigin.USER,
@@ -489,17 +489,61 @@ public final class UserActions {
       if (thread == null || !(w.userId.equals(thread.aId()) || w.userId.equals(thread.bId()))) return Optional.<String>empty();
       String other = w.userId.equals(thread.aId()) ? thread.bId() : thread.aId();
       long t = Math.max(now, w.time + 1);
-      double flirt = r.features().getOrDefault("flirtiness", 0.0);
-      double edge = r.features().getOrDefault("edginess", 0.0);
-      String interaction = flirt > 0.5 ? "dm_flirt"
-          : edge > 0.6 && r.features().getOrDefault("warmth", 0.5) < 0.3 ? "dm_curt" : "dm_warm";
-      var brief = new Brief(null, "DM", null, r.stance(), other, interaction, r.topics(), r.controversy(), 0, Map.of());
+      var brief = new Brief(null, "DM", null, r.stance(), other, BEING_READ, r.topics(), r.controversy(), 0, Map.of());
       String id = Ulid.next(t, RandomSource.seeded(w.seed).derive("r-dm:" + t + ":" + threadId + ":" + text));
       var row = new DmRow.Message(id, threadId, w.userId, t, AirStatus.SCRIPTED, text, RenderStatus.RENDERED, brief.json(),
           r.appraisalJson(), null);
       lane.run(() -> sql.commit(new DmRepository(sql).saveMessages(new UnitOfWork(), List.of(row))));
       engine.advanceTo(t);
       return Optional.of(id);
+    });
+  }
+
+  /** R's words have aired, but what they do to the person waits for the model's reading: no such rule, so airing leaves them be. */
+  private static final String BEING_READ = "being_read";
+
+  private static String dmInteraction(Reading r) {
+    if ("HOSTILE".equals(r.stance())) return "dm_hostile";
+    if ("MOCK".equals(r.stance()) || "TROLL".equals(r.stance())) return "dm_mock";
+    if (r.features().getOrDefault("flirtiness", 0.0) > 0.5) return "dm_flirt";
+    return r.features().getOrDefault("edginess", 0.0) > 0.6 && r.features().getOrDefault("warmth", 0.5) < 0.3 ? "dm_curt" : "dm_warm";
+  }
+
+  /**
+   * The model's reading of what R just said, once it's back: only now does it land on the person he said it to,
+   * and an insult is remembered. His words air at once, on a keyword guess that can't tell: "you're kinda lame" has
+   * no keywords. Regression: it counted as warm, and mocking Daniel raised his meter by five.
+   */
+  public void reappraised(String itemId, String text, Reading r, long now) {
+    engine.locked(w -> {
+      var item = item(w, itemId);
+      if (item == null || (item.type != Item.Type.DM && item.type != Item.Type.COMMENT)) return null;
+      boolean dm = item.type == Item.Type.DM;
+      String table = dm ? "dm_message" : "comment";
+      var brief = Brief.parse(sql.queryOne("SELECT brief_json FROM " + table + " WHERE id = ?", List.of(itemId), x -> x.str("brief_json")).orElse("{}"));
+      String stance = r.stance() == null ? Stance.SUPPORT.name() : r.stance();
+      String is = dm ? dmInteraction(r) : Airing.interactionFor(stance);
+      boolean wasClash = item.stance != null && Airing.CLASH.contains(item.stance);
+      item.stance = stance;
+      var uow = new UnitOfWork().add("UPDATE " + table + " SET brief_json = ? WHERE id = ?",
+          new Brief(brief.defId(), brief.category(), brief.text(), stance, brief.toward(), is, brief.topics(), brief.controversy(), brief.drama(), brief.extra()).json(), itemId);
+      String receiver = brief.toward();
+      if (receiver != null && w.people.containsKey(receiver)) {
+        var real = engine.lib().relationships().interactions().get(is);
+        if (real != null && BEING_READ.equals(brief.interaction())) {
+          var ctx = new Airing.Ctx(engine.lib(), engine.knobs(), null, false, Airing.Lookup.NONE);
+          Airing.move(w, receiver, w.userId, real.target(), false, now, ctx);
+          Airing.move(w, w.userId, receiver, real.actor(), false, now, ctx);
+        }
+        if (Airing.UGLY.contains(stance) && !wasClash) {
+          String said = text.length() <= 160 ? text : text.substring(0, 160) + "…";
+          new app.radiance.memory.MemoryRepository(sql).save(uow, List.of(Airing.memory(w, receiver, now,
+              w.person(w.userId).name + " took a shot at them: \"" + said + "\"", 5, List.of(w.userId), List.of("clash"), null, null)));
+        }
+      }
+      lane.run(() -> sql.commit(uow));
+      engine.advanceTo(Math.max(now, w.time));
+      return null;
     });
   }
 
@@ -536,15 +580,20 @@ public final class UserActions {
           : Stances.comment(w, b, w.person(w.userId), said, engine.lib(), engine.knobs(), day, rng);
       if (stance == Stance.REACT_ONLY || stance == Stance.META) stance = Stance.SUPPORT;
       if (curt && (stance == Stance.FLIRT || stance == Stance.HYPE || stance == Stance.CONGRATS)) stance = Stance.SUPPORT;
-      String interaction = curt ? "dm_curt" : stance == Stance.FLIRT ? "dm_flirt" : "dm_warm";
-      int count = curt ? 1 : 1 + (rng.chance(0.4) ? 1 : 0) + (e.affinity > 30 && rng.chance(0.2) ? 1 : 0);
+      // a shot at them gets a response to the shot: nobody carries on about their car
+      boolean stung = said != null && Airing.UGLY.contains(said.stance);
+      if (stung) stance = b.trait("agreeableness") < 40 ? Stance.MOCK : rng.chance(0.35) ? Stance.JOKE : Stance.DISAGREE;
+      String interaction = curt || stung ? "dm_curt" : stance == Stance.FLIRT ? "dm_flirt" : "dm_warm";
+      int count = curt || stung ? 1 : 1 + (rng.chance(0.4) ? 1 : 0) + (e.affinity > 30 && rng.chance(0.2) ? 1 : 0);
       long recent = sql.queryOne("SELECT COUNT(*) AS n FROM dm_message WHERE thread_id = ? AND sender_id = ?"
           + " AND created_at > ?", List.of(threadId, w.userId, now - 30 * 60_000L), x -> x.lng("n")).orElse(0L);
       boolean wrapUp = recent >= 8 || ("WORK".equals(b.location) && rng.chance(0.15));
       for (int i = 0; i < count; i++) {
         boolean last = i == count - 1;
         String text = i == 0
-            ? (curt ? "answer R's message curtly: short, cool, minimal effort, one line" : "answer R's last message")
+            ? (curt ? "answer R's message curtly: short, cool, minimal effort, one line"
+                : stung ? "answer R's message: he just insulted them, and they react to that, hurt, annoyed or giving it back, however they would"
+                : "answer R's last message")
             : "a quick follow-up text in the same burst";
         if (last && wrapUp) text += "; then wrap the conversation up their way (gtg, ttyl, busy)";
         var extra = new java.util.LinkedHashMap<String, Object>();

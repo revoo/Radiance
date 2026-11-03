@@ -41,6 +41,8 @@ interactions:
   dm_warm:              { target: { affinity: 2, trust: 2, familiarity: 3 }, actor: { familiarity: 2 } }
   dm_curt:              { target: { affinity: -2, familiarity: 1 } }   # a curt brush-off
   dm_flirt:             { target: { affinity: 2, attraction: 3, familiarity: 3 }, actor: { attraction: 2, familiarity: 2 } }
+  dm_mock:              { target: { affinity: -8, respect: -3, trust: -2, familiarity: 1 } }   # "you're kinda lame"
+  dm_hostile:           { target: { affinity: -12, respect: -4, trust: -4, familiarity: 1 } }
   dm_left_on_seen:      { target: { affinity: -3 } }
   friend_request_sent:     { target: { familiarity: 2 } }
   friend_request_accepted: { target: { affinity: 3, familiarity: 3 }, actor: { affinity: 2, familiarity: 3 } }

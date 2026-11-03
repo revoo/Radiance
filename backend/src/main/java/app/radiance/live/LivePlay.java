@@ -497,6 +497,7 @@ public final class LivePlay {
         var reading = appraiser.read(text, context);
         lane.run(() -> sql.commit(new UnitOfWork().add("UPDATE comment SET appraisal_json = ? WHERE id = ?",
             reading.appraisalJson(), id.get())));
+        actions.reappraised(id.get(), text, reading, t);
         var script = actions.considered(id.get(), reading, t);
         actions.answerMentions(script, id.get(), actions.mentioned(text), t);
         plan(id.get(), wall, script, addressee, dramatic, true);
@@ -541,6 +542,7 @@ public final class LivePlay {
         var reading = appraiser.read(text, "a direct message");
         lane.run(() -> sql.commit(new UnitOfWork().add("UPDATE dm_message SET appraisal_json = ? WHERE id = ?",
             reading.appraisalJson(), id.get())));
+        actions.reappraised(id.get(), text, reading, t);
         var reply = actions.dmReply(threadId, id.get(), coldShoulderRate, t);
         if (reply.leftOnSeen()) {
           emit("dm.seen", Map.of("threadId", threadId, "at", t));

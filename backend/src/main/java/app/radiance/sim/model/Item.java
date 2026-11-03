@@ -29,7 +29,7 @@ public final class Item {
   public final String kind;
   public final String category;
   public final String defId;
-  public final String stance;
+  public String stance;
   public final List<String> topics;
   public final double controversy;
   public final double drama;
