@@ -32,6 +32,30 @@ describe("ProfilePage", () => {
     await waitFor(() => expect(JSON.parse(m.calls.find((c) => c.method === "POST")!.body!)).toEqual({ handle: "sarah.kim" }));
   });
 
+  it("opens a resident's whole photo from the face in the circle", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      mockFetch({
+        "GET /api/people/sarah.kim/posts": { items: [], nextCursor: null },
+        "GET /api/people/sarah.kim/photos": [],
+        "GET /api/people/sarah.kim": {
+          actor: { ...SARAH, avatarUrl: "/api/media/a1?size=thumb" }, bio: null, employer: null, hometown: null, relationshipStatus: null,
+          birthday: null, relationship: "FRIEND", friend: true, mutualFriends: 0, friends: [],
+        },
+      }).fn,
+    );
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter initialEntries={["/people/sarah.kim"]}>
+          <Routes>
+            <Route path="/people/:handle" element={<ProfilePage me={ME} />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: /photo$/ }));
+    expect(await screen.findByRole("img", { name: /profile photo/ })).toHaveAttribute("src", "/api/media/a1");
+  });
+
   it("has no Message button on R's own profile", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(
       mockFetch({

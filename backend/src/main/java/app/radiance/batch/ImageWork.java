@@ -19,6 +19,8 @@ import app.radiance.social.SocialRepository;
 import app.radiance.weather.WeatherBook;
 import app.radiance.weather.WeatherHour;
 import app.radiance.weather.WeatherRepository;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.List;
@@ -53,6 +55,7 @@ public final class ImageWork {
   private final ContentLibrary lib;
   private final WallClock clock;
   private volatile Limits limits;
+  private Path avatarFiles;
 
   public ImageWork(Sql sql, WriterLane lane, MediaStore store, ImageGenerator generator, ContentLibrary lib, WallClock clock, Limits limits) {
     this.sql = sql;
@@ -62,6 +65,15 @@ public final class ImageWork {
     this.lib = lib;
     this.clock = clock;
     this.limits = limits;
+  }
+
+  /**
+   * Where approved avatars wait, as {@code <handle>.jpg} and {@code <handle>.thumb.jpg}. A resident with a file there never gets a
+   * generated one, and a changed file replaces their avatar in the next batch.
+   */
+  public ImageWork withAvatarFiles(Path dir) {
+    this.avatarFiles = dir;
+    return this;
   }
 
   /** New limits from the Director's console. */
@@ -92,12 +104,19 @@ public final class ImageWork {
   }
 
   private boolean avatars(SimWorld w, long worldNow, int[] count) {
-    if (!generator.real()) return true; // the placeholder isn't better than initials
-    var missing = sql.query("SELECT a.id, a.gender, a.birth_date, a.occupation, p.identity_json FROM actor a JOIN persona p ON p.actor_id = a.id"
-        + " LEFT JOIN media m ON m.id = a.avatar_media_id WHERE a.kind = 'BOT' AND (a.avatar_media_id IS NULL OR m.status <> 'READY') ORDER BY a.id",
-        List.of(), r -> new String[] {r.str("id"), r.str("gender"), r.str("birth_date"), r.str("occupation"), r.str("identity_json")});
+    var bots = sql.query("SELECT a.id, a.gender, a.birth_date, a.occupation, p.identity_json, a.handle, m.status, m.bytes FROM actor a"
+        + " JOIN persona p ON p.actor_id = a.id LEFT JOIN media m ON m.id = a.avatar_media_id WHERE a.kind = 'BOT' ORDER BY a.id",
+        List.of(), r -> new String[] {r.str("id"), r.str("gender"), r.str("birth_date"), r.str("occupation"), r.str("identity_json"),
+            r.str("handle"), r.str("status"), r.isNull("bytes") ? null : String.valueOf(r.lng("bytes"))});
     int failures = 0;
-    for (var a : missing) {
+    for (var a : bots) {
+      boolean ready = MediaRow.READY.equals(a[6]);
+      var file = avatarFiles == null ? null : avatarFiles.resolve(a[5] + ".jpg");
+      if (file != null && Files.isRegularFile(file)) {
+        if (!ready || !a[7].equals(String.valueOf(file.toFile().length()))) count[fromFile(a, file, w.date(worldNow)) ? 1 : 3]++;
+        continue;
+      }
+      if (ready || !generator.real()) continue; // the placeholder isn't better than initials
       if (!affordable(count)) return false;
       var row = pending("AVATAR", avatarPrompt(a, w.date(worldNow)), a[0].hashCode(), null);
       var uow = new MediaRepository(sql).save(new UnitOfWork(), row);
@@ -114,6 +133,29 @@ public final class ImageWork {
       }
     }
     return true;
+  }
+
+  /** A picture R approved: the whole photo, and its face for the small circle if there's one beside it. */
+  private boolean fromFile(String[] a, Path file, LocalDate today) {
+    var row = pending("AVATAR", avatarPrompt(a, today), a[0].hashCode(), null);
+    String key = "generated/" + row.id();
+    var face = file.resolveSibling(a[5] + ".thumb.jpg");
+    try {
+      byte[] bytes = Files.readAllBytes(file);
+      store.put(key, bytes);
+      boolean hasFace = Files.isRegularFile(face);
+      if (hasFace) store.put(key + "-thumb", Files.readAllBytes(face));
+      var uow = new MediaRepository(sql).save(new UnitOfWork(), row.ready(key, hasFace ? key + "-thumb" : key, "image/jpeg", bytes.length));
+      uow.add("UPDATE actor SET avatar_media_id = ? WHERE id = ?", row.id(), a[0]);
+      lane.run(() -> sql.commit(uow));
+      return true;
+    } catch (java.io.IOException | RuntimeException e) {
+      log.warn("Couldn't use the avatar file {}: {}", file, e.toString());
+      return false;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
   }
 
   /** Reused wherever they appear. Avatars are the one place an identifiable (AI) face is allowed. */

@@ -106,6 +106,48 @@ class ImageWorkTests {
     return work(g, perDay, neurons).run(engine.world(), now);
   }
 
+  String[] avatarOf(String actorId) {
+    return db.sql.queryOne("SELECT m.storage_key AS full_key, m.thumb_key AS thumb, m.status AS s FROM actor a JOIN media m ON m.id = a.avatar_media_id WHERE a.id = ?",
+        List.of(actorId), r -> new String[] {r.str("full_key"), r.str("thumb"), r.str("s")}).orElse(null);
+  }
+
+  /** An approved picture: nothing generated for them, and the circle shows the face rather than the whole hiking photo. */
+  @Test
+  void anApprovedPictureBecomesTheAvatar_WithItsFaceAsTheThumbnail() throws Exception {
+    var files = java.nio.file.Files.createDirectories(dir.resolve("avatars"));
+    var person = engine.world().residents().getFirst();
+    java.nio.file.Files.write(files.resolve(person.handle + ".jpg"), JPEG);
+    byte[] face = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, 1};
+    java.nio.file.Files.write(files.resolve(person.handle + ".thumb.jpg"), face);
+    var stub = new Stub();
+    var store = new LocalFileMediaStore(dir.resolve("media"));
+    var work = work(stub, 0, 9000).withAvatarFiles(files);
+    assertThat(work.run(engine.world(), now).avatars()).isGreaterThanOrEqualTo(1);
+    var avatar = avatarOf(person.id);
+    assertThat(avatar[2]).isEqualTo("READY");
+    assertThat(store.get(avatar[0]).orElseThrow()).isEqualTo(JPEG);
+    assertThat(store.get(avatar[1]).orElseThrow()).isEqualTo(face);
+    assertThat(stub.prompts).hasSize(engine.world().residents().size() - 1);
+  }
+
+  @Test
+  void anUnchangedPictureIsLeftAlone_AndAChangedOneReplacesTheAvatar() throws Exception {
+    var files = java.nio.file.Files.createDirectories(dir.resolve("avatars"));
+    var person = engine.world().residents().getFirst();
+    var file = files.resolve(person.handle + ".jpg");
+    java.nio.file.Files.write(file, JPEG);
+    var work = work(new Stub(), 0, 9000).withAvatarFiles(files);
+    work.run(engine.world(), now);
+    String first = avatarOf(person.id)[0];
+    work.run(engine.world(), now);
+    assertThat(avatarOf(person.id)[0]).isEqualTo(first);
+    byte[] next = java.util.Arrays.copyOf(JPEG, JPEG.length + 1);
+    java.nio.file.Files.write(file, next);
+    work.run(engine.world(), now);
+    assertThat(avatarOf(person.id)[0]).isNotEqualTo(first);
+    assertThat(new LocalFileMediaStore(dir.resolve("media")).get(avatarOf(person.id)[0]).orElseThrow()).isEqualTo(next);
+  }
+
   @Test
   void aPhotoPostGainsItsPicture_ThePromptCarriesTheRules() {
     photoPost("p", 3, null, Fidelity.FULL, "houseplants on a sunny windowsill");

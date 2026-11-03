@@ -203,6 +203,7 @@ export function ProfilePage({ me }: { me: Actor }) {
   const answer = useAnswerFriendRequest();
   const posts = usePersonPosts(handle);
   const [editing, setEditing] = useState(false);
+  const [avatarOpen, setAvatarOpen] = useState(false);
   const openThread = useOpenThread();
   const navigate = useNavigate();
 
@@ -236,8 +237,20 @@ export function ProfilePage({ me }: { me: Actor }) {
         </div>
         <div className="flex flex-col items-center px-4 pb-5 sm:flex-row sm:items-end sm:gap-4">
           <div className="relative z-10 -mt-16 rounded-full bg-panel p-1.5 shadow-lift">
-            <Avatar actor={p.actor} size="xl" ring={p.actor.you} link={false} />
+            {p.actor.you || !p.actor.avatarUrl ? (
+              <Avatar actor={p.actor} size="xl" ring={p.actor.you} link={false} />
+            ) : (
+              <button type="button" onClick={() => setAvatarOpen(true)} aria-label={`See ${p.actor.name}'s photo`} className="block rounded-full transition hover:brightness-110">
+                <Avatar actor={p.actor} size="xl" link={false} />
+              </button>
+            )}
             {p.actor.you && <AvatarPicker />}
+            {avatarOpen && p.actor.avatarUrl && (
+              <Modal wide title={p.actor.name} onClose={() => setAvatarOpen(false)}>
+                {/* the small circle shows a thumbnail of the face; this is the whole photo */}
+                <img src={p.actor.avatarUrl.replace("?size=thumb", "")} alt={`${p.actor.name}'s profile photo`} className="max-h-[75vh] w-full rounded-xl object-contain" />
+              </Modal>
+            )}
           </div>
           <div className="mt-3 min-w-0 flex-1 text-center sm:text-left">
             <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{p.actor.name}</h1>

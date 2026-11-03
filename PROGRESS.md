@@ -6,6 +6,9 @@
   and the cost floor, not voice. One real FLUX image worked. Found and fixed: Workers AI answers 400 to `seed` (every picture
   would have failed), and `avoids:{b}` made the second side of a feud avoid herself. SPEC's `image_seed` continuity can't
   hold on this model. Next: fresh world, per hosting.md "Real prose".
+- **Avatars are hand-picked (2026-11-03).** R chose all 30 from FLUX 3 Image Klein test rounds (Cloudflare partner model, paid from AI
+  Gateway credits, called outside the app). They live in `data/avatars` on the server; `ImageWork` loads them and never generates
+  for a resident with a file. R's taste: attractive and put together, true to the person, varied scenes, not LinkedIn headshots.
 - **M10 merged and live (2026-11-02)**: `main` at 6095374, deployed to https://radiance.enigmatica.app with real feeds and
   real weather. R gave standing approval to merge when CI is green.
   - AC not fully proven, for R to know:
