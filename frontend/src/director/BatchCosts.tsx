@@ -112,7 +112,7 @@ export function CostsPanel() {
         <div className="grid gap-x-8 gap-y-1 md:grid-cols-2">
           {c.windows.filter((w) => !w.id.endsWith(":closed")).map((w) => {
             const money = w.id.startsWith("usd:");
-            return <Bar key={w.id} label={windowName(w.id)} value={w.used} max={w.limit} text={money ? `${usd(w.used)} / ${usd(w.limit)}` : `${Math.round(w.used)} / ${Math.round(w.limit)}`} title={`${w.id}: resets ${new Date(w.resetsAt).toLocaleString()}`} />;
+            return <Bar key={w.id} label={windowName(w.id)} value={w.used} max={w.limit} text={`${money ? `${usd(w.used)} / ${usd(w.limit)}` : `${Math.round(w.used)} / ${Math.round(w.limit)}`} · resets ${span(w.resetsAt, wall)}`} title={`${w.id}: resets ${new Date(w.resetsAt).toLocaleString()}`} />;
           })}
         </div>
         {c.windows.filter((w) => w.closedUntil && w.closedUntil > wall).map((w) => (

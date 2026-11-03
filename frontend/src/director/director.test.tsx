@@ -451,7 +451,7 @@ describe("the panels", () => {
     at("/director/costs");
     expect(await screen.findByText("$3.25")).toBeInTheDocument();
     expect(screen.getByText("62%")).toBeInTheDocument();
-    expect(screen.getByText("$0.50 / $1.00")).toBeInTheDocument();
+    expect(screen.getByText(/\$0\.50 \/ \$1\.00 · resets in/)).toBeInTheDocument();
     expect(screen.getByText(/fake:closed is closed until/)).toBeInTheDocument();
     expect(screen.getByText("12")).toBeInTheDocument();
   });
