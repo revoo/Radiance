@@ -494,6 +494,31 @@ class LivePlayTests {
     assertThat(heard[2]).as("the slowest answer, in minutes past the horizon").isLessThanOrEqualTo(20);
   }
 
+  /** Regression: Amanda liked "voting is for tards", on her own post: the comment still read as supportive. */
+  @Test
+  void nobodyLikesAnInsultAimedAtThem() {
+    var actions = new UserActions(db.sql, db.lane, engine);
+    String post = fixture("insulted-post", "kristen.wagner", null);
+    String kristen = engine.world().byHandle().get("kristen.wagner").id;
+    var guess = new UserActions.Reading(java.util.Map.of(), List.of(), 0, "SUPPORT", "{}");
+    int reactions = 0;
+    for (String stance : List.of("HOSTILE", "MOCK", "TROLL")) {
+      var real = new UserActions.Reading(java.util.Map.of("edginess", 0.8), List.of(), 0.5, stance, "{}");
+      for (int i = 0; i < 40; i++) {
+        db.clock.advance(Duration.ofMinutes(1));
+        long t = db.clock.nowMs();
+        String comment = actions.comment(post, null, "voting is for idiots " + stance + i, guess, t).orElseThrow();
+        actions.reappraised(comment, "voting is for idiots", real, t);
+        for (var r : actions.considered(comment, real, t).reactions) {
+          if (!r.actorId().equals(kristen)) continue;
+          reactions++;
+          assertThat(r.kind()).as(stance).isIn(app.radiance.social.ReactionRow.Kind.ANGRY, app.radiance.social.ReactionRow.Kind.SAD);
+        }
+      }
+    }
+    assertThat(reactions).as("enough tries to mean something").isPositive();
+  }
+
   @Test
   void rReplyingOnHisOwnPost_OftenGetsAnAnswer_AndAtLeastAReaction() {
     String theirs = fixture("his-post", null, "kristen.wagner");

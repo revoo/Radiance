@@ -174,7 +174,8 @@ public final class LiveResponder {
                   Airing.CLASH.contains(comment.stance) && Airing.CLASH.contains(stance.name()) ? "debate_exchange" : null));
         } else if (aff > -COLD_SHOULDER || rng.chance(0.45)) {
           plan.reaction(t + horizon + delay(rng, 45_000, 15 * 60_000L), ReactionRow.Target.COMMENT, comment.id, b.id,
-              Stances.reaction(Stance.valueOf(comment.stance == null ? "SUPPORT" : comment.stance), b, post, aff, rng));
+              Airing.UGLY.contains(comment.stance) ? Stances.stung(b, rng)
+                  : Stances.reaction(Stance.valueOf(comment.stance == null ? "SUPPORT" : comment.stance), b, post, aff, rng));
         }
       } else if (rng.chance(0.2 + Math.max(0, aff) / 400)) {
         plan.reaction(t + horizon + delay(rng, 3 * 60_000L, 3_600_000L), ReactionRow.Target.COMMENT, comment.id, b.id,

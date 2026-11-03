@@ -163,7 +163,7 @@ public final class ContextPacketBuilder {
     long until = targets.values().stream().mapToLong(Target::time).max().orElse(Long.MAX_VALUE);
     var threadText = threadSoFar(post, comments.stream().filter(c -> c.body() == null || c.createdAt() <= until).toList());
     String content = fill("render-thread", today(t, post.headlineId(), authors), people(authors, t, budget),
-        canon(authors, t), threadText, briefsJson(briefs, targets, authors));
+        canon(authors, t, null), threadText, briefsJson(briefs, targets, authors));
     content = trim(content, budget);
     return new Packet(prefix(), content, briefs, targets);
   }
@@ -215,7 +215,7 @@ public final class ContextPacketBuilder {
         targets.put(m.id(), new Target("DM", m.id(), m.senderId(), b.stance(), null, false, m.createdAt()));
       }
     }
-    String content = fill("render-dm", today(t, null, authors), people(authors, t, budget), canon(authors, t),
+    String content = fill("render-dm", today(t, null, authors), people(authors, t, budget), canon(authors, t, threadId),
         convo.isEmpty() ? "(no messages yet)" : convo.toString(), briefsJson(briefs, targets, authors));
     return new Packet(prefix(), trim(content, budget), briefs, targets);
   }
@@ -455,17 +455,17 @@ public final class ContextPacketBuilder {
         .map(s -> "“" + s + "”").toList();
   }
 
-  String canon(Set<String> ids, long t) {
+  String canon(Set<String> ids, long t, String dmThread) {
     var sb = new StringBuilder();
-    // what came up in a DM stays between those two. Regression: R told Amanda he read a book, and Daniel teased him for it
-    var facts = sql.query("SELECT f.subject_id, f.statement, f.status, t.a_id, t.b_id FROM fact f"
-        + " LEFT JOIN dm_message m ON m.id = f.origin_ref LEFT JOIN dm_thread t ON t.id = m.thread_id"
+    // what came up in a DM stays in that DM. Regression: R told Amanda he read a book, and Daniel teased him for it;
+    // Jessica brought their private toast and eggs up in public
+    var facts = sql.query("SELECT f.subject_id, f.statement, f.status, m.thread_id FROM fact f LEFT JOIN dm_message m ON m.id = f.origin_ref"
         + " WHERE f.status <> 'VOID' AND f.valid_from <= ? ORDER BY f.valid_from DESC", List.of(t), r -> new String[] {r.str("subject_id"),
-        r.str("statement"), r.str("status"), r.isNull("a_id") ? null : r.str("a_id"), r.isNull("b_id") ? null : r.str("b_id")});
+        r.str("statement"), r.str("status"), r.isNull("thread_id") ? null : r.str("thread_id")});
     var per = new HashMap<String, Integer>();
     for (var f : facts) {
       if (!ids.contains(f[0])) continue;
-      if (f[3] != null && !Set.of(f[3], f[4]).containsAll(ids)) continue;
+      if (f[3] != null && !f[3].equals(dmThread)) continue;
       if (per.merge(f[0], 1, Integer::sum) > FACTS_PER_SUBJECT) continue;
       var p = world.people.get(f[0]);
       sb.append("- @").append(p == null ? f[0] : p.handle).append(" ").append(f[1])

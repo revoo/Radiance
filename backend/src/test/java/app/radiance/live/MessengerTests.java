@@ -409,6 +409,13 @@ class MessengerTests {
     var budget = LivePlayTests.gateway(null).budgetFor(app.radiance.llm.Purpose.RENDER_DM);
     assertThat(builder.dms(theirs, budget).content()).contains("read a book this week", "plays softball badly");
     assertThat(builder.dms(other, budget).content()).contains("plays softball badly").doesNotContain("read a book this week");
+    // nor does she bring it up in public, even on a thread with only the two of them
+    db.commit(new UnitOfWork()
+        .add("INSERT INTO post (id, author_id, created_at, kind, audience, origin, air_status, body, render_status, brief_json, comment_count, importance, fidelity, reaction_counts_json)"
+            + " VALUES ('p', ?, ?, 'STATUS', 'FRIENDS', 'USER', 'AIRED', 'anyone tryna party today?', 'RENDERED', '{}', 0, 3, 'FULL', '{}')", me, t - 1_000)
+        .add("INSERT INTO comment (id, post_id, author_id, created_at, origin, air_status, render_status, brief_json, reaction_counts_json)"
+            + " VALUES ('q', 'p', ?, ?, 'LIVE', 'SCRIPTED', 'PLANNED', '{}', '{}')", amanda, t + 1_000));
+    assertThat(builder.thread("p", budget).content()).contains("plays softball badly").doesNotContain("read a book this week");
   }
 
   /** Regression: asked "how was your day?", Jessica answered "where do you live?" again. The brief now holds what it answers. */

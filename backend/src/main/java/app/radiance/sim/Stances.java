@@ -208,6 +208,11 @@ private static final double OPPOSED_PULL = 3.5;
     return ReactionRow.Kind.LIKE;
   }
 
+  /** How someone reacts to a shot at them. Regression: Amanda liked "voting is for tards", on her own post. */
+  public static ReactionRow.Kind stung(Person b, RandomSource rng) {
+    return b.trait("agreeableness") >= 60 && rng.chance(0.5) ? ReactionRow.Kind.SAD : ReactionRow.Kind.ANGRY;
+  }
+
   /** Ugly stances, for the feel report's 5–12% band. */
   public static boolean ugly(String stance) {
     return "TROLL".equals(stance) || "MOCK".equals(stance) || "HOSTILE".equals(stance);
