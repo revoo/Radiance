@@ -1,8 +1,9 @@
-import { Activity, Bell, HeartHandshake, House, LogOut, MessageCircle, Monitor, Moon, ShieldAlert, Sun, Users, X } from "lucide-react";
+import { Bell, Clapperboard, HeartHandshake, House, LogOut, MessageCircle, Monitor, Moon, Pause, ShieldAlert, Sun, Users, X } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router";
 import { useBackups, useLogout, useMe, useNotifications, usePeople, useRail, useThreads, useWorld } from "../api/queries.ts";
 import type { Actor } from "../api/types.ts";
+import { directorOn, isDirectorShortcut, setDirector, useDirector } from "../director/mode.ts";
 import { live, useLive, worldNow } from "../live/store.ts";
 import { Avatar, Card } from "../ui/kit.tsx";
 import { LiveCams } from "./LiveCams.tsx";
@@ -91,11 +92,13 @@ function NavIcon({ to, label, icon, badge }: { to: string; label: string; icon: 
   );
 }
 
-/** The avatar in the top bar opens R's menu: his profile, the pacing monitor, and logging out. */
+/** The avatar in the top bar opens R's menu: his profile, the Director's console when it's on, and logging out. */
 function AccountMenu({ me }: { me: Actor }) {
+  const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
   const logout = useLogout();
   const navigate = useNavigate();
+  const director = useDirector();
   useEffect(() => {
     if (!open) return;
     const close = (e: KeyboardEvent | MouseEvent) => {
@@ -134,10 +137,28 @@ function AccountMenu({ me }: { me: Actor }) {
             <span className="flex size-8 items-center justify-center rounded-full bg-panel-2"><Users className="size-4" /></span>
             Friends
           </Link>
-          <Link role="menuitem" to="/director/pacer" onClick={() => setOpen(false)} className={item}>
-            <span className="flex size-8 items-center justify-center rounded-full bg-panel-2"><Activity className="size-4" /></span>
-            Pacing monitor
-          </Link>
+          {director && (
+            <Link role="menuitem" to="/director" onClick={() => setOpen(false)} className={item}>
+              <span className="flex size-8 items-center justify-center rounded-full bg-panel-2"><Clapperboard className="size-4" /></span>
+              Director's console
+            </Link>
+          )}
+          <button
+            role="menuitemcheckbox"
+            aria-checked={director}
+            onClick={() => {
+              setDirector(!director);
+              setOpen(false);
+              if (director && pathname.startsWith("/director")) navigate("/");
+            }}
+            className={item}
+          >
+            <span className="flex size-8 items-center justify-center rounded-full bg-panel-2"><Clapperboard className="size-4" /></span>
+            <span className="min-w-0">
+              <span className="block">Director mode: {director ? "on" : "off"}</span>
+              <span className="block text-xs font-medium text-muted">Ctrl+Shift+D</span>
+            </span>
+          </button>
           <button
             role="menuitem"
             disabled={logout.isPending}
@@ -228,6 +249,7 @@ function Shortcut({ to, icon, label }: { to: string; icon: ReactNode; label: str
 }
 
 function LeftRail({ me }: { me: Actor }) {
+  const director = useDirector();
   const likeMeters = useMe().data?.likeMeters !== false;
   return (
     <aside className="sticky top-20 hidden h-[calc(100vh-6rem)] w-64 shrink-0 flex-col gap-1 lg:flex">
@@ -259,11 +281,13 @@ function LeftRail({ me }: { me: Actor }) {
         icon={<span className="flex size-8 items-center justify-center rounded-full bg-[#e8590c] text-white"><Bell className="size-4" /></span>}
         label="Notifications"
       />
-      <Shortcut
-        to="/director/pacer"
-        icon={<span className="flex size-8 items-center justify-center rounded-full bg-[#5f3dc4] text-white"><Activity className="size-4" /></span>}
-        label="Pacing monitor"
-      />
+      {director && (
+        <Shortcut
+          to="/director"
+          icon={<span className="flex size-8 items-center justify-center rounded-full bg-[#5f3dc4] text-white"><Clapperboard className="size-4" /></span>}
+          label="Director's console"
+        />
+      )}
       <LiveCams />
       <p className="mt-auto px-3 pt-2 text-xs text-faint">A simulated Chicagoland. Everyone here but you is a resident.</p>
     </aside>
@@ -379,6 +403,36 @@ function BackfillBanner() {
   );
 }
 
+/** A stopped world looks like a broken one, so it says so. */
+function PausedBanner() {
+  const paused = Boolean(useWorld().data?.paused);
+  if (!paused) return null;
+  return (
+    <div role="status" className="animate-rise flex items-center gap-3 rounded-2xl border border-line bg-panel px-4 py-3 text-sm shadow-card">
+      <Pause className="size-4 shrink-0 text-accent" aria-hidden="true" />
+      <span><span className="font-semibold">The world is paused.</span> <span className="text-muted">Nothing airs and nobody answers until it's resumed from the Director's console.</span></span>
+    </div>
+  );
+}
+
+/** The console's shortcut works from anywhere: on opens it, off leaves it. */
+function useDirectorShortcut() {
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!isDirectorShortcut(e)) return;
+      e.preventDefault();
+      const next = !directorOn();
+      setDirector(next);
+      if (next) navigate("/director");
+      else if (pathname.startsWith("/director")) navigate("/");
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [navigate, pathname]);
+}
+
 /** Backups that can't leave the server are the one thing worth interrupting the game for (ADR 0019). */
 function BackupBanner() {
   const warning = useBackups().data?.warning;
@@ -392,16 +446,20 @@ function BackupBanner() {
 }
 
 export function Layout({ me, network, children }: { me: Actor; network: string; children: ReactNode }) {
-  const wide = useLocation().pathname.startsWith("/messages");
+  const { pathname } = useLocation();
+  const wide = pathname.startsWith("/messages");
+  const console = pathname.startsWith("/director");
+  useDirectorShortcut();
   return (
     <div className="min-h-screen pb-20 pt-16 sm:pb-8">
       <TopBar me={me} network={network} />
       <div className="mx-auto flex max-w-[1320px] gap-6 px-3 pt-4 sm:px-4">
-        <LeftRail me={me} />
-        <main className={`mx-auto w-full min-w-0 flex-1 space-y-4 ${wide ? "max-w-[980px]" : "max-w-[640px]"}`}>
+        {!console && <LeftRail me={me} />}
+        <main className={`mx-auto w-full min-w-0 flex-1 space-y-4 ${console ? "max-w-[1280px]" : wide ? "max-w-[980px]" : "max-w-[640px]"}`}>
           <BackupBanner />
           <BackfillBanner />
-          {!wide && (
+          <PausedBanner />
+          {!wide && !console && (
             <div className="xl:hidden">
               <WeatherChip />
             </div>
@@ -409,7 +467,7 @@ export function Layout({ me, network, children }: { me: Actor; network: string; 
           {children}
           <WeatherCredit />
         </main>
-        {!wide && <RightRail />}
+        {!wide && !console && <RightRail />}
       </div>
       <BottomTabs me={me} />
       <Toasts />

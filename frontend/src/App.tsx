@@ -11,7 +11,7 @@ import { LoginPage } from "./pages/LoginPage.tsx";
 import { MessengerPage } from "./pages/MessengerPage.tsx";
 import { NotificationsPage } from "./pages/NotificationsPage.tsx";
 import { OnboardingPage } from "./pages/OnboardingPage.tsx";
-import { PacerPage } from "./pages/PacerPage.tsx";
+import { DirectorPage } from "./director/DirectorPage.tsx";
 import { PostPage } from "./pages/PostPage.tsx";
 import { ProfilePage } from "./pages/ProfilePage.tsx";
 import { Layout, Logo } from "./shell/Layout.tsx";
@@ -70,7 +70,9 @@ export default function App() {
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/messages" element={<MessengerPage me={actor} />} />
         <Route path="/messages/:threadId" element={<MessengerPage me={actor} />} />
-        <Route path="/director/pacer" element={<PacerPage />} />
+        <Route path="/director" element={<DirectorPage />} />
+        <Route path="/director/:tab" element={<DirectorPage />} />
+        <Route path="/director/:tab/:sub" element={<DirectorPage />} />
         <Route path="*" element={<FeedPage me={actor} />} />
       </Routes>
     </Layout>

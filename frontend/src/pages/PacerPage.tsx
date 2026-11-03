@@ -36,9 +36,9 @@ export function PacerPage() {
   return (
     <>
       <div className="px-1">
-        <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
-          <Activity className="size-6 text-accent" aria-hidden="true" /> Pacing monitor
-        </h1>
+        <h2 className="flex items-center gap-2 text-lg font-bold tracking-tight">
+          <Activity className="size-5 text-accent" aria-hidden="true" /> Pacing monitor
+        </h2>
         <p className="mt-1 text-sm text-muted">
           How live responses reach you. Targets: first reaction ≤ 6 s, first comment ≤ 25 s, tapering within ~5 minutes.
         </p>
@@ -103,8 +103,7 @@ export function PacerPage() {
             </table>
           </Card>
           <p className="px-1 text-xs text-faint">
-            Max this session: {p.maxCommentsPerMinute} comments / min, {p.maxNotificationsPerMinute} alerts / min. Tune these in
-            content/rules/pacing.yaml.
+            Max this session: {p.maxCommentsPerMinute} comments / min, {p.maxNotificationsPerMinute} alerts / min. Tune these under Knobs.
           </p>
         </>
       )}

@@ -191,10 +191,11 @@ class DirectorPlayTests {
     assertThat(count("SELECT COUNT(*) AS n FROM arc WHERE id = ?", onTheScript.events.getFirst().arcId())).isZero();
     assertThat(engine.recentDrops()).as("the airing report says why").anyMatch(d -> d.reason().contains("blacklisted"));
 
-    long before = count("SELECT COUNT(*) AS n FROM event WHERE def_id = 'new_hobby'");
+    String starts = "SELECT COUNT(*) AS n FROM event WHERE def_id = 'new_hobby' AND json_extract(payload_json, '$.arc.kind') = 'START'";
+    long before = count(starts);
     long t = engine.locked(w -> w.time);
     new ScriptWriter(db.sql, db.lane, engine, ContinuityAuditor.Mode.RECORD, db.clock).write(t, t + 14 * 24 * HOUR, Fidelity.FULL, List.of(), engine.weather(t, t + 14 * 24 * HOUR), Set.of(), ContentOrigin.SCRIPT);
-    assertThat(count("SELECT COUNT(*) AS n FROM event WHERE def_id = 'new_hobby'")).as("two weeks of planning start none").isEqualTo(before);
+    assertThat(count(starts)).as("two weeks of planning start none").isEqualTo(before);
 
     lib.unblock("new_hobby");
     assertThat(lib.startableArcs()).containsKey("new_hobby");

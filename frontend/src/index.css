@@ -31,6 +31,9 @@
 }
 
 :root {
+  --viz-pos: #2a78d6;
+  --viz-neg: #d6452f;
+  --viz-mid: #c9c5d2;
   --surface: #f4f2f8;
   --panel: #ffffff;
   --panel-2: #f6f4fa;
@@ -51,6 +54,9 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    --viz-pos: #3987e5;
+    --viz-neg: #e0523a;
+    --viz-mid: #4a4556;
     --surface: #0f0d15;
     --panel: #19161f;
     --panel-2: #221e2a;
@@ -70,6 +76,9 @@
 }
 
 :root[data-theme="dark"] {
+  --viz-pos: #3987e5;
+  --viz-neg: #e0523a;
+  --viz-mid: #4a4556;
   --surface: #0f0d15;
   --panel: #19161f;
   --panel-2: #221e2a;

@@ -35,6 +35,10 @@ function describe(d: Data): string {
  */
 export function applyEvent(qc: QueryClient, name: string, d: Data, refresh = refreshPost) {
   switch (name) {
+    case "world.changed":
+      // the clock moved or stopped: anything on screen may be out of date
+      void qc.invalidateQueries();
+      break;
     case "friend.changed":
       void qc.invalidateQueries({ queryKey: ["person"] });
       void qc.invalidateQueries({ queryKey: ["people"] });
@@ -108,6 +112,7 @@ const EVENTS = [
   "dm.seen",
   "meter.changed",
   "friend.changed",
+  "world.changed",
 ];
 
 /** Subscribes to {@code /api/stream} while signed in; EventSource reconnects on its own. */
