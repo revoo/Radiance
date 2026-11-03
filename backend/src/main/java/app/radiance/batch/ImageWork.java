@@ -118,11 +118,16 @@ public final class ImageWork {
 
   /** Reused wherever they appear. Avatars are the one place an identifiable (AI) face is allowed. */
   static String avatarPrompt(String[] a, LocalDate today) {
-    String gender = "F".equals(a[1]) ? "woman" : "man";
-    String heritage = a[4] == null ? "" : Json.tree(a[4]).path("heritage").asString("");
-    int age = a[2] == null || a[2].length() < 10 ? 30 : Math.max(18, Period.between(LocalDate.parse(a[2]), today).getYears());
-    return "Casual social media profile photo of an ordinary " + age + "-year-old " + (heritage.isBlank() ? "" : heritage + " ") + gender
-        + (a[3] == null ? "" : ", a " + a[3].toLowerCase(java.util.Locale.ROOT)) + ", head and shoulders, natural light, relaxed expression."
+    var identity = a[4] == null ? Json.tree("{}") : Json.tree(a[4]);
+    String look = identity.path("appearance").asString("");
+    if (look.isBlank()) {
+      String gender = "F".equals(a[1]) ? "woman" : "man";
+      String heritage = identity.path("heritage").asString("");
+      int age = a[2] == null || a[2].length() < 10 ? 30 : Math.max(18, Period.between(LocalDate.parse(a[2]), today).getYears());
+      look = age + "-year-old " + (heritage.isBlank() ? "" : heritage + " ") + gender
+          + (a[3] == null ? "" : ", works as: " + a[3].toLowerCase(java.util.Locale.ROOT)) + ".";
+    }
+    return "Casual social media profile photo of an ordinary adult: " + look + " Head and shoulders, natural light, relaxed expression."
         + " An invented person, not anyone real. No text, no logos.";
   }
 
