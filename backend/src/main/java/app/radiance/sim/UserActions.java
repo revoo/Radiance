@@ -538,7 +538,8 @@ public final class UserActions {
         if (Airing.UGLY.contains(stance) && !wasClash) {
           String said = text.length() <= 160 ? text : text.substring(0, 160) + "…";
           new app.radiance.memory.MemoryRepository(sql).save(uow, List.of(Airing.memory(w, receiver, now,
-              w.person(w.userId).name + " took a shot at them: \"" + said + "\"", 5, List.of(w.userId), List.of("clash"), null, null)));
+              w.person(w.userId).name + " took a shot at them: \"" + said + "\"", 5, List.of(w.userId),
+              dm ? List.of("clash", "dm:" + sql.queryOne("SELECT thread_id FROM dm_message WHERE id = ?", List.of(itemId), x -> x.str("thread_id")).orElse("")) : List.of("clash"), null, null)));
         }
       }
       lane.run(() -> sql.commit(uow));

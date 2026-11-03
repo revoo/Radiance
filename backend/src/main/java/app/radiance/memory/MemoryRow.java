@@ -13,6 +13,11 @@ public record MemoryRow(
     String arcId,
     String eventId,
     boolean compacted) {
+  /** Remembered from a DM: tagged {@code dm:<thread>}, and stays in that thread (SPEC §5.6). */
+  public static boolean isFromADm(String tagsJson) {
+    return tagsJson != null && tagsJson.contains("\"dm:");
+  }
+
   public enum Kind {
     EPISODE,
     PERIOD_SUMMARY

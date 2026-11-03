@@ -72,7 +72,7 @@ class ContextPacketTests {
           && a.visibility != app.radiance.kernel.Visibility.PUBLIC)) {
         assertThat(builder.mustNotReveal(megan, involved)).anySatisfy(l -> assertThat(l).contains("Jessica", "Nick"));
         assertThat(builder.mustNotReveal(jessica, involved)).isEmpty();
-        assertThat(builder.people(involved, w.time, BUDGET)).contains("known only to");
+        assertThat(builder.people(involved, w.time, null)).contains("known only to");
       }
     }
   }

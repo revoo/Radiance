@@ -234,7 +234,7 @@ public final class Renderer {
       String id = Ulid.next(at, RandomSource.seeded(world.seed).derive("fact:" + t.id() + ":" + i++));
       uow.add("INSERT INTO fact (id, subject_id, statement, weight, source, status, visibility, valid_from, origin_ref)"
           + " VALUES (?, ?, ?, 'MINOR', 'PROSE', ?, ?, ?, ?) ON CONFLICT DO NOTHING", id, subject.id, f.statement().strip(),
-          status, Visibility.PUBLIC.name(), at, t.id());
+          status, (t.type().equals("DM") ? Visibility.PRIVATE : Visibility.PUBLIC).name(), at, t.id());
     }
   }
 

@@ -155,7 +155,8 @@ public final class Maintenance {
     var person = world.people.get(actorId);
     if (person == null) return;
     long cutoff = world.time - COMPACT_AGE;
-    var old = new MemoryRepository(sql).olderEpisodes(actorId, cutoff);
+    // a summary would lose where a private memory came from, and it goes everywhere: those stay out
+    var old = new MemoryRepository(sql).olderEpisodes(actorId, cutoff).stream().filter(m -> !app.radiance.memory.MemoryRow.isFromADm(m.tagsJson())).toList();
     if (old.size() <= COMPACT_OVER) return;
     String lately = sql.queryOne("SELECT life_summary FROM persona WHERE actor_id = ?", List.of(actorId),
         r -> r.isNull("life_summary") ? "" : r.str("life_summary")).orElse("");
@@ -202,8 +203,9 @@ public final class Maintenance {
     var tags = e.tags.stream().toList();
     if (!tags.isEmpty()) rel.append("; tags: ").append(String.join(", ", tags));
     if (e.summary != null) rel.append("\nHow they know each other: ").append(e.summary);
-    var memories = sql.query("SELECT text FROM memory WHERE owner_id = ? AND participants_json LIKE ? AND compacted = 0"
-        + " ORDER BY world_time DESC LIMIT 8", List.of(fromId, "%" + toId + "%"), r -> r.str("text"));
+    var memories = sql.query("SELECT text, tags_json FROM memory WHERE owner_id = ? AND participants_json LIKE ? AND compacted = 0"
+        + " ORDER BY world_time DESC LIMIT 16", List.of(fromId, "%" + toId + "%"), r -> app.radiance.memory.MemoryRow.isFromADm(r.str("tags_json")) ? "" : r.str("text"))
+        .stream().filter(x -> !x.isEmpty()).limit(8).toList();
     String prompt = lib.prompt("summary").replace("{{network_name}}", networkName).replace("{{from}}", from.name)
         .replace("{{to}}", to.name).replace("{{relationship}}", rel.toString())
         .replace("{{lately}}", memories.isEmpty() ? "(nothing much)" : "- " + String.join("\n- ", memories));

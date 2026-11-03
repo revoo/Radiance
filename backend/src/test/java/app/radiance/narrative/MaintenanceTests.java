@@ -37,7 +37,10 @@ class MaintenanceTests {
         rows.add(new MemoryRow("01OLD" + String.format("%021d", i), jake.id, w.time - 20 * 86_400_000L + i * 60_000L,
             MemoryRow.Kind.EPISODE, "Jake roasted Jesse's car #" + i, 3, "[\"" + tim.id + "\"]", "[]", null, null, false));
       }
-      sim.sqlLane().run(() -> sim.sql.commit(new MemoryRepository(sim.sql).save(new UnitOfWork(), rows)));
+      sim.sqlLane().run(() -> sim.sql.commit(new MemoryRepository(sim.sql).save(new UnitOfWork(), rows)
+          // a summary would carry a private memory out of its DM, with nothing left to say where it came from
+          .add("INSERT INTO memory (id, owner_id, world_time, kind, text, importance, participants_json, tags_json, compacted)"
+              + " VALUES ('from-a-dm', ?, 1, 'EPISODE', 'said in a DM', 9, '[]', '[\"dm:t1\"]', 0)", jake.id)));
       // a material change toward Tim
       var e = w.edge(jake.id, tim.id);
       e.familiarity = 60;
@@ -62,6 +65,7 @@ class MaintenanceTests {
       var errors = sim.sql.query("SELECT kind, status, last_error FROM job WHERE kind IN ('REFLECT', 'SUMMARY')", List.of(),
           r -> r.str("kind") + " " + r.str("status") + " " + r.str("last_error"));
       assertThat(compacted).as(errors.toString()).isGreaterThanOrEqualTo(50);
+      assertThat(sim.sql.queryOne("SELECT compacted FROM memory WHERE id = 'from-a-dm'", List.of(), r -> r.lng("compacted")).orElseThrow()).isZero();
       assertThat(sim.sql.queryOne("SELECT COUNT(*) AS n FROM memory WHERE owner_id = ? AND kind = 'PERIOD_SUMMARY'",
           List.of(jake.id), r -> r.lng("n")).orElseThrow()).isBetween(1L, 3L);
       assertThat(sim.sql.queryOne("SELECT life_summary FROM persona WHERE actor_id = ?", List.of(jake.id),

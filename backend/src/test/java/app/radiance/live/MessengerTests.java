@@ -359,8 +359,8 @@ class MessengerTests {
     assertThat(engine.item(id).stance).isEqualTo("MOCK");
     assertThat(app.radiance.sim.Brief.parse(db.sql.queryOne("SELECT brief_json FROM dm_message WHERE id = ?", List.of(id), r -> r.str("brief_json")).orElseThrow()).interaction())
         .isEqualTo("dm_mock");
-    assertThat(db.sql.query("SELECT text FROM memory WHERE owner_id = ?", List.of(someone), r -> r.str("text")))
-        .anyMatch(x -> x.contains("kinda lame"));
+    assertThat(db.sql.query("SELECT tags_json FROM memory WHERE owner_id = ? AND text LIKE '%kinda lame%'", List.of(someone), r -> r.str("tags_json")))
+        .singleElement().asString().contains("dm:" + thread);
 
     var reply = actions.dmReply(thread, id, 1.0, t);
     assertThat(reply.script().dms).hasSize(1);
@@ -416,6 +416,58 @@ class MessengerTests {
         .add("INSERT INTO comment (id, post_id, author_id, created_at, origin, air_status, render_status, brief_json, reaction_counts_json)"
             + " VALUES ('q', 'p', ?, ?, 'LIVE', 'SCRIPTED', 'PLANNED', '{}', '{}')", amanda, t + 1_000));
     assertThat(builder.thread("p", budget).content()).contains("plays softball badly").doesNotContain("read a book this week");
+  }
+
+  /**
+   * The canary: secrets planted everywhere a prompt can read from, and every kind of prompt that shouldn't
+   * see them. Knowledge has an audience (SPEC §5.6): a DM is its two people, in that DM; a friends-only post
+   * is its author's friends; what hasn't aired is nobody yet.
+   */
+  @Test
+  void everySecretStaysWithItsAudience_InEveryKindOfPrompt() {
+    var world = engine.world();
+    String me = world.userId;
+    var friends = residents();
+    String amanda = friends.get(4);
+    String daniel = friends.get(5);
+    String theirs = actions.thread(amanda);
+    String other = actions.thread(daniel);
+    // someone Amanda and Daniel can't both see, and someone they both can
+    String stranger = world.residents().stream().map(p -> p.id).filter(id -> !id.equals(amanda) && !id.equals(daniel)
+        && !(world.edge(amanda, id).connected && world.edge(daniel, id).connected)).findFirst().orElseThrow();
+    long t = db.clock.nowMs();
+    String sql = "INSERT INTO post (id, author_id, created_at, kind, audience, origin, air_status, body, render_status, brief_json, importance, fidelity)"
+        + " VALUES (?, ?, ?, 'STATUS', 'FRIENDS', 'SCRIPT', ?, ?, 'RENDERED', '{}', 3, 'FULL')";
+    String comment = "INSERT INTO comment (id, post_id, author_id, created_at, origin, air_status, body, gist, render_status, brief_json)"
+        + " VALUES (?, ?, ?, ?, 'SCRIPT', 'AIRED', 'words', ?, 'RENDERED', '{}')";
+    String planned = "INSERT INTO comment (id, post_id, author_id, created_at, origin, air_status, render_status, brief_json)"
+        + " VALUES (?, ?, ?, ?, 'LIVE', 'SCRIPTED', 'PLANNED', '{}')";
+    String dm = "INSERT INTO dm_message (id, thread_id, sender_id, created_at, air_status, body, render_status, brief_json) VALUES (?, ?, ?, ?, ?, ?, ?, '{}')";
+    db.commit(new UnitOfWork()
+        .add(dm, "a", theirs, amanda, t - 2_000, "AIRED", "CANARY-DM-TEXT", "RENDERED")
+        .add("INSERT INTO fact (id, subject_id, statement, weight, source, status, visibility, valid_from, origin_ref) VALUES ('f1', ?, 'CANARY-DM-FACT', 'MINOR', 'PROSE', 'ACTIVE', 'PRIVATE', ?, 'a')", amanda, t - 2_000)
+        .add("INSERT INTO fact (id, subject_id, statement, weight, source, status, visibility, valid_from, origin_ref) VALUES ('f2', ?, 'public-fact', 'MINOR', 'PROSE', 'ACTIVE', 'PUBLIC', ?, 'some-post')", amanda, t - 2_000)
+        .add("INSERT INTO memory (id, owner_id, world_time, kind, text, importance, participants_json, tags_json, compacted) VALUES ('m1', ?, ?, 'EPISODE', 'CANARY-DM-MEMORY', 9, ?, ?, 0)",
+            amanda, t - 2_000, "[\"" + me + "\"]", "[\"clash\",\"dm:" + theirs + "\"]")
+        .add(sql, "strangers", stranger, t - 3_000, "AIRED", "strangers post")
+        .add(comment, "s1", "strangers", amanda, t - 2_500, "CANARY-STRANGER-GIST")
+        .add(sql, "tomorrow", amanda, t + 86_400_000L, "SCRIPTED", "CANARY-UNAIRED opening words here")
+        .add(sql, "shared", me, t - 1_000, "AIRED", "a post everyone can read")
+        .add(comment, "s2", "shared", amanda, t - 900, "gist-of-this-thread")
+        .add(planned, "q1", "shared", amanda, t + 1_000)
+        .add(planned, "q2", "shared", daniel, t + 1_000)
+        .add(dm, "b", theirs, amanda, t + 1_000, "SCRIPTED", null, "PLANNED")
+        .add(dm, "c", other, daniel, t + 1_000, "SCRIPTED", null, "PLANNED"));
+    var builder = new ContextPacketBuilder(db.sql, LivePlayTests.LIB, "Radiance", engine.world());
+    var budget = LivePlayTests.gateway(null).budgetFor(app.radiance.llm.Purpose.RENDER_DM);
+
+    var hers = builder.dms(theirs, budget).content();
+    assertThat(hers).as("the DM itself").contains("CANARY-DM-TEXT", "CANARY-DM-FACT", "CANARY-DM-MEMORY", "public-fact");
+    var his = builder.dms(other, budget).content();
+    assertThat(his).as("another DM").doesNotContain("CANARY");
+    var thread = builder.thread("shared", budget).content();
+    assertThat(thread).as("a public thread with her in it").doesNotContain("CANARY").contains("public-fact");
+    assertThat(thread.substring(thread.indexOf("<today>"), thread.indexOf("</today>"))).as("the thread itself is in <thread>").doesNotContain("gist-of-this-thread");
   }
 
   /** Regression: asked "how was your day?", Jessica answered "where do you live?" again. The brief now holds what it answers. */

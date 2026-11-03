@@ -162,7 +162,7 @@ public final class ContextPacketBuilder {
     // nothing scripted for later: a reply mustn't see what hasn't been said yet
     long until = targets.values().stream().mapToLong(Target::time).max().orElse(Long.MAX_VALUE);
     var threadText = threadSoFar(post, comments.stream().filter(c -> c.body() == null || c.createdAt() <= until).toList());
-    String content = fill("render-thread", today(t, post.headlineId(), authors), people(authors, t, budget),
+    String content = fill("render-thread", today(t, post.headlineId(), authors, post.id()), people(authors, t, null),
         canon(authors, t, null), threadText, briefsJson(briefs, targets, authors));
     content = trim(content, budget);
     return new Packet(prefix(), content, briefs, targets);
@@ -215,7 +215,7 @@ public final class ContextPacketBuilder {
         targets.put(m.id(), new Target("DM", m.id(), m.senderId(), b.stance(), null, false, m.createdAt()));
       }
     }
-    String content = fill("render-dm", today(t, null, authors), people(authors, t, budget), canon(authors, t, threadId),
+    String content = fill("render-dm", today(t, null, authors, null), people(authors, t, threadId), canon(authors, t, threadId),
         convo.isEmpty() ? "(no messages yet)" : convo.toString(), briefsJson(briefs, targets, authors));
     return new Packet(prefix(), trim(content, budget), briefs, targets);
   }
@@ -250,7 +250,7 @@ public final class ContextPacketBuilder {
 
   // ------------------------------------------------------------------------------------- sections
 
-  String today(long t, String headlineId, Set<String> people) {
+  String today(long t, String headlineId, Set<String> people, String thisPost) {
     var local = Instant.ofEpochMilli(t).atZone(world.zone);
     var date = local.toLocalDate();
     int h = local.getHour();
@@ -277,39 +277,49 @@ public final class ContextPacketBuilder {
       sb.append("In the news: ").append(headlines.stream().map(x -> "“" + x.title() + "”")
           .collect(Collectors.joining("; "))).append(".\n");
     }
-    var sofar = todaySoFar(t, people);
+    var sofar = todaySoFar(t, people, thisPost);
     if (!sofar.isEmpty()) sb.append("Today so far:\n").append(sofar);
     return sb.toString().strip();
   }
 
-  /** Gists of earlier items today involving these people (SPEC §5.10: scripted "today so far"). */
-  private String todaySoFar(long t, Set<String> people) {
+  /**
+   * Gists of the latest items today involving these people (SPEC §5.10: scripted "today so far"), for continuity:
+   * only what everyone in this packet could have seen, and not the thread they're writing, which is there in full.
+   */
+  private String todaySoFar(long t, Set<String> people, String thisPost) {
     var date = world.date(t);
     long from = date.atStartOfDay(world.zone).toInstant().toEpochMilli();
-    var sb = new StringBuilder();
-    var rows = sql.query("SELECT author_id, created_at, gist FROM comment WHERE created_at >= ? AND created_at < ?"
-        + " AND gist IS NOT NULL AND air_status <> 'DROPPED' ORDER BY created_at LIMIT 200", List.of(from, t),
-        r -> new String[] {r.str("author_id"), r.str("gist")});
-    int n = 0;
+    var rows = sql.query("SELECT c.author_id, c.gist, c.post_id, p.author_id AS post_author, p.audience FROM comment c JOIN post p ON p.id = c.post_id"
+        + " WHERE c.created_at >= ? AND c.created_at < ? AND c.gist IS NOT NULL AND c.air_status <> 'DROPPED' ORDER BY c.created_at DESC LIMIT 200",
+        List.of(from, t), r -> new String[] {r.str("author_id"), r.str("gist"), r.str("post_id"), r.str("post_author"), r.str("audience")});
+    var lines = new ArrayList<String>();
     for (var r : rows) {
-      if (!people.contains(r[0])) continue;
-      sb.append("- ").append(r[1]).append('\n');
-      if (++n >= 8) break;
+      if (!people.contains(r[0]) || r[2].equals(thisPost)) continue;
+      if (!r[4].equals("PUBLIC") && !people.stream().allMatch(x -> canSeePostsOf(x, r[3]))) continue;
+      lines.add("- " + r[1] + "\n");
+      if (lines.size() >= 8) break;
     }
-    return sb.toString();
+    java.util.Collections.reverse(lines);
+    return String.join("", lines);
   }
 
-  String people(Set<String> ids, long t, PromptBudget budget) {
+  private boolean canSeePostsOf(String reader, String author) {
+    if (reader.equals(author)) return true;
+    var e = world.edgeOrNull(reader, author);
+    return e != null && e.connected;
+  }
+
+  String people(Set<String> ids, long t, String dmThread) {
     var sb = new StringBuilder();
     for (String id : ids) {
       var p = world.people.get(id);
       if (p == null) continue;
-      sb.append(person(p, ids, t)).append('\n');
+      sb.append(person(p, ids, t, dmThread)).append('\n');
     }
     return sb.toString().strip();
   }
 
-  private String person(Person p, Set<String> involved, long t) {
+  private String person(Person p, Set<String> involved, long t, String dmThread) {
     var sb = new StringBuilder("## @").append(p.handle).append(" — ").append(p.name);
     if (p.user) {
       sb.append(" (R, the newest member; never write as him)\n");
@@ -348,6 +358,7 @@ public final class ContextPacketBuilder {
     if (!things.isEmpty()) sb.append("Their things: ").append(String.join("; ", things)).append(".\n");
     var arcIds = world.arcsOf(p.id).stream().map(a -> a.id).collect(Collectors.toSet());
     var memories = new MemoryRetrieval(sql).top(p.id, t, involved, arcIds, Set.of(), 2 * MEMORIES).stream()
+        .filter(m -> !app.radiance.memory.MemoryRow.isFromADm(m.tagsJson()) || (dmThread != null && m.tagsJson().contains("\"dm:" + dmThread + "\"")))
         .map(this::remembered).filter(x -> x != null).limit(MEMORIES).toList();
     if (!memories.isEmpty()) {
       sb.append("Remembers:\n");
@@ -448,8 +459,8 @@ public final class ContextPacketBuilder {
   }
 
   private List<String> openings(String id) {
-    return sql.query("SELECT body FROM (SELECT body, created_at FROM post WHERE author_id = ? AND body IS NOT NULL"
-        + " UNION ALL SELECT body, created_at FROM comment WHERE author_id = ? AND body IS NOT NULL)"
+    return sql.query("SELECT body FROM (SELECT body, created_at FROM post WHERE author_id = ? AND body IS NOT NULL AND air_status = 'AIRED'"
+        + " UNION ALL SELECT body, created_at FROM comment WHERE author_id = ? AND body IS NOT NULL AND air_status = 'AIRED')"
         + " ORDER BY created_at DESC LIMIT 5", List.of(id, id), r -> r.str("body")).stream()
         .map(b -> String.join(" ", java.util.Arrays.stream(b.strip().split("\\s+")).limit(3).toList()))
         .map(s -> "“" + s + "”").toList();
