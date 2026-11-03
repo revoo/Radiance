@@ -83,6 +83,7 @@ public final class NightlyBatch {
   private final WeatherSources weatherSources;
   private final HeadlineFeeds headlineFeeds;
   private ImageWork imageWork;
+  private app.radiance.llm.LlmConsole console;
   private final AtomicInteger running = new AtomicInteger();
 
   public NightlyBatch(Sql sql, SqlAdmin admin, WriterLane lane, LeaseHolder lease, WallClock clock, ContentLibrary lib,
@@ -116,6 +117,20 @@ public final class NightlyBatch {
   public NightlyBatch withImages(ImageWork work) {
     this.imageWork = work;
     return this;
+  }
+
+  /** Gives each run its own spending window (SPEC §5.15: {@code usd:batch}). */
+  public NightlyBatch withBudgetWindow(app.radiance.llm.LlmConsole console) {
+    this.console = console;
+    return this;
+  }
+
+  public ImageWork.Limits imageLimits() {
+    return imageWork == null ? new ImageWork.Limits(0, 0, 0) : imageWork.limits();
+  }
+
+  public void tuneImages(ImageWork.Limits limits) {
+    if (imageWork != null) imageWork.tune(limits);
   }
 
   /** Spring's cron has a seconds field; the config uses Unix five-field crons (SPEC §9). */
@@ -187,6 +202,7 @@ public final class NightlyBatch {
       lane.run(() -> sql.commit(new UnitOfWork().add("INSERT INTO batch_run (id, kind, started_at, status)"
           + " VALUES (?, ?, ?, 'RUNNING')", id, kind.name(), started)));
       try {
+        if (console != null) console.openBatch();
         var report = execute(id, kind, started);
         finish(id, report, null);
         return report;
@@ -197,6 +213,7 @@ public final class NightlyBatch {
         return failed;
       }
     } finally {
+      if (console != null) console.closeBatch();
       running.decrementAndGet();
     }
   }

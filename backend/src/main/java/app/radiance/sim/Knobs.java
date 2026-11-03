@@ -25,6 +25,12 @@ public record Knobs(
     double scriptSlackHours, double primeTimeBoost, double backfillFullHours, double backfillReducedDays,
     double maxGapDays) {
 
+  public Knobs {
+    eventMix = sorted(eventMix);
+    contentKindWeights = sorted(contentKindWeights);
+    regionMix = sorted(regionMix);
+  }
+
   public static Knobs defaults() {
     return new Knobs(36, 21, 2, 10,
         "STEADY", 1.0, 2, 2,
@@ -35,6 +41,10 @@ public record Knobs(
         1.0, true,
         25, sorted("NATIONAL", 0.60, "WORLD", 0.30, "LOCAL", 0.10),
         7, 21, 60, 6, 1.5, 48, 7, 30);
+  }
+
+  private static Map<String, Double> sorted(Map<String, Double> m) {
+    return java.util.Collections.unmodifiableMap(new java.util.TreeMap<>(m));
   }
 
   /** Sorted, so every JVM iterates the mix in the same order. */

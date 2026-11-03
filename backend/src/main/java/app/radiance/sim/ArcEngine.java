@@ -71,6 +71,11 @@ final class ArcEngine {
     }
   }
 
+  /** The Director moves an arc straight to {@code to}, whatever its phase is due next (SPEC §5.16). */
+  static void jump(Plan p, Arc arc, ArcDef def, String to, long t) {
+    enter(p, arc, def, arc.phase, to, t, false);
+  }
+
   private static void abandon(Plan p, Arc arc, ArcDef def) {
     if (def.abandon() == null || def.abandon().equals(arc.phase)) return;
     enter(p, arc, def, arc.phase, def.abandon(), p.slice.start(), true);

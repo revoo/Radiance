@@ -12,7 +12,10 @@ import app.radiance.content.Rules.WeatherCondition;
 import java.util.List;
 import java.util.Map;
 
-/** Every content file, loaded and cross-validated as one library (ADR 0015). Immutable. */
+/**
+ * Every content file, loaded and cross-validated as one library (ADR 0015). Immutable but for the blacklist, which the
+ * Director can add to while the world runs (SPEC §5.16).
+ */
 public record ContentLibrary(
     Map<String, QuirkDef> quirks,
     Map<String, EventDef> events,
@@ -27,6 +30,20 @@ public record ContentLibrary(
     Map<String, List<Map<String, Object>>> tables,
     Map<String, String> prompts,
     List<ContentProperties.BlacklistEntry> blacklist) {
+
+  public ContentLibrary {
+    blacklist = new java.util.concurrent.CopyOnWriteArrayList<>(blacklist);
+  }
+
+  /** Stops an arc from starting, from now on. */
+  public void block(String arcId) {
+    if (!isBlacklisted(arcId)) blacklist.add(new ContentProperties.BlacklistEntry(arcId, List.of()));
+  }
+
+  /** Lets an arc start again. */
+  public void unblock(String arcId) {
+    blacklist.removeIf(b -> b.id().equals(arcId));
+  }
 
   public boolean isBlacklisted(String arcId) {
     return blacklist.stream().anyMatch(b -> b.id().equals(arcId));

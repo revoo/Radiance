@@ -39,17 +39,22 @@ public final class WorldEngine {
   public record Report(int aired, int dropped, int memories, int notifications, List<String> dropReasons,
       long rowsWritten, List<String> airedKeys, List<String> droppedKeys, List<NotificationRow> notes) {}
 
+  /** Something airing refused, and why (SPEC §5.16's airing report). */
+  public record Dropped(long at, String reason) {}
+
+  private static final int DROPS_KEPT = 200;
   static final long HOUR = 3_600_000L;
 
   private final Sql sql;
   private final WriterLane lane;
   private final ContentLibrary lib;
-  private final Knobs knobs;
+  private volatile Knobs knobs;
   private final ModelStore store;
   private SimWorld world;
   // live play, the in-process batch and R's actions all touch the committed world: one at a time
   private final ReentrantLock lock = new ReentrantLock();
   private final List<Consumer<Report>> listeners = new CopyOnWriteArrayList<>();
+  private final java.util.Deque<Dropped> drops = new java.util.concurrent.ConcurrentLinkedDeque<>();
 
   public WorldEngine(Sql sql, WriterLane lane, ContentLibrary lib, Knobs knobs) {
     this.sql = sql;
@@ -127,6 +132,16 @@ public final class WorldEngine {
     return knobs;
   }
 
+  /** New knobs from the Director's console: the next plan or airing uses them. */
+  public void tune(Knobs knobs) {
+    this.knobs = knobs;
+  }
+
+  /** What airing has refused lately, newest first. */
+  public List<Dropped> recentDrops() {
+    return List.copyOf(drops);
+  }
+
   public ContentLibrary lib() {
     return lib;
   }
@@ -177,6 +192,10 @@ public final class WorldEngine {
       memories += out.memories.size();
       notes += out.notifications.size();
       reasons.addAll(out.dropReasons);
+      for (String reason : out.dropReasons) {
+        drops.addFirst(new Dropped(next, reason));
+        while (drops.size() > DROPS_KEPT) drops.removeLast();
+      }
       out.statuses.forEach((key, status) -> (status == AirStatus.AIRED ? airedKeys : droppedKeys).add(key));
       created.addAll(out.notifications);
       trim(w);

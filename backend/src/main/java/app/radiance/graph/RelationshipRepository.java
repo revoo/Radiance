@@ -64,8 +64,9 @@ public final class RelationshipRepository {
 
   /** Today's copy of everyone's like-meter for {@code userId}, for the 7-day trends (SPEC §5.9). */
   public UnitOfWork snapshotMeters(UnitOfWork uow, String day, String userId) {
-    return uow.add("INSERT INTO meter_snapshot (day, actor_id, affinity) SELECT ?, from_id, affinity FROM relationship"
-        + " WHERE to_id = ? ON CONFLICT (day, actor_id) DO UPDATE SET affinity = excluded.affinity", day, userId);
+    return uow.add("INSERT INTO meter_snapshot (day, actor_id, affinity, mood) SELECT ?, r.from_id, r.affinity, s.mood"
+        + " FROM relationship r LEFT JOIN actor_state s ON s.actor_id = r.from_id"
+        + " WHERE r.to_id = ? ON CONFLICT (day, actor_id) DO UPDATE SET affinity = excluded.affinity, mood = excluded.mood", day, userId);
   }
 
   public UnitOfWork save(UnitOfWork uow, Collection<RelationshipRow> rows) {

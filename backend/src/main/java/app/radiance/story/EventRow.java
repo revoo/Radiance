@@ -19,6 +19,10 @@ public record EventRow(
     String payloadJson,
     String recapLine) {
 
+  public EventRow withSource(Source s) {
+    return new EventRow(id, worldTime, type, defId, actorId, targetId, arcId, importance, visibility, s, airStatus, payloadJson, recapLine);
+  }
+
   public enum Source {
     STORYTELLER,
     ARC,

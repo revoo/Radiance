@@ -52,7 +52,7 @@ public final class ImageWork {
   private final ImageGenerator generator;
   private final ContentLibrary lib;
   private final WallClock clock;
-  private final Limits limits;
+  private volatile Limits limits;
 
   public ImageWork(Sql sql, WriterLane lane, MediaStore store, ImageGenerator generator, ContentLibrary lib, WallClock clock, Limits limits) {
     this.sql = sql;
@@ -62,6 +62,15 @@ public final class ImageWork {
     this.lib = lib;
     this.clock = clock;
     this.limits = limits;
+  }
+
+  /** New limits from the Director's console. */
+  public void tune(Limits limits) {
+    this.limits = limits;
+  }
+
+  public Limits limits() {
+    return limits;
   }
 
   /** Runs on the batch's thread, outside the writer lane: each image takes seconds. */

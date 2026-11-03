@@ -208,7 +208,7 @@ final class Planner {
   }
 
   /** One storyteller incident: its event, and the post or DM that shows it. */
-  private void fire(Plan p, EventDef def, Person a, Map<String, String> participants, long t) {
+  void fire(Plan p, EventDef def, Person a, Map<String, String> participants, long t) {
     var w = p.w;
     var out = def.output() == null ? PostOutput.NONE : def.output().post();
     String other = participants.entrySet().stream().filter(e -> !e.getKey().equals("actor")).map(Map.Entry::getValue)

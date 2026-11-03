@@ -104,6 +104,8 @@ public final class LivePlay {
   private final Appraiser appraiser;
   private final LlmGateway gateway;
   private final ContentLibrary lib;
+  /** The pacing rules for the next session; the Director can change them. */
+  private volatile app.radiance.content.Rules.PacingRules pacing;
   private final WallClock clock;
   private final LeaseHolder lease;
   private final Backfill backfill;
@@ -145,6 +147,7 @@ public final class LivePlay {
     this.appraiser = appraiser;
     this.gateway = gateway;
     this.lib = engine.lib();
+    this.pacing = lib.pacing();
     this.clock = clock;
     this.lease = lease;
     this.backfill = backfill;
@@ -244,8 +247,78 @@ public final class LivePlay {
 
   /** World time now: wall time plus the world's offset (SPEC §5.1 clock). */
   public long now() {
-    long offset = sql.queryOne("SELECT time_offset_ms FROM world", List.of(), r -> r.lng("time_offset_ms")).orElse(0L);
-    return clock.nowMs() + offset;
+    long wall = clock.nowMs();
+    return sql.queryOne("SELECT time_offset_ms, paused_at FROM world", List.of(),
+        r -> r.isNull("paused_at") ? wall + r.lng("time_offset_ms") : r.lng("paused_at")).orElse(wall);
+  }
+
+  public boolean paused() {
+    return sql.queryOne("SELECT paused FROM world", List.of(), r -> r.bool("paused")).orElse(false);
+  }
+
+  // --------------------------------------------------------------------- the Director (SPEC §5.16)
+
+  /** Stops the clock: nothing airs and nobody answers until {@link #resume}. R can still look around. */
+  public void pause() {
+    long t = now();
+    lane.run(() -> sql.commit(new UnitOfWork().add("UPDATE world SET paused = 1, paused_at = COALESCE(paused_at, ?)", t)));
+    emit("world.changed", Map.of("paused", true));
+  }
+
+  /** Starts the clock from where it stopped. */
+  public void resume() {
+    long wall = clock.nowMs(), t = now();
+    lane.run(() -> sql.commit(new UnitOfWork().add("UPDATE world SET paused = 0, paused_at = NULL, time_offset_ms = ?", t - wall)));
+    catchUp();
+  }
+
+  /** Moves the clock on: what's scripted airs now, and past the end of the script a backfill fills in. */
+  public void fastForward(long hours) {
+    long ms = hours * 3_600_000L;
+    lane.run(() -> sql.commit(new UnitOfWork().add("UPDATE world SET time_offset_ms = time_offset_ms + ?,"
+        + " paused_at = CASE WHEN paused_at IS NULL THEN NULL ELSE paused_at + ? END", ms, ms)));
+    catchUp();
+  }
+
+  private void catchUp() {
+    background("director-time", () -> {
+      try {
+        long t = now();
+        engine.advanceTo(t);
+        if (scriptedUntil() < t && !paused() && !backfill.running()) backfill.start();
+      } catch (RuntimeException e) {
+        log.warn("Catching the world up failed", e);
+      } finally {
+        emit("world.changed", Map.of("paused", paused()));
+        wake.offer(true);
+      }
+    });
+  }
+
+  /** Saves an incident the Director fired and starts writing it. */
+  public void injected(Script script) {
+    actions.save(script);
+    wake.offer(true);
+    var posts = new LinkedHashSet<String>();
+    script.posts.forEach(p -> posts.add(p.id()));
+    script.comments.forEach(c -> posts.add(c.postId()));
+    posts.forEach(this::render);
+    if (script.dms.isEmpty()) return;
+    long wall = clock.nowMs();
+    var uow = new UnitOfWork();
+    var jobs = new JobRepository(sql);
+    script.dms.stream().map(m -> m.threadId()).distinct().forEach(id -> jobs.enqueue(uow, JobKinds.RENDER_DM, id, JobKinds.BACKFILL, wall, wall, wall));
+    lane.run(() -> sql.commit(uow));
+  }
+
+  /** Throws if these rules can't work. */
+  public static void checkPacing(app.radiance.content.Rules.PacingRules rules) {
+    new Pacer(rules, RandomSource.seeded(0));
+  }
+
+  /** New pacing rules, for the next session: the current one keeps what it has planned. */
+  public void tunePacing(app.radiance.content.Rules.PacingRules rules) {
+    pacing = rules;
   }
 
   /**
@@ -302,7 +375,7 @@ public final class LivePlay {
     meters = currentMeters();
     meterMovedAt.clear();
     long seed = engine.locked(w -> w.seed);
-    pacer = new Pacer(lib.pacing(), RandomSource.seeded(seed).derive("pacer:" + sessionId));
+    pacer = new Pacer(pacing, RandomSource.seeded(seed).derive("pacer:" + sessionId));
     sessionRng = RandomSource.seeded(seed).derive("session:" + sessionId);
     typing.clear();
     dmSlots.clear();
@@ -590,6 +663,7 @@ public final class LivePlay {
       return 60_000;
     }
     if (!lease.isHeld()) return 1_000;
+    if (paused()) return 1_000;
     long t = now();
 
     decideFriends(wall);
@@ -619,7 +693,7 @@ public final class LivePlay {
         String s = status.getOrDefault(slot.key, "DROPPED");
         if (s.equals("PLANNED") && wall - slot.since <= pacer.typingGiveUp()) {
           // its slot came before its render: R sees "Sarah is writing a comment…" until it lands
-          if (!slot.announced && lib.pacing().typing().showWhenLate()) {
+          if (!slot.announced && pacing.typing().showWhenLate()) {
             slot.announced = true;
             emit("typing.started", Map.of("postId", slot.postId, "actorId", slot.actorId, "name", slot.name,
                 "key", slot.key, "kind", "comment"));
@@ -760,7 +834,7 @@ public final class LivePlay {
 
   private void hook(long t, long wall) {
     pacer.hooked(wall);
-    var kinds = lib.pacing().hooks().kinds();
+    var kinds = pacing.hooks().kinds();
     // half the time, try a DM from someone with a reason first
     if (kinds.contains("dm_from_motivated_resident") && sessionRng.chance(0.5) && dmHook(t, wall, false)) return;
     if (kinds.contains("comment_on_older_post")) {

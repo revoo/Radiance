@@ -103,6 +103,11 @@ class LlmConfig {
     return gateway;
   }
 
+  @Bean
+  LlmConsole llmConsole(LlmProperties props, DefaultLlmGateway gateway, BudgetLedger budget) {
+    return new LlmConsole(props, gateway, budget);
+  }
+
   /** Loads every alias's prompt-notes file now, so a missing one fails startup, not a render. */
   private static Map<String, String> promptNotes(LlmProperties props, ResourceLoader resources) {
     var notes = new ConcurrentHashMap<String, String>();
