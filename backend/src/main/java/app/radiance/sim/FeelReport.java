@@ -24,6 +24,7 @@ public final class FeelReport {
   public final List<String> lines = new ArrayList<>();
   public final Map<String, Integer> userTags = new TreeMap<>();
   public double userPostComments;
+  public double residentPostComments;
   public double userPostReactions;
 
   record PostLite(String id, String author, long t, String kind, String category, String headline, String arc) {}
@@ -81,6 +82,7 @@ public final class FeelReport {
     // ---- comments per post (residents' posts)
     var cpp = new ArrayList<Integer>();
     for (var p : posts) if (!p.author().equals(user)) cpp.add(commentsByPost.getOrDefault(p.id(), List.of()).size());
+    residentPostComments = median(cpp);
     lines.add(String.format("Comments per resident post: median %.1f, p90 %.1f, max %d", median(cpp), pct(cpp, 0.9),
         cpp.stream().mapToInt(Integer::intValue).max().orElse(0)));
 

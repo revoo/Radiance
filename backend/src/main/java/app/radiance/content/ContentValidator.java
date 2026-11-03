@@ -403,6 +403,7 @@ final class ContentValidator {
     }
     var e = lib.engagement();
     if (e.thetaComment() <= e.thetaReact()) problem("rules/engagement.yaml", "theta_comment must exceed theta_react");
+    if (e.thetaCommentFriends() <= e.thetaReactFriends()) problem("rules/engagement.yaml", "theta_comment_friends must exceed theta_react_friends");
     var pacing = lib.pacing();
     var durations = new ArrayList<String>();
     if (pacing.responseCurve() != null) {

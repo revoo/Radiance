@@ -20,6 +20,8 @@ class FeelBandsTests {
       var report = FeelReport.of(sim);
       assertThat(report.bands).as(report.render(sim)).allMatch(FeelReport.Band::ok);
       assertThat(sim.spoilers).isEmpty();
+      // Regression: the thresholds tuned for R left friends' posts with no comments at all, and the feed felt dead.
+      assertThat(report.residentPostComments).isGreaterThanOrEqualTo(1);
     }
   }
 

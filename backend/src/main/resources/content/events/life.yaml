@@ -57,7 +57,7 @@
   cooldown_days: 30
   importance: 4
   tags: [ work ]
-  output: { post: STATUS, brief: "a small career win: a certification, a big client, a shout-out from the boss, a project shipped" }
+  output: { post: STATUS, brief: "a small win in their actual line of work, the kind only someone in their job would brag about" }
   effects: { mood: 0.2 }
 
 - id: trip_booked

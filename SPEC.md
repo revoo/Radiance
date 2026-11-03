@@ -986,7 +986,7 @@ Live contract tests (§10) verify what each alias in use declares.
 - **`MediaStore` port:** `LocalFileMediaStore` (default; files on disk served through the API) and `R2MediaStore` (private bucket; AWS SDK v2 S3 client with endpoint `https://<account_id>.r2.cloudflarestorage.com` and region `auto`). Follow Cloudflare's aws-sdk-java R2 example: the SDK's default chunked transfer encoding causes 403 signature errors with R2 unless configured. The bucket's CORS policy must allow PUT and GET from the SPA's origin, or browser uploads through presigned URLs fail.
 - **Uploads:** the SPA downsizes to ≤ 1600 px and creates a 400 px thumbnail, then PUTs both via presigned URLs. `POST /api/media/{id}/complete` verifies the objects and runs the vision appraisal (§5.9). No server-side image processing in V1.
 - **Downloads:** `GET /api/media/{id}` returns a 302 to a short-lived presigned URL (reused for its lifetime so the browser can cache it), or streams the local file.
-- **Generation:** `ImageGenerator` port. `WorkersAiImageGenerator` calls `POST https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/run/{model}` with a bearer token; the default model, `@cf/black-forest-labs/flux-1-schnell`, returns a base64 JPEG. `FakeImageGenerator` draws a labeled placeholder. The model is config; `@cf/black-forest-labs/flux-2-klein-4b` is a higher-quality option that also accepts input images (a possible route to reference-based consistency later).
+- **Generation:** `ImageGenerator` port. `WorkersAiImageGenerator` calls `POST https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/run/{model}` with a bearer token; the default model, `@cf/black-forest-labs/flux-2-klein-4b`, returns a base64 JPEG. Pictures people keep seeing use FLUX 3 Image Klein through `PartnerImageGenerator` (ADR 0023). `FakeImageGenerator` draws a labeled placeholder. The model is config; `@cf/black-forest-labs/flux-2-klein-4b` is a higher-quality option that also accepts input images (a possible route to reference-based consistency later).
 - **What gets images:** avatars (genesis) and scripted PHOTO posts from event and arc defs — cars, food, projects, pets, places, sunsets, snowy streets, holiday decorations, hangouts shot from behind or from afar, with outdoor shots matching the day's weather (§5.12). Rules: no identifiable faces except avatars; no children; no real people; no logos or text; a prompt suffix for an amateur-smartphone-photo look. Live responses are text-only in V1.
 - **Visual continuity:** entities carry `visual_description` and `image_seed`, reused verbatim for every photo of that entity. Avatars are reused everywhere.
 - **Budget:** the nightly batch generates images within `images-per-sim-day` (default 12) and a daily neuron budget under the free allocation (`daily-neuron-budget`, default 9,000; it resets at 00:00 UTC). On quota errors, mark media DEFERRED and retry on a later run; the post airs without its photo and gains it when the image is ready. Priority: arc milestones > important posts > everything else.
@@ -1334,7 +1334,7 @@ radiance:
   media:
     store: local                       # local | r2
     generator: workers-ai              # workers-ai | fake
-    image-model: "@cf/black-forest-labs/flux-1-schnell"
+    image-model: "@cf/black-forest-labs/flux-2-klein-4b"
     images-per-sim-day: 12             # live-tunable
     daily-neuron-budget: 9000          # stays under Workers AI's 10k/day free allocation
   news:

@@ -75,12 +75,12 @@ public final class Rules {
 
   // ---------------------------------------------------------------- engagement.yaml (§5.8)
 
-  /** The weights of the engagement utility (SPEC §5.8); θ_comment must exceed θ_react. */
+  /** The weights of the engagement utility (SPEC §5.8); θ_comment must exceed θ_react, on R's posts and on residents'. */
   public record EngagementRules(
       double wRel, double wFam, double wTopic, double wCtrv, double wDrama, double wRecip,
       double wMood, double wFat, double wSat, double steepness, double thetaReact,
-      double thetaComment, double noiseSd, int sessionsPerDayMin, int sessionsPerDayMax,
-      int sessionMinutesMin, int sessionMinutesMax) {}
+      double thetaComment, double thetaReactFriends, double thetaCommentFriends, double noiseSd, int sessionsPerDayMin,
+      int sessionsPerDayMax, int sessionMinutesMin, int sessionMinutesMax) {}
 
   // ---------------------------------------------------------------- pacing.yaml (A.6)
 

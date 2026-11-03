@@ -44,10 +44,13 @@ radiance:
     avatar-files: data/avatars         # approved avatars: <handle>.jpg and <handle>.thumb.jpg; docs/ops/hosting.md
     generator: fake                    # fake | workers-ai (needs CF_ACCOUNT_ID and CF_AI_API_TOKEN)
     api-token: ${CF_AI_API_TOKEN:}
-    image-model: "@cf/black-forest-labs/flux-1-schnell"
+    image-model: "@cf/black-forest-labs/flux-2-klein-4b"
+    premium-model: black-forest-labs/flux-3-image-klein    # ADR 0023: for pictures people keep seeing; paid from AI Gateway credits
+    premium-api-token: ${CF_AI_FLUX3_API_TOKEN:${CF_AI_API_TOKEN:}}
+    premium-per-run: 6                 # the rest of a batch's pictures use image-model
     images-per-sim-day: 12             # live-tunable
     daily-neuron-budget: 9000          # stays under Workers AI's 10k/day free allocation; resets 00:00 UTC
-    neurons-per-image: 175             # what Cloudflare reports for a 1024px, 4-step flux-1-schnell image: 172.8
+    neurons-per-image: 175             # flux-1-schnell measured 172.8; Klein 4B prices lower, unmeasured, so this errs high
   cameras:                             # ADR 0020; on in prod. Picked by eye, 2026-11-02 and 11-03
     enabled: false
     dataset: https://services2.arcgis.com/aIrBD8yn1TDTEXoz/arcgis/rest/services/TrafficCamerasTM_Public/FeatureServer/0/query

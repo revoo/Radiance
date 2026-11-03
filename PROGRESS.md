@@ -9,6 +9,9 @@
 - **Avatars are hand-picked (2026-11-03).** R chose all 30 from FLUX 3 Image Klein test rounds (Cloudflare partner model, paid from AI
   Gateway credits, called outside the app). They live in `data/avatars` on the server; `ImageWork` loads them and never generates
   for a resident with a file. R's taste: attractive and put together, true to the person, varied scenes, not LinkedIn headshots.
+- **Believability pass (2026-11-03), R's V1 priority:** photos follow their written captions; Klein 4B everyday, FLUX 3 for lasting
+  pictures (ADR 0023); friends' posts have their own engagement thresholds (median 2 comments, was 0); briefs and the render prompt
+  keep residents in their real jobs. R doesn't mind what photos contain as long as they look real.
 - **M10 merged and live (2026-11-02)**: `main` at 6095374, deployed to https://radiance.enigmatica.app with real feeds and
   real weather. R gave standing approval to merge when CI is green.
   - AC not fully proven, for R to know:

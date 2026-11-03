@@ -199,6 +199,49 @@ class MediaTests {
     }
   }
 
+  /** FLUX.2 refuses JSON: it needs a form even for just a prompt. */
+  @Test
+  void flux2GetsAForm() throws Exception {
+    var seen = new java.util.ArrayList<String>();
+    var image = Base64.getEncoder().encodeToString(JPEG);
+    var server = server(200, "{\"result\":{\"image\":\"" + image + "\"}}", seen, new AtomicInteger());
+    try {
+      var g = new WorkersAiImageGenerator(URI.create("http://127.0.0.1:" + server.getAddress().getPort()), "acct", "@cf/black-forest-labs/flux-2-klein-4b", "secret");
+      assertThat(g.generate("a red car", 1).bytes()).isEqualTo(JPEG);
+      assertThat(seen.get(2)).contains("name=\"prompt\"", "a red car", "name=\"width\"").doesNotContain("seed");
+    } finally {
+      server.stop(0);
+    }
+  }
+
+  /** Found on the first real call: the model goes in the body, and the image is nested a level down. */
+  @Test
+  void aPartnerModelGetsItsRequestInTheBody_AndItsPictureFromTheLinkItAnswers() throws Exception {
+    var seen = new java.util.ArrayList<String>();
+    var server = com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+    String base = "http://127.0.0.1:" + server.getAddress().getPort();
+    server.createContext("/client/v4/accounts/acct/ai/run", x -> {
+      seen.add(new String(x.getRequestBody().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+      byte[] out = ("{\"result\":{\"state\":\"Completed\",\"result\":{\"image\":\"" + base + "/delivered.jpg\"}},\"success\":true}").getBytes();
+      x.sendResponseHeaders(200, out.length);
+      x.getResponseBody().write(out);
+      x.close();
+    });
+    server.createContext("/delivered.jpg", x -> {
+      x.sendResponseHeaders(200, JPEG.length);
+      x.getResponseBody().write(JPEG);
+      x.close();
+    });
+    server.start();
+    try {
+      var out = new PartnerImageGenerator(URI.create(base), "acct", "black-forest-labs/flux-3-image-klein", "secret").generate("a red car", -5);
+      assertThat(out.bytes()).isEqualTo(JPEG);
+      assertThat(seen.get(0)).contains("\"model\":\"black-forest-labs/flux-3-image-klein\"", "\"prompt\":\"a red car\"", "\"resolution\":\"1k\"", "\"seed\":4294967290");
+    } finally {
+      server.stop(0);
+    }
+  }
+
   @Test
   void beingOutOfAllowanceIsAQuotaError_AndAnythingElseIsAFailure() throws Exception {
     for (var c : java.util.List.of(new Object[] {429, "slow down"}, new Object[] {402, "pay"}, new Object[] {400, "you have used your daily free allocation of 10,000 neurons"})) {

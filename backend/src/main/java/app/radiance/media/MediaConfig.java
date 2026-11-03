@@ -35,7 +35,7 @@ class MediaConfig {
 
   @Bean
   ImageGenerator imageGenerator(@Value("${radiance.media.generator:fake}") String generator,
-      @Value("${radiance.media.image-model:@cf/black-forest-labs/flux-1-schnell}") String model,
+      @Value("${radiance.media.image-model:@cf/black-forest-labs/flux-2-klein-4b}") String model,
       @Value("${radiance.backup.r2.account-id:}") String account, @Value("${radiance.media.api-token:}") String token,
       @Value("${radiance.media.api-base:https://api.cloudflare.com}") URI base) {
     if (!"workers-ai".equals(generator)) return new FakeImageGenerator();
@@ -44,6 +44,15 @@ class MediaConfig {
       return new FakeImageGenerator();
     }
     return new WorkersAiImageGenerator(base, account, model, token);
+  }
+
+  @Bean
+  PremiumImages premiumImages(@Value("${radiance.media.generator:fake}") String generator,
+      @Value("${radiance.media.premium-model:}") String model, @Value("${radiance.media.premium-per-run:6}") int perRun,
+      @Value("${radiance.backup.r2.account-id:}") String account, @Value("${radiance.media.premium-api-token:}") String token,
+      @Value("${radiance.media.api-base:https://api.cloudflare.com}") URI base) {
+    if (!"workers-ai".equals(generator) || model.isBlank() || account.isBlank() || token.isBlank()) return new PremiumImages(null, 0);
+    return new PremiumImages(new PartnerImageGenerator(base, account, model, token), perRun);
   }
 
   @Bean

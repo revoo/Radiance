@@ -76,7 +76,7 @@
   importance: 1
   tags: [ physical, fitness ]
   excludes: { tags: [ injured, low_energy, homebound ] }
-  output: { post: CHECKIN, brief: "checked in at the gym; a short brag or a complaint about leg day" }
+  output: { post: CHECKIN, brief: "checked in at the gym; a short brag or a gripe, about whatever part of it annoyed or pleased them today" }
 
 - id: snow_day_dibs
   category: DAILY

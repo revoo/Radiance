@@ -40,14 +40,14 @@ class BatchConfig {
       HeadlineFeeds headlines, app.radiance.media.MediaStore mediaStore, app.radiance.media.ImageGenerator generator,
       @Value("${radiance.media.images-per-sim-day:12}") int imagesPerDay, @Value("${radiance.media.daily-neuron-budget:9000}") int neuronBudget,
       @Value("${radiance.media.neurons-per-image:175}") int neuronsPerImage, app.radiance.llm.LlmConsole console,
-      @Value("${radiance.media.avatar-files:data/avatars}") java.nio.file.Path avatarFiles) {
+      @Value("${radiance.media.avatar-files:data/avatars}") java.nio.file.Path avatarFiles, app.radiance.media.PremiumImages premium) {
     // a YAML list, so bind it rather than @Value it (SPEC §9: UTC Unix crons)
     List<String> crons = org.springframework.boot.context.properties.bind.Binder.get(env)
         .bind("radiance.batch.crons", org.springframework.boot.context.properties.bind.Bindable.listOf(String.class))
         .orElse(List.of("0 9 * * *", "0 11 * * *"));
     return new NightlyBatch(sql, admin, lane, lease, clock, lib, engine, writer, gateway, world.networkName(), crons,
         softening, weather, headlines)
-        .withImages(new ImageWork(sql, lane, mediaStore, generator, lib, clock, new ImageWork.Limits(imagesPerDay, neuronBudget, neuronsPerImage)).withAvatarFiles(avatarFiles))
+        .withImages(new ImageWork(sql, lane, mediaStore, generator, lib, clock, new ImageWork.Limits(imagesPerDay, neuronBudget, neuronsPerImage)).withAvatarFiles(avatarFiles).withPremium(premium))
         .withBudgetWindow(console);
   }
 

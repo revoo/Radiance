@@ -20,6 +20,7 @@ public final class PhotoPrompts {
   /** The look, and the rules: no identifiable faces except avatars, no children, no real people, no logos or text. */
   static final String RULES = ". Amateur smartphone photo, natural light, slightly imperfect framing."
       + " No identifiable faces, no children, no real people, no logos, no text.";
+  private static final int CAPTION_CHARS = 400;
   private static final Pattern OUTDOORS = Pattern.compile(
       "(?i)\\b(street|outdoor|outside|patio|park|path|lakefront|skyline|driveway|bridge|river|rooftops?|porch|parking|tow truck)\\b");
 
@@ -32,6 +33,14 @@ public final class PhotoPrompts {
    * @param sky the weather in plain words at the photo's time, or null
    */
   public static Optional<Photo> of(SimWorld w, ContentLibrary lib, String postId, String authorId, String arcId, Brief b, String sky) {
+    return of(w, lib, postId, authorId, arcId, b, sky, null);
+  }
+
+  /**
+   * The same, once the post is written: the picture shows what the caption says, so the salmon in the post is salmon in the
+   * photo. An entity keeps its description too, so it still looks like itself.
+   */
+  public static Optional<Photo> of(SimWorld w, ContentLibrary lib, String postId, String authorId, String arcId, Brief b, String sky, String caption) {
     String template = b.extra().get("media") instanceof String s && !s.isBlank() ? s : b.text();
     if (template == null || template.isBlank()) return Optional.empty();
     Thing thing = null;
@@ -41,7 +50,14 @@ public final class PhotoPrompts {
     }
     String scene = thing == null ? template : template.replace(ENTITY, thing.visualDescription);
     scene = scene.replaceAll("(?i)^amateur smartphone photo of ", "");
-    if (sky != null && OUTDOORS.matcher(scene).find()) scene += ", in this weather: " + sky;
+    String words = caption == null ? "" : caption.replaceAll("@[\\w.]+", "a friend").strip();
+    if (words.length() > CAPTION_CHARS) words = words.substring(0, CAPTION_CHARS);
+    boolean outdoors = OUTDOORS.matcher(scene + " " + words).find();
+    if (!words.isEmpty()) {
+      scene = (thing == null ? "" : scene + ". ") + "The photo someone posted with this caption: \"" + words
+          + "\" Show what the caption describes, as they'd really have snapped it";
+    }
+    if (sky != null && outdoors) scene += ", in this weather: " + sky;
     long seed = thing == null ? postId.hashCode() : thing.imageSeed != null ? thing.imageSeed : thing.id.hashCode();
     return Optional.of(new Photo(scene + RULES, seed, thing == null ? null : thing.id));
   }

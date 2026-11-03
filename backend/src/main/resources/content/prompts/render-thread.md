@@ -21,6 +21,7 @@
 Write each brief as its author would actually type it, in order: their voice card, their state, their
 constraints and what they know. Rude, petty, crude or prejudiced if that's who they are and the stance
 says so; warm and goofy if that's who they are. Never soften, disclaim, moralize or add a lesson.
+Their job, family and city are the ones in the cast directory: never give them another job, boss or coworkers.
 
 For every brief return one item with:
 - `briefId`: the brief's id, exactly once each.

@@ -549,8 +549,10 @@ final class Planner {
     // people who oppose a controversial take are likelier to stop and answer it (SPEC §12 M10)
     double u = utility(w, b, item, a, day, rng)
         + ("NEWS".equals(item.category) && Stances.alignment(b, item) < 0 ? OPPOSED_ENGAGE * item.controversy : 0);
-    boolean comment = !crowded(w, item, 0) && rng.chance(sigmoid(r.steepness() * (u - r.thetaComment())));
-    boolean react = comment ? rng.chance(0.5) : rng.chance(sigmoid(r.steepness() * (u - r.thetaReact())));
+    double thetaComment = a.user ? r.thetaComment() : r.thetaCommentFriends();
+    double thetaReact = a.user ? r.thetaReact() : r.thetaReactFriends();
+    boolean comment = !crowded(w, item, 0) && rng.chance(sigmoid(r.steepness() * (u - thetaComment)));
+    boolean react = comment ? rng.chance(0.5) : rng.chance(sigmoid(r.steepness() * (u - thetaReact)));
     if (!comment && !react) return;
     long t = s.start() + 30_000L + (long) (rng.nextDouble() * Math.max(MIN, s.end() - s.start()));
     var e = w.edgeOrNull(b.id, a.id);

@@ -13,6 +13,8 @@ w_sat: 0.5
 steepness: 1.5            # k in P = σ(k·(U − θ))
 theta_react: 2.0
 theta_comment: 3.35        # must exceed theta_react
+theta_react_friends: 1.1   # on residents' posts: R's salience doesn't lift these, so at R's thresholds nearly nobody answered anyone
+theta_comment_friends: 2.3 # must exceed theta_react_friends
 noise_sd: 0.08            # ε
 sessions_per_day_min: 3   # online sessions sampled from the routine (SPEC §5.8)
 sessions_per_day_max: 10

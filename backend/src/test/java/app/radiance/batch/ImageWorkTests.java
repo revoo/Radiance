@@ -148,6 +148,44 @@ class ImageWorkTests {
     assertThat(new LocalFileMediaStore(dir.resolve("media")).get(avatarOf(person.id)[0]).orElseThrow()).isEqualTo(next);
   }
 
+  /** Regression: Kristen wrote about salmon and the generic prompt gave her eggs. */
+  @Test
+  void aPhotoShowsWhatItsWrittenPostSays() {
+    photoPost("p", 3, null, Fidelity.FULL, "a meal on a table, natural light");
+    db.commit(new UnitOfWork().add("UPDATE post SET body = ? WHERE id = ?", "Salmon and broccoli off the sheet pan, thanks @jake.zielinski", "p"));
+    var stub = new Stub();
+    run(stub, 12, 9000);
+    String prompt = stub.prompts.stream().filter(x -> x.contains("Salmon")).findFirst().orElseThrow();
+    assertThat(prompt).contains("Salmon and broccoli off the sheet pan, thanks a friend").doesNotContain("a meal on a table", "@jake");
+  }
+
+  ImageWork.Report runWithPremium(Stub everyday, ImageGenerator better, int perRun) {
+    return work(everyday, 12, 9000).withPremium(new app.radiance.media.PremiumImages(better, perRun)).run(engine.world(), now);
+  }
+
+  @Test
+  void onlyPicturesPeopleKeepSeeingGetThePremiumModel() {
+    photoPost("meal", 1, null, Fidelity.FULL, "a plain meal for everyday");
+    photoPost("big", 5, null, Fidelity.FULL, "a big lasting moment");
+    var everyday = new Stub();
+    var better = new Stub();
+    runWithPremium(everyday, better, 100);
+    assertThat(better.prompts).anyMatch(x -> x.contains("a big lasting moment")).noneMatch(x -> x.contains("a plain meal"));
+    assertThat(everyday.prompts).anyMatch(x -> x.contains("a plain meal")).noneMatch(x -> x.contains("a big lasting moment"));
+  }
+
+  @Test
+  void pastItsLimit_OrOutOfCredits_APictureUsesTheEverydayModelInstead() {
+    photoPost("big", 5, null, Fidelity.FULL, "a big lasting moment");
+    var everyday = new Stub();
+    var spent = new Stub();
+    spent.allowance = 0;
+    assertThat(runWithPremium(everyday, spent, 100).deferred()).isZero();
+    assertThat(mediaStatus("big")).isEqualTo("READY");
+    assertThat(everyday.prompts).anyMatch(x -> x.contains("a big lasting moment"));
+    assertThat(spent.prompts).isEmpty();
+  }
+
   @Test
   void aPhotoPostGainsItsPicture_ThePromptCarriesTheRules() {
     photoPost("p", 3, null, Fidelity.FULL, "houseplants on a sunny windowsill");

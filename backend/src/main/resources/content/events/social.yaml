@@ -13,7 +13,7 @@
   modifiers: { agreeableness: 1.5, quirk.wholesome_cheerleader: 4.0 }
   participants: { with: "friend[affinity>30]" }
   importance: 2
-  output: { post: STATUS, brief: "a shout-out to @with for something they did; tagged" }
+  output: { post: STATUS, brief: "a shout-out to @with for one specific thing they did, spelled out so a stranger would follow; tagged" }
 
 - id: hangout_photo
   category: SOCIAL

@@ -9,6 +9,7 @@ import app.radiance.media.ImageGenerator;
 import app.radiance.media.MediaRepository;
 import app.radiance.media.MediaRow;
 import app.radiance.media.MediaStore;
+import app.radiance.media.PremiumImages;
 import app.radiance.persistence.Sql;
 import app.radiance.persistence.UnitOfWork;
 import app.radiance.persistence.WriterLane;
@@ -47,6 +48,7 @@ public final class ImageWork {
   private static final long DAY = 86_400_000L;
   private static final long LOOK_BACK = 2 * DAY;
   private static final int GIVE_UP_AFTER_FAILURES = 3;
+  private static final int HIGH_VALUE = 4;
 
   private final Sql sql;
   private final WriterLane lane;
@@ -56,6 +58,7 @@ public final class ImageWork {
   private final WallClock clock;
   private volatile Limits limits;
   private Path avatarFiles;
+  private PremiumImages premium = new PremiumImages(null, 0);
 
   public ImageWork(Sql sql, WriterLane lane, MediaStore store, ImageGenerator generator, ContentLibrary lib, WallClock clock, Limits limits) {
     this.sql = sql;
@@ -76,6 +79,12 @@ public final class ImageWork {
     return this;
   }
 
+  /** The better model, for pictures people will keep seeing (ADR 0023). */
+  public ImageWork withPremium(PremiumImages premium) {
+    this.premium = premium;
+    return this;
+  }
+
   /** New limits from the Director's console. */
   public void tune(Limits limits) {
     this.limits = limits;
@@ -91,7 +100,7 @@ public final class ImageWork {
     long wall = clock.nowMs();
     long today = wall - wall % DAY;
     int neurons = (int) Math.min(Integer.MAX_VALUE, repo.generatedSince(today)) * limits.neuronsPerImage();
-    int[] count = {0, 0, 0, 0, neurons}; // photos, avatars, deferred, failed, neurons used
+    int[] count = {0, 0, 0, 0, neurons, 0}; // photos, avatars, deferred, failed, neurons used, premium images
     boolean open = avatars(w, worldNow, count);
     if (open) photos(w, worldNow, today, count);
     var report = new Report(count[0], count[1], count[2], count[3]);
@@ -122,7 +131,7 @@ public final class ImageWork {
       var uow = new MediaRepository(sql).save(new UnitOfWork(), row);
       uow.add("UPDATE actor SET avatar_media_id = ? WHERE id = ?", row.id(), a[0]);
       lane.run(() -> sql.commit(uow));
-      switch (generate(row, count)) {
+      switch (generate(row, count, true)) {
         case QUOTA -> {
           return false;
         }
@@ -193,7 +202,7 @@ public final class ImageWork {
       var post = social.post(id).orElse(null);
       if (post == null) continue;
       String sky = weather.at(post.createdAt()).map(WeatherHour::describe).orElse(null);
-      var photo = PhotoPrompts.of(w, lib, post.id(), post.authorId(), post.arcId(), Brief.parse(post.briefJson()), sky);
+      var photo = PhotoPrompts.of(w, lib, post.id(), post.authorId(), post.arcId(), Brief.parse(post.briefJson()), sky, post.body());
       if (photo.isEmpty()) continue;
       var existing = post.mediaId() == null ? null : repo.byId(post.mediaId()).orElse(null);
       var row = existing != null ? existing : pending("PHOTO", photo.get().prompt(), photo.get().seed(), photo.get().entityId());
@@ -202,7 +211,8 @@ public final class ImageWork {
         uow.add("UPDATE post SET media_id = ? WHERE id = ?", row.id(), post.id());
         lane.run(() -> sql.commit(uow));
       }
-      switch (generate(row, count)) {
+      boolean lasting = photo.get().entityId() != null || post.arcId() != null || post.importance() >= HIGH_VALUE;
+      switch (generate(row, count, lasting)) {
         case QUOTA -> {
           return;
         }
@@ -222,15 +232,29 @@ public final class ImageWork {
 
   private enum Outcome { DONE, QUOTA, FAILED }
 
-  private Outcome generate(MediaRow row, int[] count) {
+  /** The better model if this picture deserves it and there's room, or null: it never holds a picture up. */
+  private ImageGenerator.Generated premium(MediaRow row, int[] count) {
+    if (premium.generator() == null || count[5] >= premium.perRun()) return null;
+    try {
+      var image = premium.generator().generate(row.prompt(), row.seed());
+      count[5]++;
+      return image;
+    } catch (RuntimeException e) {
+      log.warn("The premium image model failed, using the everyday one: {}", e.toString());
+      return null;
+    }
+  }
+
+  private Outcome generate(MediaRow row, int[] count, boolean lasting) {
     var repo = new MediaRepository(sql);
     try {
-      var image = generator.generate(row.prompt(), row.seed());
+      var better = lasting ? premium(row, count) : null;
+      var image = better != null ? better : generator.generate(row.prompt(), row.seed());
       String key = "generated/" + row.id();
       store.put(key, image.bytes());
       var ready = row.ready(key, key, image.mime(), image.bytes().length);
       lane.run(() -> sql.commit(repo.save(new UnitOfWork(), ready)));
-      if (generator.real()) count[4] += limits.neuronsPerImage();
+      if (better == null && generator.real()) count[4] += limits.neuronsPerImage();
       return Outcome.DONE;
     } catch (ImageGenerator.QuotaExceeded e) {
       log.info("Image generation paused: {}", e.getMessage());
