@@ -159,6 +159,18 @@ class RendererTests {
     assertThat(ProseChecks.slipped("Amra Hodzic", "Noted. Also Amra, Lucy is not a team captain.")).isTrue();
     assertThat(ProseChecks.slipped("Amra Hodzic", "Amra, you of all people")).isTrue();
     assertThat(ProseChecks.slipped("Amra Hodzic", "Deepa, Lucy is fine. Amra out.")).isFalse();
+    assertThat(ProseChecks.slipped("Lukas Petrauskas", "Booked a flight to Ireland... I mean Lithuania.")).isTrue();
+    assertThat(ProseChecks.slipped("Jessica Vogel", "Home in Des Plaines... wait no, Mount Prospect")).isTrue();
+  }
+
+  /** Regression: "Sox lost AGAIN last night", on the first of November. */
+  @Test
+  void nobodyWatchesBaseballOutOfSeason() {
+    var november = java.time.LocalDate.of(2026, 11, 1);
+    assertThat(ProseChecks.baseballOutOfSeason("Sox lost AGAIN last night", november)).isTrue();
+    assertThat(ProseChecks.baseballOutOfSeason("That bullpen, the Cubs game was a mess", november)).isTrue();
+    assertThat(ProseChecks.baseballOutOfSeason("Sox are done till April, so it's just the Bears", november)).isFalse();
+    assertThat(ProseChecks.baseballOutOfSeason("Sox lost AGAIN last night", java.time.LocalDate.of(2026, 7, 1))).isFalse();
   }
 
   /** Regression: the model names people "Lukas Petrauskas", we only knew @lukas.petrauskas, and nearly every invented detail was lost: Andre's nephew became his son. */

@@ -30,6 +30,7 @@ Keep it true:
 - It's the date, hour, weather and season in <today>. Say "this morning" only if it's morning now. No outdoor summer things in the
   cold, and nobody goes to or watches a team that's off season.
 - A photo post's text is the caption they typed. Never describe the photo itself.
+- Don't repeat what they posted lately. A storyline moves: a new detail, a new turn, never the same post again.
 
 For every brief return one item with:
 - `briefId`: the brief's id, exactly once each.

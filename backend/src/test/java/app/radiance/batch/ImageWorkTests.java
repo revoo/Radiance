@@ -179,6 +179,18 @@ class ImageWorkTests {
     assertThat(everyday.prompts).anyMatch(x -> x.contains("a plain meal")).noneMatch(x -> x.contains("a big lasting moment"));
   }
 
+  /** Found in a real run: with the day's free neurons gone, the photos just waited though FLUX 3 had credit. */
+  @Test
+  void outOfFreeNeurons_APictureUsesThePremiumModelIfThereIsRoom() {
+    photoPost("meal", 1, null, Fidelity.FULL, "a plain meal for everyday");
+    var everyday = new Stub();
+    everyday.allowance = 0;
+    var better = new Stub();
+    assertThat(runWithPremium(everyday, better, 100).deferred()).isZero();
+    assertThat(mediaStatus("meal")).isEqualTo("READY");
+    assertThat(better.prompts).anyMatch(x -> x.contains("a plain meal"));
+  }
+
   /** Found in a real run: Klein 4B's filter refused a post about a table saw. */
   @Test
   void aPictureTheEverydayModelRefusesGoesToTheOtherOne() {

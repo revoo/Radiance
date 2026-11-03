@@ -256,10 +256,9 @@ public final class ImageWork {
       ImageGenerator.Generated image;
       try {
         image = better != null ? better : generator.generate(row.prompt(), row.seed());
-      } catch (ImageGenerator.QuotaExceeded e) {
-        throw e;
       } catch (RuntimeException e) {
-        // a model's safety filter sometimes refuses something harmless, a table saw for one: the other one may not
+        // out of free neurons, or a safety filter refusing something harmless like a table saw: the other model may still do it
+        if (lasting) throw e; // it just had its turn
         better = premium(row, count);
         if (better == null) throw e;
         image = better;

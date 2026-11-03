@@ -33,7 +33,14 @@ public final class ProseChecks {
     return Pattern.compile("(?i)(^|\\balso )" + Pattern.quote(author.split(" ")[0]) + ",").matcher(text).find();
   }
 
-  static final Pattern SLIP = Pattern.compile("(?i)\\bno wait,? i'?m\\b");
+  static final Pattern SLIP = Pattern.compile("(?i)\\bno wait,? i'?m\\b|\\.\\.\\.\\s*(wait no|i mean)\\b");
+  /** "Sox lost AGAIN last night", in November. */
+  static final Pattern BASEBALL_GAME = Pattern.compile("(?i)\\b(cubs|sox)\\b[^.!?]{0,30}\\b(lost|won|blew|beat|bullpen|game)\\b|\\b(cubs|sox)\\s+(bullpen|game)\\b");
+
+  static boolean baseballOutOfSeason(String text, java.time.LocalDate date) {
+    int month = date.getMonthValue();
+    return (month < 4 || month > 10) && BASEBALL_GAME.matcher(text).find();
+  }
   static final Pattern LLM_ISMS = Pattern.compile("(?i)\\b(delve|delving|tapestry|a testament to|navigating the|"
       + "it'?s important to|as someone who|in today'?s world|let'?s all be kind|everyone'?s valid|just my two cents,? "
       + "everyone|at the end of the day,? we|journey of|embrace the|a reminder that we|stay safe out there,? everyone|"
@@ -115,6 +122,9 @@ public final class ProseChecks {
       if (f.major()) out.add(new Problem("major-fact", "don't introduce major life facts (\"" + f.statement() + "\")"));
     }
     if (slipped(author == null ? null : author.name, text)) out.add(new Problem("slip", "the writing lost track of who's talking; just write it as them"));
+    if (baseballOutOfSeason(text, java.time.Instant.ofEpochMilli(t).atZone(world.zone).toLocalDate())) {
+      out.add(new Problem("season", "baseball is off season right now: no games, wins, losses or bullpens"));
+    }
     var isms = LLM_ISMS.matcher(text);
     if (isms.find()) out.add(new Problem("llm-ism", "sounds like a chatbot (\"" + isms.group() + "\"); write like a person"));
     if (softeningCheck && target.stance() != null && Set.of("MOCK", "HOSTILE", "TROLL").contains(target.stance())
