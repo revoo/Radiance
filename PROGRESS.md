@@ -20,9 +20,8 @@
   logging in: health, security headers, every console endpoint refusing anonymous requests, migration 0007, no errors in the log.
   Logged-in use of the live site (photos through R2, the console) hasn't been tried there; I don't have R's password. The same
   build was checked by hand locally, served by the backend as in production.
-- For R to decide: the domain is proxied by Cloudflare, whose Web Analytics injects a beacon script. The new content security
-  policy (`WebSecurityConfig.CSP`) blocks it, so those analytics stop reporting and the console logs one harmless error. To keep
-  them, allow `https://static.cloudflareinsights.com` in `script-src` and `https://cloudflareinsights.com` in `connect-src`.
+- Decided by R (2026-11-03): Cloudflare's analytics beacon stays blocked by the content security policy (`WebSecurityConfig.CSP`);
+  R doesn't need it. It leaves one harmless error in the browser console.
 - To check next time (the first chance is 2026-11-03, 08:30 and 09:00 UTC): the batch's new script window (09:00 planning a full
   day, 11:00 planning 0); the first `meter_snapshot` rows, now with mood; the first scheduled backup upload; the first generated
   placeholder pictures reaching R2; and that the camera tile shows when logged in on the live site.
