@@ -51,6 +51,15 @@ export async function api<T>(path: string, options: Options = {}): Promise<T> {
   return (text ? JSON.parse(text) : undefined) as T;
 }
 
+/** Sends a file's bytes as they are, with the CSRF token. */
+export async function apiPut(path: string, body: Blob): Promise<void> {
+  const headers: Record<string, string> = { "Content-Type": body.type };
+  const token = csrfToken();
+  if (token) headers["X-XSRF-TOKEN"] = token;
+  const res = await fetch(path, { method: "PUT", headers, body, credentials: "same-origin" });
+  if (!res.ok) throw new ApiError(res.status);
+}
+
 /** Makes sure the CSRF cookie exists before the first write (any GET sets it). */
 export async function primeCsrf(): Promise<void> {
   if (csrfToken()) return;

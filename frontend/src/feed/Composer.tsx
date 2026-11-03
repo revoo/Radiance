@@ -1,8 +1,9 @@
-import { Sparkles } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { ImagePlus, Loader2, Sparkles, X } from "lucide-react";
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useCreatePost, usePeople } from "../api/queries.ts";
-import type { Actor } from "../api/types.ts";
+import type { Actor, Media } from "../api/types.ts";
 import { Avatar, Button, Card } from "../ui/kit.tsx";
+import { uploadPhoto } from "./photos.ts";
 
 const MAX = 5_000;
 
@@ -34,6 +35,43 @@ export function Composer({ me }: { me: Actor }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const create = useCreatePost(me);
   const friends = usePeople("friends");
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [photo, setPhoto] = useState<{ preview: string; media: Media | null } | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const attempt = useRef(0);
+
+  const clearPhoto = () => {
+    attempt.current += 1;
+    setPhoto((current) => {
+      if (current) URL.revokeObjectURL(current.preview);
+      return null;
+    });
+    if (fileInput.current) fileInput.current.value = "";
+  };
+
+  const pickPhoto = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    clearPhoto();
+    setPhotoError(null);
+    const mine = attempt.current;
+    setPhoto({ preview: URL.createObjectURL(file), media: null });
+    uploadPhoto(file).then(
+      (media) => {
+        if (attempt.current === mine) setPhoto((current) => current && { ...current, media });
+      },
+      (error: unknown) => {
+        if (attempt.current !== mine) return;
+        clearPhoto();
+        setPhotoError(error instanceof Error ? error.message : "That photo didn't upload");
+      },
+    );
+  };
+
+  // a preview outlives nothing: the browser holds it until it's let go
+  useEffect(() => () => {
+    attempt.current += 1;
+  }, []);
 
   const matches = useMemo(() => {
     if (!mention || !friends.data) return [];
@@ -44,7 +82,9 @@ export function Composer({ me }: { me: Actor }) {
   }, [mention, friends.data]);
 
   const first = me.name.split(" ")[0];
-  const expanded = focused || text.length > 0;
+  const expanded = focused || text.length > 0 || photo !== null;
+  const uploading = photo !== null && photo.media === null;
+  const canPost = !uploading && text.length <= MAX && (text.trim().length > 0 || photo !== null);
 
   const resize = (el: HTMLTextAreaElement) => {
     el.style.height = "auto";
@@ -66,8 +106,10 @@ export function Composer({ me }: { me: Actor }) {
 
   const submit = () => {
     const t = text.trim();
-    if (!t || t.length > MAX) return;
-    create.mutate(t);
+    if (!canPost) return;
+    create.mutate({ text: t, media: photo?.media ?? null });
+    clearPhoto();
+    setPhotoError(null);
     setText("");
     setMention(null);
     if (ref.current) ref.current.style.height = "auto";
@@ -151,8 +193,42 @@ export function Composer({ me }: { me: Actor }) {
         </div>
       </div>
 
+      <input ref={fileInput} type="file" accept="image/*" aria-label="Add a photo" onChange={pickPhoto} className="hidden" />
+
+      {photo && (
+        <div className="animate-rise relative mt-3 ml-[52px] w-fit overflow-hidden rounded-2xl border border-line">
+          <img src={photo.preview} alt="Your photo" className={`max-h-56 transition-opacity ${uploading ? "opacity-60" : ""}`} />
+          {uploading && (
+            <span className="absolute inset-0 flex items-center justify-center" role="status" aria-label="Uploading">
+              <Loader2 className="size-7 animate-spin text-white drop-shadow" aria-hidden="true" />
+            </span>
+          )}
+          <button
+            type="button"
+            aria-label="Remove photo"
+            onClick={clearPhoto}
+            className="absolute right-2 top-2 rounded-full bg-black/60 p-1 text-white transition hover:bg-black/80"
+          >
+            <X className="size-4" aria-hidden="true" />
+          </button>
+        </div>
+      )}
+      {photoError && (
+        <p role="alert" className="mt-2 pl-[52px] text-sm font-medium text-bad">
+          {photoError}
+        </p>
+      )}
+
       {!expanded && (
         <div className="scrollbar-none mt-3 flex gap-2 overflow-x-auto pl-[52px]">
+          <button
+            type="button"
+            onClick={() => fileInput.current?.click()}
+            className="flex shrink-0 items-center gap-1.5 rounded-full border border-line px-3 py-1 text-xs font-semibold text-muted transition hover:border-accent hover:text-accent"
+          >
+            <ImagePlus className="size-3.5" aria-hidden="true" />
+            Photo
+          </button>
           {PROMPTS.map((p) => (
             <button
               key={p.label}
@@ -175,10 +251,22 @@ export function Composer({ me }: { me: Actor }) {
 
       {expanded && (
         <div className="animate-rise mt-3 flex items-center justify-between pl-[52px]">
-          <span className={`text-xs ${text.length > MAX ? "text-bad" : "text-faint"}`}>
-            {text.length > MAX - 300 ? `${MAX - text.length} left` : "Ctrl + Enter to post · @ to mention a friend"}
+          <span className="flex min-w-0 items-center gap-2">
+            <button
+              type="button"
+              aria-label="Add a photo"
+              title="Add a photo"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => fileInput.current?.click()}
+              className="shrink-0 rounded-full p-1.5 text-muted transition hover:bg-panel-2 hover:text-accent"
+            >
+              <ImagePlus className="size-5" aria-hidden="true" />
+            </button>
+            <span className={`truncate text-xs ${text.length > MAX ? "text-bad" : "text-faint"}`}>
+              {text.length > MAX - 300 ? `${MAX - text.length} left` : "Ctrl + Enter to post · @ to mention a friend"}
+            </span>
           </span>
-          <Button onClick={submit} disabled={!text.trim() || text.length > MAX} className="px-6">
+          <Button onClick={submit} disabled={!canPost} className="px-6">
             Post
           </Button>
         </div>

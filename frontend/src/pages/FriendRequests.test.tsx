@@ -26,6 +26,7 @@ const person = (over: object) => ({
 function profile(p: object) {
   const m = mockFetch({
     "GET /api/people/sarah.kim/posts": { items: [], nextCursor: null },
+      "GET /api/people/sarah.kim/photos": [],
     "GET /api/people/sarah.kim": p,
     "GET /api/me": { likeMeters: true, username: "r", worldReady: true, onboarded: true, actor: ME, networkName: "Radiance" },
     "POST /api/people/sarah.kim/friend-request": undefined,
@@ -75,6 +76,7 @@ describe("a resident's profile", () => {
   it("hides the meter when like-meters are off", async () => {
     const m = mockFetch({
       "GET /api/people/sarah.kim/posts": { items: [], nextCursor: null },
+      "GET /api/people/sarah.kim/photos": [],
       "GET /api/people/sarah.kim": person({ friend: true, meter: 42 }),
       "GET /api/me": { likeMeters: false, username: "r", worldReady: true, onboarded: true, actor: ME, networkName: "Radiance" },
     });

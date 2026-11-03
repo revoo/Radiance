@@ -7,6 +7,17 @@ export type Actor = {
   you: boolean;
   occupation: string | null;
   livesIn: string | null;
+  avatarUrl?: string | null;
+};
+
+export type Media = {
+  id: string;
+  url: string | null;
+  thumbUrl: string | null;
+  description: string | null;
+  status: string;
+  width: number | null;
+  height: number | null;
 };
 
 export const REACTION_KINDS = ["LIKE", "LOVE", "CARE", "HAHA", "WOW", "SAD", "ANGRY"] as const;
@@ -45,6 +56,7 @@ export type Post = {
   preview: Comment[];
   typing: Typing[];
   link?: PostLink | null;
+  media?: Media | null;
 };
 
 /** A news take's link card. The url is null unless it's a real web link. */

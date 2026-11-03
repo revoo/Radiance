@@ -8,7 +8,10 @@ final class Views {
 
   private Views() {}
 
-  record Actor(String id, String handle, String name, boolean you, String occupation, String livesIn) {}
+  record Actor(String id, String handle, String name, boolean you, String occupation, String livesIn, String avatarUrl) {}
+
+  /** A photo. Its url is null until it's READY. */
+  record Media(String id, String url, String thumbUrl, String description, String status, Integer width, Integer height) {}
 
   /** Top three kinds, the total, and R's own reaction (null if none). */
   record Reactions(int total, List<String> top, Map<String, Integer> byKind, String mine, List<String> recent) {
@@ -21,7 +24,7 @@ final class Views {
       List<Comment> replies) {}
 
   record Post(String id, Actor author, long createdAt, String kind, String audience, String body, Reactions reactions,
-      int commentCount, List<Comment> preview, List<Typing> typing, Link link) {}
+      int commentCount, List<Comment> preview, List<Typing> typing, Link link, Media media) {}
 
   /** A news take's link card. The url is null unless it's a real web link (offline fixtures aren't). */
   record Link(String url, String source, String title) {}

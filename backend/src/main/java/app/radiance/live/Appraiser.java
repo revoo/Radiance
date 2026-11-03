@@ -116,8 +116,48 @@ public final class Appraiser {
 
   // -------------------------------------------------------------------------------------- offline
 
+  /** A neutral look at a photo of R's (SPEC §5.9): what's in it, and how it comes across. */
+  public record PhotoAppraisal(String description, List<String> topics, double warmth, double humor, double bragging,
+      double vulnerability, double positivity, double edginess, double flirtiness) {}
+
+  private static final PhotoAppraisal UNSEEN = new PhotoAppraisal("a photo", List.of(), 0.5, 0.1, 0.1, 0.1, 0.5, 0, 0);
+
+  /** One call per upload. A failed look just leaves the post with less to go on: it never stops the post. */
+  public PhotoAppraisal readPhoto(byte[] image, String mime) {
+    String prompt = "Describe this photo from a social network neutrally, in one plain sentence: what's in it, as someone"
+        + " scrolling past would put it. Then rate how it comes across, each tone feature 0–1. Topics from: "
+        + String.join(", ", new TreeSet<>(Vocab.TOPICS)) + ".";
+    var result = gateway.call(new LlmRequest<>(Purpose.VISION_APPRAISAL,
+        List.of(new Block("You describe photos neutrally and return structured features.")),
+        List.of(new Part.Image(mime, java.util.Base64.getEncoder().encodeToString(image)), Part.text(prompt)), PhotoAppraisal.class, 300,
+        timeout, Priority.LIVE));
+    if (!result.ok() || result.value().description() == null || result.value().description().isBlank()) return UNSEEN;
+    var a = result.value();
+    var known = new TreeSet<>(Vocab.TOPICS);
+    var topics = a.topics() == null ? List.<String>of() : a.topics().stream().filter(t -> t != null && known.contains(t)).distinct().limit(3).toList();
+    String description = a.description().strip();
+    return new PhotoAppraisal(description.length() > 300 ? description.substring(0, 300) : description, topics, c(a.warmth()), c(a.humor()),
+        c(a.bragging()), c(a.vulnerability()), c(a.positivity()), c(a.edginess()), c(a.flirtiness()));
+  }
+
+  /** What R wrote, plus what his photo shows: the stronger of each feature, and both sets of topics. */
+  public static app.radiance.sim.UserActions.Reading withPhoto(app.radiance.sim.UserActions.Reading text, PhotoAppraisal photo) {
+    var features = new TreeMap<>(text.features());
+    features.merge("warmth", photo.warmth(), Math::max);
+    features.merge("humor", photo.humor(), Math::max);
+    features.merge("bragging", photo.bragging(), Math::max);
+    features.merge("vulnerability", photo.vulnerability(), Math::max);
+    features.merge("positivity", photo.positivity(), Math::max);
+    features.merge("edginess", photo.edginess(), Math::max);
+    features.merge("flirtiness", photo.flirtiness(), Math::max);
+    var topics = new java.util.LinkedHashSet<>(text.topics());
+    topics.addAll(photo.topics());
+    return new app.radiance.sim.UserActions.Reading(features, List.copyOf(topics), text.controversy(), text.stance(), text.appraisalJson());
+  }
+
   /** Offline play reads R's words with simple, deterministic cues instead of a model. */
   public static void registerFake(FakeResponses fakes) {
+    fakes.register(PhotoAppraisal.class, call -> UNSEEN);
     fakes.register(ContentAppraisal.class, call -> {
       String all = call.allContent();
       int a = all.lastIndexOf("<text>\n"), b = all.lastIndexOf("\n</text>");

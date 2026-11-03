@@ -1,4 +1,4 @@
-import { Briefcase, Cake, Heart, House, MapPin, MessageCircle, Pencil, Search, UserRoundCheck, UserRoundPlus } from "lucide-react";
+import { Briefcase, Cake, Camera, Heart, House, MapPin, MessageCircle, Pencil, Search, UserRoundCheck, UserRoundPlus } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import {
@@ -6,12 +6,15 @@ import {
   useMe,
   useOpenThread,
   usePerson,
+  usePersonPhotos,
   usePersonPosts,
   useSendFriendRequest,
+  useSetAvatar,
   useUpdateProfile,
 } from "../api/queries.ts";
+import { uploadPhoto } from "../feed/photos.ts";
 import { LikeMeter } from "../ui/LikeMeter.tsx";
-import type { Actor, Person } from "../api/types.ts";
+import type { Actor, Media, Person } from "../api/types.ts";
 import { PostCard } from "../feed/PostCard.tsx";
 import { colorFor } from "../ui/format.ts";
 import { Avatar, Button, Card, Empty, Modal, PostSkeleton, Skeleton } from "../ui/kit.tsx";
@@ -129,6 +132,68 @@ function FriendsGrid({ person }: { person: Person }) {
   );
 }
 
+/** R picks his own picture. */
+function AvatarPicker() {
+  const setAvatar = useSetAvatar();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const pick = async (file: File | undefined) => {
+    if (!file) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const media = await uploadPhoto(file);
+      await setAvatar.mutateAsync(media.id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "That photo didn't upload");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <>
+      <label
+        title="Change your picture"
+        className="absolute bottom-1 right-1 flex size-9 cursor-pointer items-center justify-center rounded-full border-2 border-panel bg-panel-2 text-ink shadow transition hover:bg-line"
+      >
+        <Camera className={`size-4 ${busy ? "animate-pulse" : ""}`} aria-hidden="true" />
+        <input type="file" accept="image/*" aria-label="Change your picture" className="sr-only" onChange={(e) => void pick(e.target.files?.[0])} />
+      </label>
+      {error && (
+        <p role="alert" className="absolute left-1/2 top-full w-48 -translate-x-1/2 pt-1 text-center text-xs font-medium text-bad">
+          {error}
+        </p>
+      )}
+    </>
+  );
+}
+
+/** Their photos, the most recent first. */
+function Photos({ handle }: { handle: string }) {
+  const photos = usePersonPhotos(handle).data ?? [];
+  const [open, setOpen] = useState<Media | null>(null);
+  if (photos.length === 0) return null;
+  return (
+    <Card className="p-4">
+      <h2 className="pb-3 text-lg font-bold">Photos</h2>
+      <ul className="grid grid-cols-3 gap-1.5 overflow-hidden rounded-xl">
+        {photos.slice(0, 9).map((m) => (
+          <li key={m.id}>
+            <button type="button" onClick={() => setOpen(m)} aria-label={m.description ?? "A photo"} className="block aspect-square w-full overflow-hidden bg-panel-2">
+              <img src={m.thumbUrl ?? m.url ?? undefined} alt="" loading="lazy" className="size-full object-cover transition-transform hover:scale-105" />
+            </button>
+          </li>
+        ))}
+      </ul>
+      {open && (
+        <Modal title="Photo" onClose={() => setOpen(null)}>
+          <img src={open.url ?? undefined} alt={open.description ?? "A photo"} className="max-h-[75vh] w-full rounded-xl object-contain" />
+        </Modal>
+      )}
+    </Card>
+  );
+}
+
 /** A profile (SPEC §8): cover, avatar, intro, friends with mutuals, and posts. R can edit his own. */
 export function ProfilePage({ me }: { me: Actor }) {
   const { handle = "" } = useParams();
@@ -172,6 +237,7 @@ export function ProfilePage({ me }: { me: Actor }) {
         <div className="flex flex-col items-center px-4 pb-5 sm:flex-row sm:items-end sm:gap-4">
           <div className="relative z-10 -mt-16 rounded-full bg-panel p-1.5 shadow-lift">
             <Avatar actor={p.actor} size="xl" ring={p.actor.you} link={false} />
+            {p.actor.you && <AvatarPicker />}
           </div>
           <div className="mt-3 min-w-0 flex-1 text-center sm:text-left">
             <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{p.actor.name}</h1>
@@ -228,6 +294,7 @@ export function ProfilePage({ me }: { me: Actor }) {
         <div className="space-y-4">
           <Intro person={p} />
           <FriendsGrid person={p} />
+          <Photos handle={p.actor.handle} />
         </div>
         <div className="space-y-4">
           {posts.isPending && <PostSkeleton />}

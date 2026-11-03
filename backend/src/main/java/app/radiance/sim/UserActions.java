@@ -57,28 +57,31 @@ public final class UserActions {
   private final Sql sql;
   private final WriterLane lane;
   private final WorldEngine engine;
-  private final LiveResponder responder;
 
   public UserActions(Sql sql, WriterLane lane, WorldEngine engine) {
     this.sql = sql;
     this.lane = lane;
     this.engine = engine;
-    this.responder = new LiveResponder(engine.lib(), engine.knobs());
   }
 
   // ------------------------------------------------------------------------------------- R's writes
 
   /** R's post, aired at once. Returns its id. */
   public String post(String text, Reading r, long now) {
+    return post(text, null, null, r, now);
+  }
+
+  /** R's post, with a photo if {@code mediaId} is set. What the photo shows goes to the writers with the thread. */
+  public String post(String text, String mediaId, String photoOf, Reading r, long now) {
     return engine.locked(w -> {
       long t = Math.max(now, w.time + 1);
       double edge = r.features().getOrDefault("edginess", 0.0);
       var brief = new Brief(null, null, "R's own post", null, null, null, r.topics(), Math.max(r.controversy(), edge * 0.6),
-          edge * 0.4, Plan.extra("valence", r.features().getOrDefault("positivity", 0.5) - 0.4));
+          edge * 0.4, Plan.extra("valence", r.features().getOrDefault("positivity", 0.5) - 0.4, "photoOf", photoOf));
       // R's actions are inputs: the same session replays to the same ids, and so the same responses
-      String id = Ulid.next(t, RandomSource.seeded(w.seed).derive("r-post:" + t + ":" + text));
-      var row = new PostRow(id, w.userId, t, PostRow.Kind.STATUS, PostRow.Audience.FRIENDS, ContentOrigin.USER,
-          AirStatus.SCRIPTED, text, RenderStatus.RENDERED, brief.json(), r.appraisalJson(), null, null, null, null, 3,
+      String id = Ulid.next(t, RandomSource.seeded(w.seed).derive("r-post:" + t + ":" + text + ":" + mediaId));
+      var row = new PostRow(id, w.userId, t, mediaId == null ? PostRow.Kind.STATUS : PostRow.Kind.PHOTO, PostRow.Audience.FRIENDS, ContentOrigin.USER,
+          AirStatus.SCRIPTED, text, RenderStatus.RENDERED, brief.json(), r.appraisalJson(), mediaId, null, null, null, 3,
           Fidelity.FULL, "{}", 0);
       lane.run(() -> sql.commit(new SocialRepository(sql).savePosts(new UnitOfWork(), List.of(row))));
       engine.advanceTo(t);
@@ -196,7 +199,7 @@ public final class UserActions {
       String day = w.day(now);
       int postsToday = (int) w.items.values().stream()
           .filter(i -> i.type == Item.Type.POST && w.userId.equals(i.authorId) && w.day(i.time).equals(day)).count();
-      return responder.onPost(w, post, r.features(), Math.max(1, postsToday), now, HORIZON, reacted);
+      return new LiveResponder(engine.lib(), engine.knobs()).onPost(w, post, r.features(), Math.max(1, postsToday), now, HORIZON, reacted);
     });
   }
 
@@ -204,7 +207,7 @@ public final class UserActions {
   public Script considered(String commentId, Reading r, long now) {
     return engine.locked(w -> {
       var comment = item(w, commentId);
-      return comment == null ? new Script() : responder.onComment(w, comment, r.features(), now, HORIZON);
+      return comment == null ? new Script() : new LiveResponder(engine.lib(), engine.knobs()).onComment(w, comment, r.features(), now, HORIZON);
     });
   }
 

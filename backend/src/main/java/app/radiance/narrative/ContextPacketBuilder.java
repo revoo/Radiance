@@ -423,10 +423,21 @@ public final class ContextPacketBuilder {
     return sb.isEmpty() ? "(nothing beyond the cast directory)" : sb.toString().strip();
   }
 
+  /** What a post's photo shows, so people can react to it: a dog gets talked about as a dog. */
+  private java.util.Optional<String> photoOf(PostRow post) {
+    if (post.mediaId() == null) return java.util.Optional.empty();
+    return new app.radiance.media.MediaRepository(sql).byId(post.mediaId()).map(m -> m.description()).filter(d -> d != null && !d.isBlank());
+  }
+
+  private String arcOf(String postId) {
+    return new SocialRepository(sql).post(postId).map(PostRow::arcId).orElse(null);
+  }
+
   private String threadSoFar(PostRow post, List<CommentRow> comments) {
     var sb = new StringBuilder();
-    sb.append(handle(post.authorId())).append(" (").append(post.kind().name().toLowerCase()).append(" post): ")
-        .append(post.body() != null ? post.body() : "(being written now; see briefs)").append('\n');
+    sb.append(handle(post.authorId())).append(" (").append(post.kind().name().toLowerCase()).append(" post");
+    photoOf(post).ifPresent(what -> sb.append(", the photo shows: ").append(what));
+    sb.append("): ").append(post.body() != null ? post.body() : "(being written now; see briefs)").append('\n');
     var written = comments.stream().filter(c -> c.body() != null).toList();
     if (written.size() > THREAD_TAIL) {
       sb.append("(").append(written.size() - THREAD_TAIL).append(" earlier comments)\n");
@@ -461,7 +472,10 @@ public final class ContextPacketBuilder {
         if (!lines.isEmpty()) m.put("constraints", lines);
       }
       if (x.get("headline") != null) m.put("headline", x.get("headline"));
-      if (x.get("media") != null) m.put("media", x.get("media"));
+      if (x.get("media") != null) {
+        String arcId = target == null ? null : arcOf(target.id());
+        m.put("media", app.radiance.sim.PhotoPrompts.forWriters(world, lib, target == null ? null : target.authorId(), b.defId(), arcId, String.valueOf(x.get("media"))));
+      }
       m.put("recapLine", Boolean.TRUE.equals(x.get("recapLine")));
       out.add(m);
     }

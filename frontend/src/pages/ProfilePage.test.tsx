@@ -9,6 +9,7 @@ describe("ProfilePage", () => {
   it("messages a resident from their profile", async () => {
     const m = mockFetch({
       "GET /api/people/sarah.kim/posts": { items: [], nextCursor: null },
+      "GET /api/people/sarah.kim/photos": [],
       "GET /api/people/sarah.kim": {
         actor: SARAH, bio: "Nurse, night owl.", employer: "Evanston Hospital", hometown: "Skokie", relationshipStatus: "SINGLE",
         birthday: "03-14", relationship: "FRIEND", friend: true, mutualFriends: 3, friends: [],
@@ -35,6 +36,7 @@ describe("ProfilePage", () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(
       mockFetch({
         "GET /api/people/sam.rivera/posts": { items: [], nextCursor: null },
+        "GET /api/people/sam.rivera/photos": [],
         "GET /api/people/sam.rivera": {
           actor: ME, bio: null, employer: null, hometown: null, relationshipStatus: null, birthday: null, relationship: null,
           friend: false, mutualFriends: 0, friends: [],

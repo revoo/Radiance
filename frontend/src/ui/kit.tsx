@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { type ButtonHTMLAttributes, type ReactNode, useEffect, useRef } from "react";
+import { type ButtonHTMLAttributes, type ReactNode, useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import type { Actor } from "../api/types.ts";
 import { useLive } from "../live/store.ts";
@@ -13,12 +13,13 @@ const SIZES = { xs: "size-6 text-[10px]", sm: "size-8 text-xs", md: "size-10 tex
  * real avatars. {@code ring} draws the brand gradient around it (R, or someone who's live right now).
  */
 export function Avatar({ actor, size = "md", ring = false, link = true }: {
-  actor: Pick<Actor, "id" | "name" | "handle">;
+  actor: Pick<Actor, "id" | "name" | "handle"> & { avatarUrl?: string | null };
   size?: keyof typeof SIZES;
   ring?: boolean;
   link?: boolean;
 }) {
   const pulse = useLive((s) => s.pulses[actor.id]);
+  const [broken, setBroken] = useState(false);
   const a = colorFor(actor.id);
   const b = colorFor(actor.id + "~");
   const face = (
@@ -27,7 +28,11 @@ export function Avatar({ actor, size = "md", ring = false, link = true }: {
       className={`${SIZES[size]} relative inline-flex shrink-0 select-none items-center justify-center rounded-full font-semibold tracking-wide text-white`}
       style={{ backgroundImage: `linear-gradient(135deg, ${a}, ${b})` }}
     >
-      {initials(actor.name)}
+      {actor.avatarUrl && !broken ? (
+        <img src={actor.avatarUrl} alt="" loading="lazy" onError={() => setBroken(true)} className="absolute inset-0 size-full rounded-full object-cover" />
+      ) : (
+        initials(actor.name)
+      )}
       {pulse && (
         <span
           key={pulse.key}

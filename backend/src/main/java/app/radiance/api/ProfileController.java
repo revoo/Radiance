@@ -82,6 +82,18 @@ class ProfileController {
         p.backstory());
   }
 
+  record NewAvatar(String mediaId) {}
+
+  /** R's own picture: a photo he's finished uploading. */
+  @org.springframework.web.bind.annotation.PostMapping("/avatar")
+  org.springframework.http.ResponseEntity<Void> avatar(@org.springframework.web.bind.annotation.RequestBody NewAvatar body) {
+    var me = user().orElseThrow(() -> Problems.bad("Finish your profile first"));
+    var media = new app.radiance.media.MediaRepository(sql).byId(String.valueOf(body.mediaId()))
+        .filter(m -> "UPLOAD".equals(m.origin()) && "READY".equals(m.status())).orElseThrow(() -> Problems.bad("That photo isn't ready"));
+    lane.run(() -> sql.commit(new app.radiance.persistence.UnitOfWork().add("UPDATE actor SET avatar_media_id = ? WHERE id = ?", media.id(), me.id())));
+    return org.springframework.http.ResponseEntity.noContent().build();
+  }
+
   private java.util.Optional<ActorRow> user() {
     return new CastRepository(sql).actors().stream().filter(a -> a.kind() == ActorRow.Kind.USER).findFirst();
   }

@@ -9,6 +9,7 @@ import { Avatar, Card, Name, RichText } from "../ui/kit.tsx";
 import { CommentBox, CommentItem } from "./Comments.tsx";
 import { ReactionPicker } from "./ReactionPicker.tsx";
 import { ReactionSummary } from "./ReactionSummary.tsx";
+import { PostPhoto } from "./PostPhoto.tsx";
 import { TypingRow } from "./TypingRow.tsx";
 
 const EMPTY: never[] = [];
@@ -58,9 +59,13 @@ export function PostCard({ post, me, expanded = false }: { post: Post; me: Actor
           </div>
         </header>
 
-        <div className="px-4 pb-3 pt-3">
+        {post.body && (
+        <div data-testid="post-text" className="px-4 pb-3 pt-3">
           <RichText text={post.body} className={short ? "text-[22px] font-medium leading-snug tracking-tight" : "text-[15px] leading-relaxed"} />
         </div>
+        )}
+
+        <PostPhoto media={post.media} />
 
         {post.link && <LinkCard link={post.link} />}
 

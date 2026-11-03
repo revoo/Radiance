@@ -981,6 +981,8 @@ Live contract tests (§10) verify what each alias in use declares.
 
 ### 5.13 Media
 
+> Superseded in part by ADR 0021: photos travel through the app (PUT to `/api/media/{id}/upload`, GET streams from local disk), with R2 keeping a durable copy. No presigned URLs or redirects.
+
 - **`MediaStore` port:** `LocalFileMediaStore` (default; files on disk served through the API) and `R2MediaStore` (private bucket; AWS SDK v2 S3 client with endpoint `https://<account_id>.r2.cloudflarestorage.com` and region `auto`). Follow Cloudflare's aws-sdk-java R2 example: the SDK's default chunked transfer encoding causes 403 signature errors with R2 unless configured. The bucket's CORS policy must allow PUT and GET from the SPA's origin, or browser uploads through presigned URLs fail.
 - **Uploads:** the SPA downsizes to ≤ 1600 px and creates a 400 px thumbnail, then PUTs both via presigned URLs. `POST /api/media/{id}/complete` verifies the objects and runs the vision appraisal (§5.9). No server-side image processing in V1.
 - **Downloads:** `GET /api/media/{id}` returns a 302 to a short-lived presigned URL (reused for its lifetime so the browser can cache it), or streams the local file.

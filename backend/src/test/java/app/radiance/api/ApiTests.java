@@ -320,4 +320,72 @@ class ApiTests {
     assertThat(CamerasController.inRealTime(wall + CamerasController.MAX_DRIFT + 1, wall)).as("fast-forwarded").isFalse();
     assertThat(CamerasController.inRealTime(wall - CamerasController.MAX_DRIFT - 1, wall)).as("paused or behind").isFalse();
   }
+
+  static final byte[] JPEG = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, 1, 2, 3};
+
+  String uploadPhoto() throws Exception {
+    var started = mvc.perform(post("/api/media/uploads").with(R).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"mime\":\"image/jpeg\",\"bytes\":6,\"width\":1600,\"height\":1200}"))
+        .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+    var tree = app.radiance.kernel.Json.tree(started);
+    String id = tree.path("mediaId").asString();
+    mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(tree.path("putUrl").asString()).with(R).with(csrf()).content(JPEG))
+        .andExpect(status().isNoContent());
+    mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(tree.path("thumbPutUrl").asString()).with(R).with(csrf()).content(JPEG))
+        .andExpect(status().isNoContent());
+    return id;
+  }
+
+  @Test
+  @Order(13)
+  void aPhotoGoesUp_GetsAPost_AndComesBackThroughTheLogin() throws Exception {
+    String id = uploadPhoto();
+    // not finished yet: it can't be seen or used
+    mvc.perform(get("/api/media/" + id).with(R)).andExpect(status().isNotFound());
+    mvc.perform(post("/api/posts").with(R).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"text\":\"hi\",\"mediaIds\":[\"" + id + "\"]}"))
+        .andExpect(status().isBadRequest());
+
+    mvc.perform(post("/api/media/" + id + "/complete").with(R).with(csrf())).andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("READY")).andExpect(jsonPath("$.url").value("/api/media/" + id));
+
+    var made = mvc.perform(post("/api/posts").with(R).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"text\":\"\",\"mediaIds\":[\"" + id + "\"]}"))
+        .andExpect(status().isCreated()).andExpect(jsonPath("$.kind").value("PHOTO")).andExpect(jsonPath("$.media.id").value(id))
+        .andReturn().getResponse().getContentAsString();
+    assertThat(app.radiance.kernel.Json.tree(made).path("body").asString()).isEmpty();
+
+    var image = mvc.perform(get("/api/media/" + id).with(R)).andExpect(status().isOk()).andReturn().getResponse();
+    assertThat(image.getContentAsByteArray()).isEqualTo(JPEG);
+    assertThat(image.getContentType()).isEqualTo("image/jpeg");
+    assertThat(image.getHeader("Cache-Control")).contains("private", "immutable");
+    mvc.perform(get("/api/media/" + id + "?size=thumb").with(R)).andExpect(status().isOk());
+    mvc.perform(get("/api/media/" + id)).andExpect(status().isUnauthorized());
+
+    String me = sql.queryOne("SELECT handle FROM actor WHERE kind = 'USER'", java.util.List.of(), r -> r.str("handle")).orElseThrow();
+    mvc.perform(get("/api/people/" + me + "/photos").with(R)).andExpect(status().isOk()).andExpect(jsonPath("$[0].id").value(id));
+  }
+
+  @Test
+  @Order(14)
+  void uploadsAreRefusedWithoutCsrf_AndAnythingOddIsABadRequest() throws Exception {
+    String body = "{\"mime\":\"image/jpeg\",\"bytes\":6}";
+    mvc.perform(post("/api/media/uploads").with(R).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isForbidden());
+    mvc.perform(post("/api/media/uploads").with(R).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"mime\":\"image/svg+xml\",\"bytes\":6}"))
+        .andExpect(status().isBadRequest());
+    mvc.perform(post("/api/media/nope/complete").with(R).with(csrf())).andExpect(status().isBadRequest());
+    mvc.perform(get("/api/media/nope").with(R)).andExpect(status().isNotFound());
+    mvc.perform(post("/api/posts").with(R).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"text\":\"x\",\"mediaIds\":[\"a\",\"b\"]}"))
+        .andExpect(status().isBadRequest());
+    // no words and no photo
+    mvc.perform(post("/api/posts").with(R).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"text\":\"\"}")).andExpect(status().isBadRequest());
+  }
+
+  @Test
+  @Order(15)
+  void rPicksHisPicture_AndItFollowsHimAround() throws Exception {
+    String id = uploadPhoto();
+    mvc.perform(post("/api/media/" + id + "/complete").with(R).with(csrf())).andExpect(status().isOk());
+    mvc.perform(post("/api/profile/avatar").with(R).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"mediaId\":\"" + id + "\"}")).andExpect(status().isNoContent());
+    mvc.perform(get("/api/me").with(R)).andExpect(jsonPath("$.actor.avatarUrl").value("/api/media/" + id + "?size=thumb"));
+    mvc.perform(post("/api/profile/avatar").with(R).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"mediaId\":\"nope\"}")).andExpect(status().isBadRequest());
+  }
 }

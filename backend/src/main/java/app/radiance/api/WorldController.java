@@ -86,6 +86,13 @@ class WorldController {
     return new Reads(sql, live).person(handle).orElseThrow(() -> Problems.notFound("person"));
   }
 
+  @GetMapping("/people/{handle}/photos")
+  List<Views.Media> photos(@PathVariable String handle) {
+    var reads = new Reads(sql, live);
+    String id = reads.actorIdByHandle(handle).orElseThrow(() -> Problems.notFound("person"));
+    return reads.photosBy(id);
+  }
+
   @GetMapping("/people/{handle}/posts")
   Views.Page<Views.Post> posts(@PathVariable String handle, @RequestParam(required = false) String cursor,
       @RequestParam(defaultValue = "20") int limit) {

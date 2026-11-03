@@ -25,6 +25,11 @@ public final class LiveResponder {
 
   /** R laughing this hard at a tragedy reads as callous. */
   private static final double CALLOUS_HUMOR = 0.5;
+  /** People online right now are likelier to answer than the script's later sessions: this is what makes a post feel heard. */
+  private static final double LIVE_PULL = 0.4;
+  /** Generous attention (SPEC P3): while R has friends, a post is never met with silence. */
+  private static final int MIN_REACTIONS = 3;
+  private static final int MIN_COMMENTS = 1;
 
   private final ContentLibrary lib;
   private final Knobs k;
@@ -37,6 +42,37 @@ public final class LiveResponder {
   /** Residents' responses to R's post {@code post}, which has just aired at {@code t}. */
   public Script onPost(SimWorld w, Item post, Map<String, Double> features, int postsToday, long t) {
     return onPost(w, post, features, postsToday, t, 0, Set.of());
+  }
+
+  /** Tops a quiet post up to the floors, from whoever likes R most and hasn't answered yet. */
+  private void floors(SimWorld w, Plan plan, Item post, app.radiance.sim.model.Person user, String day, long t, long horizon, Set<String> reacted, int commenters) {
+    var answered = new java.util.HashSet<>(reacted);
+    plan.script.reactions.forEach(x -> answered.add(x.actorId()));
+    var wrote = new java.util.HashSet<String>();
+    plan.script.comments.forEach(x -> wrote.add(x.authorId()));
+    var friends = w.residents().stream().filter(b -> {
+      var e = w.edgeOrNull(b.id, user.id);
+      return e != null && e.connected;
+    }).sorted(java.util.Comparator.comparingDouble((app.radiance.sim.model.Person b) -> -w.edge(b.id, user.id).affinity).thenComparing(b -> b.id)).toList();
+    int reactions = answered.size();
+    for (var b : friends) {
+      if (reactions >= MIN_REACTIONS) break;
+      if (answered.contains(b.id)) continue;
+      var rng = RandomSource.forActor(w.seed, b.id, t).derive("floor-react:" + post.id);
+      plan.reaction(t + horizon + delay(rng, 90_000, 20 * 60_000L), ReactionRow.Target.POST, post.id, b.id,
+          Stances.reaction(null, b, post, w.edge(b.id, user.id).affinity, rng));
+      reactions++;
+    }
+    for (var b : friends) {
+      if (commenters >= MIN_COMMENTS) break;
+      if (wrote.contains(b.id)) continue;
+      var rng = RandomSource.forActor(w.seed, b.id, t).derive("floor-comment:" + post.id);
+      var stance = Stances.comment(w, b, user, post, lib, k, day, rng);
+      if (stance == Stance.REACT_ONLY) stance = Stance.SUPPORT;
+      plan.comment("live:" + b.id + ":" + post.id, t + horizon + delay(rng, 8 * 60_000L, 30 * 60_000L), post.id, null, b.id,
+          Planner.commentBrief(post, stance, user.id, null));
+      commenters++;
+    }
   }
 
   /**
@@ -65,7 +101,7 @@ public final class LiveResponder {
       Impressions.see(w, b, user, features, saturation, lib, k, t);
       if (planner.attentionUsed(plan, b, day) >= b.routine.attentionBudget()) continue;
       // saturation grows with each comment planned here, as it would as they land
-      double u = planner.utility(w, b, post, user, day, rng) - r.wSat() * Math.min(1, commenters / 8.0);
+      double u = planner.utility(w, b, post, user, day, rng) + LIVE_PULL - r.wSat() * Math.min(1, commenters / 8.0);
       boolean comment = !Planner.crowded(w, post, commenters)
           && rng.chance(Planner.sigmoid(r.steepness() * (u - r.thetaComment())));
       boolean react = !reacted.contains(b.id)
@@ -84,6 +120,7 @@ public final class LiveResponder {
         commenters++;
       }
     }
+    floors(w, plan, post, user, day, t, horizon, reacted, commenters);
     return plan.script;
   }
 

@@ -38,6 +38,15 @@ radiance:
     username: ${RADIANCE_USERNAME:}
     password-bcrypt: ${RADIANCE_PASSWORD_BCRYPT:}
     dev-login: false
+  media:                               # SPEC §5.13, ADR 0021
+    store: local                       # local | r2 (the backups bucket, under media/)
+    dir: data/media
+    generator: fake                    # fake | workers-ai (needs CF_ACCOUNT_ID and CF_AI_API_TOKEN)
+    api-token: ${CF_AI_API_TOKEN:}
+    image-model: "@cf/black-forest-labs/flux-1-schnell"
+    images-per-sim-day: 12             # live-tunable
+    daily-neuron-budget: 9000          # stays under Workers AI's 10k/day free allocation; resets 00:00 UTC
+    neurons-per-image: 60              # about what a 1024px, 4-step flux-1-schnell image costs
   cameras:                             # ADR 0020; on in prod. Picked by eye, 2026-11-02
     enabled: false
     dataset: https://services2.arcgis.com/aIrBD8yn1TDTEXoz/arcgis/rest/services/TrafficCamerasTM_Public/FeatureServer/0/query

@@ -12,7 +12,9 @@
 - Rail redesign, after M11: one sky card (clock, weather, forecast strip, animated skies), news rail with faces and heat.
 - Live Chicago cameras on the left rail (R's idea, ADR 0020): five hand-picked IDOT cameras, proxied and cached by the
   server, on in `prod` only. To add or change one: `radiance.cameras.spots`, matching part of its `SnapShot` file name.
-- Next: **M12 — Media** (SPEC §12), on a new branch from `main`. **Don't start until R says go.**
+- **M12 Media done on branch `m12-media`** (ADR 0021): R's photos with vision appraisal, avatars, photo tab on profiles; generated photos and avatars in the batch through `ImageGenerator`, within limits; `CF_AI_API_TOKEN` still has to go in the server `.env` for real pictures.
+- R's direction for the final stretch: finish M13, test thoroughly, polish, merge and deploy without pausing at milestones.
+- Next: **M13 — Director's console** (SPEC §5.16, §12).
 - Live on the server at 048356d (2026-11-02): M11, the rail, the cameras. Real feeds and weather confirmed there: 128 real
   headlines, classified by the placeholder until an LLM key goes in; 96 real weather hours.
 - To check next time: the batch's new script window (09:00 planning a full day, 11:00 planning 0); the first `meter_snapshot`

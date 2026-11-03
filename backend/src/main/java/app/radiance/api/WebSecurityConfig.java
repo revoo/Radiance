@@ -1,5 +1,6 @@
 package app.radiance.api;
 
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -65,7 +66,11 @@ class WebSecurityConfig {
   SecurityFilterChain securityFilterChain(HttpSecurity http, LoginLimiter limiter) throws Exception {
     return http.authorizeHttpRequests(
             auth ->
-                auth.requestMatchers("/actuator/health", "/actuator/health/**", "/api/auth/login")
+                // a stream closing or an error page is a second dispatch of a request already let in; its login may be
+                // over by then, and denying it only leaves a stack trace in the log
+                auth.dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR)
+                    .permitAll()
+                    .requestMatchers("/actuator/health", "/actuator/health/**", "/api/auth/login")
                     .permitAll()
                     .requestMatchers("/api/**", "/internal/**", "/actuator/**")
                     .authenticated()

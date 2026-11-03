@@ -8,6 +8,9 @@ server:
       cookie:
         secure: true
 radiance:
+  media:
+    store: r2
+    generator: workers-ai
   cameras:
     enabled: true
   news:

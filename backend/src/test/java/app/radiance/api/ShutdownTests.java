@@ -54,4 +54,43 @@ class ShutdownTests {
       if (!closed) ctx.close();
     }
   }
+
+  /**
+   * Regression, seen on the server: a stream whose login had ended got an async dispatch when it closed, and the
+   * security chain turned that into an Access Denied stack trace in the log. The request was authorized when it began.
+   */
+  @Test
+  @org.junit.jupiter.api.extension.ExtendWith(org.springframework.boot.test.system.OutputCaptureExtension.class)
+  void aStreamThatOutlivesItsLoginClosesQuietly(org.springframework.boot.test.system.CapturedOutput output) throws Exception {
+    var ctx = (ServletWebServerApplicationContext) new SpringApplicationBuilder(RadianceApplication.class)
+        .web(WebApplicationType.SERVLET).profiles("offline", "test").properties("server.port=0").run();
+    boolean closed = false;
+    try {
+      int port = ctx.getWebServer().getPort();
+      var cookies = new CookieManager(null, CookiePolicy.ACCEPT_ALL);
+      var http = HttpClient.newBuilder().cookieHandler(cookies).build();
+      String base = "http://localhost:" + port;
+      http.send(HttpRequest.newBuilder(URI.create(base + "/api/me")).build(), HttpResponse.BodyHandlers.discarding());
+      String token = cookies.getCookieStore().getCookies().stream().filter(c -> c.getName().equals("XSRF-TOKEN")).findFirst()
+          .orElseThrow().getValue();
+      http.send(HttpRequest.newBuilder(URI.create(base + "/api/auth/login")).header("X-XSRF-TOKEN", token)
+          .header("Content-Type", "application/x-www-form-urlencoded")
+          .POST(HttpRequest.BodyPublishers.ofString("username=" + LoginCredentials.DEV_USERNAME + "&password=" + LoginCredentials.DEV_PASSWORD))
+          .build(), HttpResponse.BodyHandlers.discarding());
+      var stream = http.send(HttpRequest.newBuilder(URI.create(base + "/api/stream")).build(), HttpResponse.BodyHandlers.ofLines());
+      assertThat(stream.body().iterator().next()).contains("hello");
+
+      String fresh = cookies.getCookieStore().getCookies().stream().filter(c -> c.getName().equals("XSRF-TOKEN")).findFirst()
+          .orElseThrow().getValue();
+      var logout = http.send(HttpRequest.newBuilder(URI.create(base + "/api/auth/logout")).header("X-XSRF-TOKEN", fresh)
+          .POST(HttpRequest.BodyPublishers.noBody()).build(), HttpResponse.BodyHandlers.discarding());
+      assertThat(logout.statusCode() / 100).isEqualTo(2);
+
+      ctx.close();
+      closed = true;
+      assertThat(output.toString()).doesNotContain("AuthorizationDeniedException");
+    } finally {
+      if (!closed) ctx.close();
+    }
+  }
 }

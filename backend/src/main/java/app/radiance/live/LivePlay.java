@@ -21,6 +21,8 @@ import app.radiance.sim.WorldEngine;
 import app.radiance.sim.model.Item;
 import app.radiance.social.ReactionRow;
 import java.time.Duration;
+import app.radiance.media.MediaRepository;
+import app.radiance.media.MediaRow;
 import app.radiance.news.HeadlineFeeds;
 import app.radiance.news.HeadlineRepository;
 import app.radiance.weather.WeatherHour;
@@ -344,10 +346,26 @@ public final class LivePlay {
 
   /** R posts: written and aired at once; responses follow at the Pacer's pace. Returns the post's id. */
   public String post(String text) {
+    return post(text, null);
+  }
+
+  /** Looks at a finished upload (SPEC §5.9) and saves what it saw, so a post with this photo knows what's in it. */
+  public MediaRow describePhoto(MediaRow upload, byte[] thumb) {
+    var photo = appraiser.readPhoto(thumb, upload.mime());
+    var described = upload.describedAs(photo.description(), app.radiance.kernel.Json.write(photo));
+    lane.run(() -> sql.commit(new MediaRepository(sql).save(new UnitOfWork(), described)));
+    return described;
+  }
+
+  /** R posts, with a photo if {@code media} is set: the appraisal saved at upload joins the reading of his words. */
+  public String post(String text, MediaRow media) {
     touch();
-    var quick = Appraiser.reading(Appraiser.heuristic(text, false));
+    var photo = media == null || media.appraisalJson() == null ? null
+        : app.radiance.kernel.Json.read(media.appraisalJson(), Appraiser.PhotoAppraisal.class);
+    var heard = Appraiser.reading(Appraiser.heuristic(text, false));
+    var quick = photo == null ? heard : Appraiser.withPhoto(heard, photo);
     long t = now(), wall = clock.nowMs();
-    String id = actions.post(text, quick, t);
+    String id = actions.post(text, media == null ? null : media.id(), media == null ? null : media.description(), quick, t);
     // reflex (no LLM, milliseconds): close friends, fans and rivals react on relationship alone
     var reflex = actions.reflex(id, t);
     actions.save(reflex);
@@ -362,7 +380,9 @@ public final class LivePlay {
     // considered (after the appraisal): who comments, and how; renders start at once
     background("live-considered", () -> {
       try {
-        var reading = appraiser.read(text, null);
+        // a photo with no caption has no words to read
+        var read = text.isBlank() ? heard : appraiser.read(text, null);
+        var reading = photo == null ? read : Appraiser.withPhoto(read, photo);
         lane.run(() -> sql.commit(new UnitOfWork().add("UPDATE post SET appraisal_json = ? WHERE id = ?",
             reading.appraisalJson(), id)));
         var script = actions.considered(id, reading, reacted, t);

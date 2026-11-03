@@ -49,10 +49,19 @@ class FeedController {
 
   @PostMapping("/posts")
   ResponseEntity<Views.Post> post(@RequestBody NewPost body) {
-    String text = text(body.text());
     requireOnboarded();
-    String id = live.post(text);
+    var media = attached(body.mediaIds());
+    String text = media != null && (body.text() == null || body.text().isBlank()) ? "" : text(body.text());
+    String id = live.post(text, media);
     return ResponseEntity.status(HttpStatus.CREATED).body(new Reads(sql, live).post(id).orElseThrow());
+  }
+
+  /** V1 posts carry one photo, and only one that's finished uploading. */
+  private app.radiance.media.MediaRow attached(List<String> ids) {
+    if (ids == null || ids.isEmpty()) return null;
+    if (ids.size() > 1) throw Problems.bad("One photo per post");
+    return new app.radiance.media.MediaRepository(sql).byId(ids.getFirst())
+        .filter(m -> "UPLOAD".equals(m.origin()) && "READY".equals(m.status())).orElseThrow(() -> Problems.bad("That photo isn't ready"));
   }
 
   @GetMapping("/posts/{id}")

@@ -35,12 +35,13 @@ final class Reads {
     this.sql = sql;
     this.live = live;
     String user = null;
-    for (var a : sql.query("SELECT id, kind, handle, display_name, occupation, current_city FROM actor", List.of(),
+    for (var a : sql.query("SELECT a.id, a.kind, a.handle, a.display_name, a.occupation, a.current_city, m.id AS avatar FROM actor a"
+        + " LEFT JOIN media m ON m.id = a.avatar_media_id AND m.status = 'READY'", List.of(),
         r -> new String[] {r.str("id"), r.str("kind"), r.str("handle"), r.str("display_name"), r.str("occupation"),
-            r.str("current_city")})) {
+            r.str("current_city"), r.str("avatar")})) {
       boolean you = a[1].equals("USER");
       if (you) user = a[0];
-      actors.put(a[0], new Views.Actor(a[0], a[2], a[3], you, a[4], a[5]));
+      actors.put(a[0], new Views.Actor(a[0], a[2], a[3], you, a[4], a[5], a[6] == null ? null : "/api/media/" + a[6] + "?size=thumb"));
     }
     this.userId = user;
   }
@@ -50,7 +51,7 @@ final class Reads {
   }
 
   Views.Actor actor(String id) {
-    return actors.getOrDefault(id, new Views.Actor(id, "unknown", "Someone", false, null, null));
+    return actors.getOrDefault(id, new Views.Actor(id, "unknown", "Someone", false, null, null, null));
   }
 
   Optional<String> actorIdByHandle(String handle) {
@@ -218,6 +219,29 @@ final class Reads {
         });
   }
 
+  /** Photos that have aired on posts this viewer could see. */
+  List<Views.Media> photosBy(String authorId) {
+    boolean friend = authorId.equals(userId) || friends().contains(authorId);
+    return sql.query("SELECT p.media_id FROM post p JOIN media m ON m.id = p.media_id WHERE p.author_id = ? AND m.status = 'READY'"
+        + " AND p.air_status = 'AIRED' AND p.render_status = 'RENDERED' AND p.body IS NOT NULL" + (friend ? "" : " AND p.audience = 'PUBLIC'")
+        + " ORDER BY p.created_at DESC, p.id DESC LIMIT 30", List.of(authorId), r -> r.str("media_id")).stream()
+        .map(id -> new app.radiance.media.MediaRepository(sql).byId(id)).flatMap(java.util.Optional::stream).map(Reads::mediaView).toList();
+  }
+
+  private Views.Media media(String postId) {
+    return sql.queryOne("SELECT media_id FROM post WHERE id = ? AND media_id IS NOT NULL", List.of(postId), r -> r.str("media_id"))
+        .flatMap(id -> new app.radiance.media.MediaRepository(sql).byId(id))
+        // a photo that's still on its way doesn't hold up the post: it just gains the picture when it's ready
+        .filter(m -> app.radiance.media.MediaRow.READY.equals(m.status()))
+        .map(Reads::mediaView).orElse(null);
+  }
+
+  static Views.Media mediaView(app.radiance.media.MediaRow m) {
+    String base = "/api/media/" + m.id();
+    boolean ready = app.radiance.media.MediaRow.READY.equals(m.status());
+    return new Views.Media(m.id(), ready ? base : null, ready ? base + "?size=thumb" : null, m.description(), m.status(), m.width(), m.height());
+  }
+
   private Views.Link link(String postId) {
     return sql.queryOne("SELECT h.url, h.source, h.title FROM post p JOIN headline h ON h.id = p.headline_id WHERE p.id = ?",
         List.of(postId), r -> {
@@ -278,7 +302,7 @@ final class Reads {
           : live.typingOn(r[0]).stream().map(t -> new Views.Typing(t.actorId(), t.name())).toList();
       out.add(new Views.Post(r[0], actor(r[1]), Long.parseLong(r[2]), r[3], r[4], r[5],
           reactions.getOrDefault(r[0], Views.Reactions.NONE), Integer.parseInt(r[6]),
-          preview.stream().map(x -> comment(x, r[0], previewReactions, List.of())).toList(), typing, link(r[0])));
+          preview.stream().map(x -> comment(x, r[0], previewReactions, List.of())).toList(), typing, link(r[0]), media(r[0])));
     }
     return out;
   }

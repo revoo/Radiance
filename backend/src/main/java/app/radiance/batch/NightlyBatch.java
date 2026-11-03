@@ -82,6 +82,7 @@ public final class NightlyBatch {
   private final boolean softeningCheck;
   private final WeatherSources weatherSources;
   private final HeadlineFeeds headlineFeeds;
+  private ImageWork imageWork;
   private final AtomicInteger running = new AtomicInteger();
 
   public NightlyBatch(Sql sql, SqlAdmin admin, WriterLane lane, LeaseHolder lease, WallClock clock, ContentLibrary lib,
@@ -109,6 +110,12 @@ public final class NightlyBatch {
     this.softeningCheck = softeningCheck;
     this.weatherSources = weatherSources;
     this.headlineFeeds = headlineFeeds;
+  }
+
+  /** Turns on pictures: off in tests that aren't about them. */
+  public NightlyBatch withImages(ImageWork work) {
+    this.imageWork = work;
+    return this;
   }
 
   /** Spring's cron has a seconds field; the config uses Unix five-field crons (SPEC §9). */
@@ -278,6 +285,17 @@ public final class NightlyBatch {
 
     if (w.userId != null) {
       lane.run(() -> sql.commit(new app.radiance.graph.RelationshipRepository(sql).snapshotMeters(new UnitOfWork(), w.date(now).toString(), w.userId)));
+    }
+
+    // 8. pictures (SPEC §5.13): a failure here never costs the night
+    if (imageWork != null) {
+      try {
+        var images = imageWork.run(w, now);
+        if (images.any()) notes.add("images: " + images);
+      } catch (RuntimeException e) {
+        log.warn("Image generation stopped", e);
+        notes.add("images stopped: " + e.getMessage());
+      }
     }
 
     int rendered = results.stream().mapToInt(Renderer.Result::rendered).sum();

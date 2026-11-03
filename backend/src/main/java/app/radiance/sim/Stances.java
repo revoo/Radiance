@@ -50,7 +50,7 @@ private static final double OPPOSED_PULL = 3.5;
     double edge = k.edge() <= 0 ? NEVER : Math.log(k.edge());
     double bias = bias(b, a, day);
     double hate = Math.max(0, -aff);
-    l.put(Stance.TROLL, -1.4 + (b.trait("argumentativeness") - 50) / 35 + hate / 40 + bias + edge);
+    l.put(Stance.TROLL, -1.2 + (b.trait("argumentativeness") - 50) / 35 + hate / 40 + bias + edge);
     l.put(Stance.MOCK, -2.0 + hate / 30 + bias + (news && align < -0.4 ? 0.6 : 0) + edge);
     l.put(Stance.HOSTILE, -2.8 + hate / 22 + bias * 0.8 + (e != null && e.hasTag("feud") ? 2 : 0) + edge);
     l.put(Stance.FLIRT, Math.abs(b.age(day) - a.age(day)) > 15 ? NEVER : flirt(b, a, att, chem, k));

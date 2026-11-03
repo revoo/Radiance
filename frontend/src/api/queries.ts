@@ -12,6 +12,7 @@ import type {
   Comment,
   FriendRequest,
   LiveCamera,
+  Media,
   Rail,
   Relationship,
   DmConversation,
@@ -86,6 +87,20 @@ export function useAnswerFriendRequest() {
 
 export function useRelationships() {
   return useQuery({ queryKey: keys.relationships, queryFn: () => api<Relationship[]>("/api/me/relationships") });
+}
+
+export function usePersonPhotos(handle: string) {
+  return useQuery({ queryKey: ["person-photos", handle], queryFn: () => api<Media[]>(`/api/people/${handle}/photos`) });
+}
+
+export function useSetAvatar() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (mediaId: string) => api<void>("/api/profile/avatar", { json: { mediaId } }),
+    onSettled: () => {
+      void qc.invalidateQueries();
+    },
+  });
 }
 
 export function useCameras() {
@@ -218,16 +233,18 @@ export function withReaction(r: Reactions, kind: ReactionKind | null): Reactions
 export function useCreatePost(me: Actor | null | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (text: string) => api<Post>("/api/posts", { json: { text } }),
-    onMutate: async (text) => {
+    mutationFn: ({ text, media }: { text: string; media?: Media | null }) =>
+      api<Post>("/api/posts", { json: media ? { text, mediaIds: [media.id] } : { text } }),
+    onMutate: async ({ text, media }) => {
       await qc.cancelQueries({ queryKey: ["feed", "recent"] });
       const temp: Post = {
         id: `temp-${Date.now()}`,
         author: me ?? { id: "you", handle: "you", name: "You", you: true, occupation: null, livesIn: null },
         createdAt: Date.now(),
-        kind: "STATUS",
+        kind: media ? "PHOTO" : "STATUS",
         audience: "FRIENDS",
         body: text,
+        media,
         reactions: { total: 0, top: [], byKind: {}, mine: null, recent: [] },
         commentCount: 0,
         preview: [],

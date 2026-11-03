@@ -71,7 +71,9 @@ class RendererTests {
   }
 
   static List<String> threads(Simulation sim) {
-    return sim.sql.query("SELECT id FROM post WHERE body IS NULL AND air_status <> 'DROPPED' ORDER BY created_at",
+    // R's own posts have their words already, but the answers to them still need writing (live play does those as they come)
+    return sim.sql.query("SELECT id FROM post WHERE air_status <> 'DROPPED' AND (body IS NULL OR id IN (SELECT post_id FROM comment WHERE body IS NULL))"
+        + " ORDER BY created_at",
         List.of(), r -> r.str("id"));
   }
 
