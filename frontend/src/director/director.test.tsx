@@ -445,7 +445,7 @@ describe("the panels", () => {
   it("costs: spend, windows, parked work", async () => {
     const costs = {
       today: 0.5, month: 3.25, byPurpose: [{ key: "render-thread", usd: 3, calls: 40 }], byProvider: [{ key: "anthropic", usd: 3, calls: 40 }], byModel: [{ key: "haiku", usd: 3, calls: 40 }], perBatch: [],
-      cacheHitRate: 0.62, fallbackRate: 0.05, calls: 40, windows: [{ id: "usd:daily", used: 0.5, limit: 1, resetsAt: NOW + 1000, closedUntil: null }, { id: "fake:closed", used: 0, limit: 0, resetsAt: NOW, closedUntil: NOW + 3_600_000 }], parked: [{ reason: "usd:daily", jobs: 12, resumes: NOW + 1000 }],
+      cacheHitRate: 0.62, fallbackRate: 0.05, calls: 40, windows: [{ id: "usd:daily", used: 0.5, limit: 1, resetsAt: NOW + 3_600_000, closedUntil: null }, { id: "fake:closed", used: 0, limit: 0, resetsAt: NOW, closedUntil: NOW + 3_600_000 }], parked: [{ reason: "usd:daily", jobs: 12, resumes: NOW + 1000 }],
     };
     vi.stubGlobal("fetch", mockFetch({ ...ROUTES, "GET /api/director/costs": costs }).fn);
     at("/director/costs");
