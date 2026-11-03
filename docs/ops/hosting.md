@@ -118,6 +118,21 @@ docker compose run --rm radiance genesis --seed 7 --authored --import
 docker compose up -d
 ```
 
+## Pictures
+
+R's photos work as they are. Generated avatars and photos need a Cloudflare Workers AI token: put `CF_AI_API_TOKEN` in `.env`
+next to `CF_ACCOUNT_ID`, then `docker compose up -d`. Without it residents keep their initials and their photo posts have no
+picture. Images stay on `./data` and in R2 (ADR 0021). The batch stops at `images-per-sim-day` and `daily-neuron-budget`, both
+under the free allocation, and picks up what's left the next day.
+
+## The Director's console
+
+Hidden while you play. Turn it on from the account menu or with Ctrl+Shift+D. What you change under Knobs is saved in
+`world.settings_json` and comes back after a restart. Starting a world over with `mv data data.old` clears it too.
+
+Stored prompts for the Prompts tab go to `./data/prompts`; the batch removes those older than `radiance.llm.prompt-keep-days`
+(14). To stop storing them, set `radiance.llm.store-prompts: false`.
+
 ## The nightly batch
 
 It runs inside the app, at `radiance.batch.crons` (09:00 and 11:00 UTC), and catches up at startup if a run was

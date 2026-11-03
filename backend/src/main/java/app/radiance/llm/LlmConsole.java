@@ -26,10 +26,12 @@ public final class LlmConsole {
   private final DefaultLlmGateway gateway;
   private final BudgetLedger ledger;
   private final Path promptDir;
+  private final int promptKeepDays;
   private volatile Map<String, LlmProperties.Route> routes;
   private volatile LlmProperties.Budgets budgets;
 
-  LlmConsole(LlmProperties props, DefaultLlmGateway gateway, BudgetLedger ledger) {
+  LlmConsole(LlmProperties props, DefaultLlmGateway gateway, BudgetLedger ledger, int promptKeepDays) {
+    this.promptKeepDays = promptKeepDays;
     this.props = props;
     this.gateway = gateway;
     this.ledger = ledger;
@@ -90,6 +92,11 @@ public final class LlmConsole {
 
   public void closeBatch() {
     ledger.closeBatch();
+  }
+
+  /** Clears out old stored prompts; the batch does this each run. */
+  public int prunePrompts(long wallMs) {
+    return PromptStore.Files.prune(promptDir, wallMs, promptKeepDays);
   }
 
   /** A stored prompt and its response, by {@code llm_call.prompt_ref}; never anything outside the prompt folder. */

@@ -32,6 +32,29 @@ public interface PromptStore {
       this.dir = dir;
     }
 
+    /** Removes the day folders older than {@code keepDays}: prompts are large, and the server's disk isn't. Returns how many went. */
+    public static int prune(Path dir, long wallMs, int keepDays) {
+      var oldest = Instant.ofEpochMilli(wallMs).atZone(ZoneOffset.UTC).toLocalDate().minusDays(keepDays);
+      if (!java.nio.file.Files.isDirectory(dir)) return 0;
+      int gone = 0;
+      try (var days = java.nio.file.Files.list(dir)) {
+        for (Path day : days.toList()) {
+          try {
+            if (!java.time.LocalDate.parse(day.getFileName().toString()).isBefore(oldest)) continue;
+          } catch (java.time.format.DateTimeParseException notADay) {
+            continue;
+          }
+          try (var files = java.nio.file.Files.walk(day)) {
+            for (Path p : files.sorted(java.util.Comparator.reverseOrder()).toList()) java.nio.file.Files.delete(p);
+          }
+          gone++;
+        }
+      } catch (IOException e) {
+        log.warn("Could not prune stored prompts: {}", e.toString());
+      }
+      return gone;
+    }
+
     @Override
     public String store(String callId, long wallMs, ProviderRequest req, ProviderResponse resp) {
       var node = Json.MAPPER.createObjectNode();

@@ -208,4 +208,5 @@ radiance:
     budgets: { daily-usd: 1.00, per-batch-usd: 0.30, monthly-usd: 10.00 }   # daily resets at midnight Central, monthly on the 1st
     store-prompts: true                # feeds the prompt inspector and the bake-off
     prompt-store-dir: data/prompts
+    prompt-keep-days: 14               # the batch removes stored prompts older than this
     recordings: { mode: "OFF", dir: data/llm-recordings }   # OFF | RECORD | REPLAY

@@ -12,9 +12,9 @@
 - Rail redesign, after M11: one sky card (clock, weather, forecast strip, animated skies), news rail with faces and heat.
 - Live Chicago cameras on the left rail (R's idea, ADR 0020): five hand-picked IDOT cameras, proxied and cached by the
   server, on in `prod` only. To add or change one: `radiance.cameras.spots`, matching part of its `SnapShot` file name.
-- **M12 Media done on branch `m12-media`** (ADR 0021): R's photos with vision appraisal, avatars, photo tab on profiles; generated photos and avatars in the batch through `ImageGenerator`, within limits; `CF_AI_API_TOKEN` still has to go in the server `.env` for real pictures.
-- R's direction for the final stretch: finish M13, test thoroughly, polish, merge and deploy without pausing at milestones.
-- Next: **M13 — Director's console** (SPEC §5.16, §12).
+- **M12 Media and M13 Director's console done** (ADR 0021, ADR 0022), see "M13 steps" below. R's direction for the final stretch: finish M13, test thoroughly, polish, merge and deploy without pausing at milestones.
+- For real pictures, `CF_AI_API_TOKEN` still has to go in the server `.env` (`docs/ops/hosting.md`, "Pictures").
+- Next: **R's acceptance test of V1** on a fresh world with real LLM keys (`docs/ops/hosting.md`, "Real prose"). Real prose, real vision and the M2 live contract tests have never run: they need a key.
 - Live on the server at 048356d (2026-11-02): M11, the rail, the cameras. Real feeds and weather confirmed there: 128 real
   headlines, classified by the placeholder until an LLM key goes in; 96 real weather hours.
 - To check next time: the batch's new script window (09:00 planning a full day, 11:00 planning 0); the first `meter_snapshot`
@@ -36,6 +36,25 @@
   `./gradlew bootRun --args='--spring.profiles.active=offline'` and `cd frontend && npm run dev`.
 - Open for tuning (from M7): a post of R's right after onboarding draws ~3 reactions and under one comment
   inside the 5-minute burst; `user-salience` and `theta_comment` are the knobs. Real voices need keys.
+
+## M13 steps (all ✔)
+1. Incident injector (`sim/Incidents`): any event, any arc, or a breakup, with the fallout scripted; refused for anything that can't happen (not a couple, same-sex romance, a blacklisted arc)
+2. Time (`LivePlay`): pause, resume and fast-forward; migration 0007's `world.paused_at` holds world time while paused; past the script a backfill fills in
+3. Live settings (`director/DirectorSettings`): knobs, blacklist, LLM routes, budgets, images per day, pacing rules, checked before anything applies, kept in `world.settings_json`, restored at startup in every run mode
+4. `/api/director/*` reads for every panel; prompts only from inside the prompt folder
+5. The console (`frontend/src/director`): hidden by default; Time & incidents, Storylines, Graph (own force layout, no new dependency), Residents, Log and reports, Batch, Pacing, Costs, Knobs, Prompts
+6. AC tests: `DirectorPlayTests` (inject a breakup, six hours on, fallout in the feed; a blacklisted arc stops at once, even already scripted) and `DirectorApiTests` through the real security chain
+
+Found and fixed along the way:
+- `usd:batch` was never enforced: nothing opened the window. Each batch run opens it now, so the per-batch limit applies for the first time when real keys go in. Work past the limit parks for the next day's run.
+- After a breakup only one ex got an aftermath: airing dropped the second as a duplicate.
+- A post could get no answer at all in a session: floors of 3 reactions and 1 comment while R has friends.
+- An SSE stream outliving its login logged Access Denied on its async dispatch.
+- Stored prompts grew without limit on the server: the batch keeps 14 days.
+
+Also added in the final stretch: presence dots and birthdays (SPEC §8), a crash screen, unread counts in the tab title, a favicon, and the Playwright smoke test (SPEC §8, ADR 0022).
+
+Left out, on purpose: `Photos` isn't a left-rail shortcut (it's a tab on each profile). A resident's "recent prompts" is a search of the Prompts tab by handle, not a list of its own.
 
 ## M11 steps (all ✔)
 1. ✔ Like-meters: `GET /api/me/relationships`, `meter` on profiles, nightly `meter_snapshot`, `ui.like-meters`.
@@ -400,9 +419,6 @@ Resolutions of spec issues raised at kickoff. Each gets an ADR when its mileston
 - M6: a batch resets jobs left RUNNING by a killed run before it renders: it holds the lease, so nobody
   else is running them. Backfill render jobs run newest first, scripts earliest first.
 
-- M7: no Playwright smoke test yet (SPEC §8): it would add a browser download to CI. The same path is
-  covered by `LivePlayTests` and `ApiTests` end to end, and was checked by hand in the browser. Proposed
-  for M8 or M9.
 - M7: the right rail has a live world clock and contacts; the weather chip and "talked about in
   Chicagoland" wait for M10, presence dots and Messenger for M8, like-meters for M11, birthdays for later.
 - M7: hooks implement `comment_on_older_post` and `pull_scripted_post_forward`; the DM hook comes with

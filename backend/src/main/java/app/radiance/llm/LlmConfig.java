@@ -104,8 +104,9 @@ class LlmConfig {
   }
 
   @Bean
-  LlmConsole llmConsole(LlmProperties props, DefaultLlmGateway gateway, BudgetLedger budget) {
-    return new LlmConsole(props, gateway, budget);
+  LlmConsole llmConsole(LlmProperties props, DefaultLlmGateway gateway, BudgetLedger budget,
+      @Value("${radiance.llm.prompt-keep-days:14}") int promptKeepDays) {
+    return new LlmConsole(props, gateway, budget, promptKeepDays);
   }
 
   /** Loads every alias's prompt-notes file now, so a missing one fails startup, not a render. */

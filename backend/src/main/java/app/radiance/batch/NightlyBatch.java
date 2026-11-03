@@ -213,7 +213,10 @@ public final class NightlyBatch {
         return failed;
       }
     } finally {
-      if (console != null) console.closeBatch();
+      if (console != null) {
+        console.closeBatch();
+        console.prunePrompts(clock.nowMs());
+      }
       running.decrementAndGet();
     }
   }
