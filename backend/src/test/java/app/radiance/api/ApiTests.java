@@ -388,4 +388,22 @@ class ApiTests {
     mvc.perform(get("/api/me").with(R)).andExpect(jsonPath("$.actor.avatarUrl").value("/api/media/" + id + "?size=thumb"));
     mvc.perform(post("/api/profile/avatar").with(R).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"mediaId\":\"nope\"}")).andExpect(status().isBadRequest());
   }
+
+  @Test
+  @Order(16)
+  void theRailKnowsWhoseBirthdayItIs_AmongRsFriends() throws Exception {
+    String user = sql.queryOne("SELECT id FROM actor WHERE kind = 'USER'", java.util.List.of(), r -> r.str("id")).orElseThrow();
+    String friend = sql.queryOne("SELECT to_id FROM relationship WHERE from_id = ? AND connected = 1 LIMIT 1", java.util.List.of(user), r -> r.str("to_id")).orElseThrow();
+    var tree = app.radiance.kernel.Json.tree(mvc.perform(get("/api/world").with(R)).andReturn().getResponse().getContentAsString());
+    var zone = java.time.ZoneId.of(tree.path("timezone").asString());
+    var today = java.time.Instant.ofEpochMilli(tree.path("worldTime").asLong()).atZone(zone).toLocalDate();
+    writer.run(() -> sql.commit(new app.radiance.persistence.UnitOfWork()
+        .add("UPDATE actor SET birth_date = ? WHERE id = ?", today.withYear(1990).toString(), friend)));
+    mvc.perform(get("/api/rail").with(R)).andExpect(status().isOk())
+        .andExpect(jsonPath("$.birthdays[?(@.id == '" + friend + "')]").exists())
+        .andExpect(jsonPath("$.online").isArray());
+    writer.run(() -> sql.commit(new app.radiance.persistence.UnitOfWork()
+        .add("UPDATE actor SET birth_date = ? WHERE id = ?", today.plusDays(2).withYear(1990).toString(), friend)));
+    mvc.perform(get("/api/rail").with(R)).andExpect(jsonPath("$.birthdays[?(@.id == '" + friend + "')]").doesNotExist());
+  }
 }

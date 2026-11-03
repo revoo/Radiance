@@ -28,7 +28,7 @@ export function ReactionSummary({ reactions, size = "md" }: { reactions: Reactio
   const icon = size === "sm" ? "size-4 text-[10px]" : "size-[22px] text-[13px]";
   const label = whoReacted(reactions.total, reactions.recent, Boolean(reactions.mine));
   return (
-    <span className="relative inline-flex items-center gap-1.5" title={label}>
+    <span data-testid="reaction-summary" className="relative inline-flex items-center gap-1.5" title={label}>
       <span className="flex -space-x-1">
         {reactions.top.map((k, i) => (
           <span

@@ -77,6 +77,8 @@ export type TalkedStory = {
 };
 
 export type Rail = {
+  online?: string[];
+  birthdays?: Actor[];
   weather: {
     hour: number;
     tempF: number;
@@ -116,7 +118,7 @@ export type World = {
   backfilling: boolean;
 };
 
-export type Status = { worldTime: number; scriptedUntil: number; backfilling: boolean; sessionActive: boolean };
+export type Status = { worldTime: number; scriptedUntil: number; backfilling: boolean; sessionActive: boolean; paused: boolean };
 
 export type RecapLine = {
   eventId: string;

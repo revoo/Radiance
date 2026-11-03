@@ -162,6 +162,12 @@ public final class Airing {
     return null;
   }
 
+  /** The same two people with their roles swapped: after a breakup each ex has their own aftermath, with the other as the ex. */
+  private static boolean mirrors(app.radiance.sim.model.Arc other, EventPayload.ArcChange c) {
+    return other.defId.equals(c.defId()) && c.roles().size() == 2 && !other.roles.equals(c.roles())
+        && new java.util.HashSet<>(other.roles.values()).equals(new java.util.HashSet<>(c.roles().values()));
+  }
+
   private static String arcCheck(SimWorld w, EventPayload.ArcChange c, ContentLibrary lib) {
     var arc = w.arcs.get(c.arcId());
     switch (c.kind()) {
@@ -171,6 +177,7 @@ public final class Airing {
         var def = lib.arcs().get(c.defId());
         for (String actor : c.roles().values()) {
           for (var other : w.arcsOf(actor)) {
+            if (mirrors(other, c)) continue;
             if (def != null && (def.exclusiveWith().contains(other.defId) || other.defId.equals(c.defId()))) {
               return "@" + w.person(actor).handle + " is already in a " + other.defId + " arc";
             }

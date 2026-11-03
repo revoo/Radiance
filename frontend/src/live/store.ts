@@ -16,12 +16,14 @@ export type LiveState = {
   openThread: string | null;
   /** World time minus this browser's clock, from the last heartbeat. */
   clockOffset: number;
+  /** World time while the Director has the world paused. */
+  pausedAt: number | null;
   /** Sims-style pulses over residents' avatars, by actor id; each change gets a new key so it animates again. */
   pulses: Record<string, { delta: number; key: number }>;
 };
 
 let pulseKey = 0;
-let state: LiveState = { newPosts: 0, typing: {}, toasts: [], backfilling: false, openThread: null, clockOffset: 0, pulses: {} };
+let state: LiveState = { newPosts: 0, typing: {}, toasts: [], backfilling: false, openThread: null, clockOffset: 0, pausedAt: null, pulses: {} };
 const listeners = new Set<() => void>();
 
 function set(next: Partial<LiveState>) {
@@ -65,8 +67,11 @@ export const live = {
   setOpenThread(id: string | null) {
     if (id !== state.openThread) set({ openThread: id });
   },
-  setClockOffset(ms: number) {
-    set({ clockOffset: ms });
+  /** Where the world's clock stands; anything showing a time catches up at once. */
+  setClock(worldTime: number, paused = false) {
+    set({ clockOffset: worldTime - Date.now(), pausedAt: paused ? worldTime : null });
+    tick += 1;
+    tickers.forEach((x) => x());
   },
   pulse(actorId: string, delta: number) {
     const key = ++pulseKey;
@@ -79,7 +84,7 @@ export const live = {
     }, 2_000);
   },
   reset() {
-    state = { newPosts: 0, typing: {}, toasts: [], backfilling: false, openThread: null, clockOffset: 0, pulses: {} };
+    state = { newPosts: 0, typing: {}, toasts: [], backfilling: false, openThread: null, clockOffset: 0, pausedAt: null, pulses: {} };
     listeners.forEach((l) => l());
   },
 };
@@ -90,7 +95,7 @@ export function useLive<T>(select: (s: LiveState) => T): T {
 
 /** World time now, by this browser's clock plus the offset from the last heartbeat. */
 export function worldNow(): number {
-  return Date.now() + state.clockOffset;
+  return state.pausedAt ?? Date.now() + state.clockOffset;
 }
 
 // one shared ticker, so "Just now" becomes "1m" while R watches

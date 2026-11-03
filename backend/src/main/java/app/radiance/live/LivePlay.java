@@ -70,7 +70,7 @@ public final class LivePlay {
   public record LiveEvent(String name, Map<String, Object> data) {}
 
   /** What a heartbeat answers. */
-  public record Status(long worldTime, long scriptedUntil, boolean backfilling, boolean sessionActive) {}
+  public record Status(long worldTime, long scriptedUntil, boolean backfilling, boolean sessionActive, boolean paused) {}
 
   /** A typing indicator on screen: "Sarah is writing a comment…". */
   public record Typing(String key, String postId, String actorId, String name, long since) {}
@@ -252,6 +252,12 @@ public final class LivePlay {
         r -> r.isNull("paused_at") ? wall + r.lng("time_offset_ms") : r.lng("paused_at")).orElse(wall);
   }
 
+  /** The residents who are around right now (SPEC §8's presence dots). */
+  public List<String> around() {
+    long t = now();
+    return engine.locked(w -> w.residents().stream().filter(p -> app.radiance.sim.Presence.around(p, t, w.zone, w.seed)).map(p -> p.id).toList());
+  }
+
   public boolean paused() {
     return sql.queryOne("SELECT paused FROM world", List.of(), r -> r.bool("paused")).orElse(false);
   }
@@ -262,7 +268,7 @@ public final class LivePlay {
   public void pause() {
     long t = now();
     lane.run(() -> sql.commit(new UnitOfWork().add("UPDATE world SET paused = 1, paused_at = COALESCE(paused_at, ?)", t)));
-    emit("world.changed", Map.of("paused", true));
+    emit("world.changed", Map.of("paused", true, "worldTime", t));
   }
 
   /** Starts the clock from where it stopped. */
@@ -289,7 +295,7 @@ public final class LivePlay {
       } catch (RuntimeException e) {
         log.warn("Catching the world up failed", e);
       } finally {
-        emit("world.changed", Map.of("paused", paused()));
+        emit("world.changed", Map.of("paused", paused(), "worldTime", now()));
         wake.offer(true);
       }
     });
@@ -363,7 +369,7 @@ public final class LivePlay {
     synchronized (this) {
       active = sessionId != null && clock.nowMs() - lastBeat <= idleTimeout;
     }
-    return new Status(now(), scriptedUntil(), backfill.running(), active);
+    return new Status(now(), scriptedUntil(), backfill.running(), active, paused());
   }
 
   private void start(long wall) {

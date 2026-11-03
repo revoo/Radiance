@@ -285,7 +285,18 @@ final class Reads {
         + " GROUP BY h.id ORDER BY COUNT(*) + SUM(p.comment_count) DESC, h.id LIMIT 5", List.of(worldTime - TALKED_WINDOW, worldTime),
         r -> new Views.Talked(r.str("title"), r.str("source"), r.str("post_id"), (int) r.lng("posts"), (int) r.lng("comments"),
             r.str("region"), r.isNull("controversy") ? 0 : r.dbl("controversy"), r.str("sensitivity"), peopleOn(r.str("id"))));
-    return new Views.Rail(weather, talked);
+    return new Views.Rail(weather, talked, live.around(), birthdays(worldTime));
+  }
+
+  /** R's friends with a birthday today, in the world's time zone. */
+  private List<Views.Actor> birthdays(long worldTime) {
+    String user = userId();
+    if (user == null) return List.of();
+    var zone = sql.queryOne("SELECT timezone FROM world", List.of(), r -> java.time.ZoneId.of(r.str("timezone"))).orElse(java.time.ZoneOffset.UTC);
+    var today = java.time.Instant.ofEpochMilli(worldTime).atZone(zone).toLocalDate();
+    String day = String.format("%%-%02d-%02d", today.getMonthValue(), today.getDayOfMonth());
+    return sql.query("SELECT a.id FROM relationship r JOIN actor a ON a.id = r.to_id WHERE r.from_id = ? AND r.connected = 1 AND a.birth_date LIKE ? ORDER BY a.display_name",
+        List.of(user, day), r -> r.str("id")).stream().map(this::actor).toList();
   }
 
   private List<Views.Post> posts(List<String[]> rows) {

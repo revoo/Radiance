@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import {
   type InfiniteData,
   type QueryClient,
@@ -110,6 +111,12 @@ export function useCameras() {
     staleTime: 60_000,
     refetchInterval: 2 * 60_000,
   });
+}
+
+/** Who's around right now, for the green dots. */
+export function useOnline(): Set<string> {
+  const online = useRail().data?.online;
+  return useMemo(() => new Set(online), [online]);
 }
 
 export function useRail() {

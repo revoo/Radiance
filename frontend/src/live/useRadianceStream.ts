@@ -37,6 +37,7 @@ export function applyEvent(qc: QueryClient, name: string, d: Data, refresh = ref
   switch (name) {
     case "world.changed":
       // the clock moved or stopped: anything on screen may be out of date
+      if (typeof d.worldTime === "number") live.setClock(d.worldTime, Boolean(d.paused));
       void qc.invalidateQueries();
       break;
     case "friend.changed":

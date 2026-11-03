@@ -26,11 +26,22 @@ public final class Presence {
   }
 
   /** Hour weights for {@code p} on {@code d}, with R's prime hours boosted. */
+  private static final long AROUND_FOR = 20 * 60_000L;
+
   public static double[] curve(Person p, LocalDate d, Set<Integer> primeHours, double boost) {
     var base = p.routine.curve(weekend(d));
     var out = new double[24];
     for (int h = 0; h < 24; h++) out[h] = Math.max(0, base[h]) * (primeHours.contains(h) ? boost : 1);
     return out;
+  }
+
+  /** Is {@code p} around right now, for the green dot? Their routine decides, and it holds steady for twenty minutes at a time. */
+  public static boolean around(Person p, long t, ZoneId zone, long seed) {
+    if (p.user) return false;
+    var at = java.time.Instant.ofEpochMilli(t).atZone(zone);
+    double chance = curve(p, at.toLocalDate(), Set.of(), 1)[at.getHour()];
+    long bucket = t - Math.floorMod(t, AROUND_FOR);
+    return RandomSource.forActor(seed, p.id, bucket).derive("around").nextDouble() < Math.min(1, chance);
   }
 
   public static List<Session> sessions(Person p, LocalDate d, ZoneId zone, long seed, EngagementRules rules,

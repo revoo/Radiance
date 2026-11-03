@@ -1,5 +1,5 @@
 import { Play } from "lucide-react";
-import { worldNow } from "../live/store.ts";
+import { useWorldNow } from "../live/store.ts";
 import { Button, Card } from "../ui/kit.tsx";
 import { type Run, useBatch, useCosts, useRunBatch } from "./api.ts";
 import { Bar, human, Loading, Pill, Problem, pct, Section, span, TargetBars, Tile, usd, when } from "./ui.tsx";
@@ -29,10 +29,10 @@ function RunRow({ r }: { r: Run }) {
 export function BatchPanel() {
   const batch = useBatch();
   const run = useRunBatch();
+  const now = useWorldNow();
   if (batch.isPending) return <Loading what="the batch" />;
   if (batch.error) return <Problem error={batch.error} />;
   const b = batch.data;
-  const now = worldNow();
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">

@@ -1,7 +1,7 @@
 import { FileText, Search, UserRound } from "lucide-react";
 import { useState } from "react";
 import { Link, NavLink, useParams } from "react-router";
-import { worldNow } from "../live/store.ts";
+import { useWorldNow } from "../live/store.ts";
 import { Avatar, Card, Empty } from "../ui/kit.tsx";
 import { type Inspector as InspectorData, useInjectables, useInspector } from "./api.ts";
 import { field, human, Loading, Pill, Problem, Section, span, Spark } from "./ui.tsx";
@@ -41,7 +41,7 @@ function Raw({ title, value }: { title: string; value: unknown }) {
 }
 
 function Sheet({ d }: { d: InspectorData }) {
-  const now = worldNow();
+  const now = useWorldNow();
   return (
     <div className="space-y-3">
       <Card className="p-4 sm:p-5">
@@ -142,7 +142,7 @@ export function Residents() {
   const [q, setQ] = useState("");
   const list = (people.data?.residents ?? []).filter((p) => p.name.toLowerCase().includes(q.trim().toLowerCase()));
   return (
-    <div className="grid gap-3 lg:grid-cols-[250px_minmax(0,1fr)]">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-[250px_minmax(0,1fr)]">
       <Card className="p-2 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
         <label className="relative block p-1">
           <span className="sr-only">Find a resident</span>

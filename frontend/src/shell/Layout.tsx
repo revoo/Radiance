@@ -1,7 +1,7 @@
-import { Bell, Clapperboard, HeartHandshake, House, LogOut, MessageCircle, Monitor, Moon, Pause, ShieldAlert, Sun, Users, X } from "lucide-react";
+import { Bell, Cake, Clapperboard, HeartHandshake, House, LogOut, MessageCircle, Monitor, Moon, Pause, ShieldAlert, Sun, Users, X } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router";
-import { useBackups, useLogout, useMe, useNotifications, usePeople, useRail, useThreads, useWorld } from "../api/queries.ts";
+import { useBackups, useLogout, useMe, useNotifications, useOnline, usePeople, useRail, useThreads, useWorld } from "../api/queries.ts";
 import type { Actor } from "../api/types.ts";
 import { directorOn, isDirectorShortcut, setDirector, useDirector } from "../director/mode.ts";
 import { live, useLive, worldNow } from "../live/store.ts";
@@ -177,6 +177,11 @@ function AccountMenu({ me }: { me: Actor }) {
 function TopBar({ me, network }: { me: Actor; network: string }) {
   const unread = useNotifications().data?.unread ?? 0;
   const dms = useUnreadDms();
+  // the tab says when something's waiting, like the real thing
+  useEffect(() => {
+    const waiting = unread + dms;
+    document.title = waiting > 0 ? `(${waiting > 99 ? "99+" : waiting}) ${network}` : network;
+  }, [unread, dms, network]);
   return (
     <header className="fixed inset-x-0 top-0 z-40 h-16 border-b border-line bg-panel/85 backdrop-blur-xl">
       <div className="mx-auto flex h-full max-w-[1320px] items-center justify-between gap-3 px-4">
@@ -331,19 +336,33 @@ function WorldClock() {
 }
 
 function RightRail() {
-  const hasWeather = Boolean(useRail().data?.weather);
+  const rail = useRail().data;
+  const hasWeather = Boolean(rail?.weather);
   const friends = usePeople("friends");
+  const online = useOnline();
+  const birthdays = rail?.birthdays ?? [];
+  const contacts = [...(friends.data ?? [])].sort((a, b) => Number(online.has(b.id)) - Number(online.has(a.id)));
   return (
     <aside className="sticky top-20 hidden h-[calc(100vh-6rem)] w-72 shrink-0 flex-col gap-3 overflow-y-auto [scrollbar-width:thin] xl:flex">
       {hasWeather ? <WeatherCard /> : <WorldClock />}
+      {birthdays.length > 0 && (
+        <Card className="p-3">
+          <h2 className="flex items-center gap-2 text-sm font-bold"><Cake className="size-4 text-accent" aria-hidden="true" /> Birthdays today</h2>
+          <ul className="mt-1.5 space-y-1 text-sm">
+            {birthdays.map((a) => <li key={a.id}><Link to={`/people/${a.handle}`} className="font-semibold hover:underline">{a.name}</Link></li>)}
+          </ul>
+        </Card>
+      )}
       <TalkedAbout />
       <div className="min-h-32 flex-1 overflow-y-auto">
-        <h2 className="px-2 pb-2 text-sm font-bold text-muted">Contacts</h2>
+        <h2 className="flex items-baseline justify-between px-2 pb-2 text-sm font-bold text-muted">
+          Contacts {online.size > 0 && contacts.length > 0 && <span className="text-xs font-medium text-faint">{contacts.filter((a) => online.has(a.id)).length} around</span>}
+        </h2>
         <ul>
-          {(friends.data ?? []).map((a) => (
+          {contacts.map((a) => (
             <li key={a.id}>
               <Link to={`/people/${a.handle}`} className="flex items-center gap-3 rounded-xl px-2 py-1.5 transition hover:bg-panel">
-                <Avatar actor={a} size="sm" link={false} />
+                <Avatar actor={a} size="sm" link={false} online={online.has(a.id)} />
                 <span className="truncate text-[15px] font-medium">{a.name}</span>
               </Link>
             </li>

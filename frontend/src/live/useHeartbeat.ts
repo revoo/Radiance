@@ -19,7 +19,7 @@ export function useHeartbeat(enabled: boolean) {
       if (document.visibilityState !== "visible") return;
       try {
         const s = await api<Status>("/api/session/heartbeat", { method: "POST" });
-        live.setClockOffset(s.worldTime - Date.now());
+        live.setClock(s.worldTime, s.paused);
         live.setBackfilling(s.backfilling);
         // the background backfill finished: there's history to see behind the pill
         if (wasBackfilling && !s.backfilling) live.addNewPosts(1);

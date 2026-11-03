@@ -127,6 +127,8 @@ class DirectorPlayTests {
     String partner = engine.locked(w -> w.person(pair.a()).partnerId);
     assertThat(partner).as("the world changed, not just the feed").isNull();
     assertThat(incidents.couples()).as("they aren't a couple any more").doesNotContain(pair);
+    assertThat(count("SELECT COUNT(*) AS n FROM arc WHERE def_id = 'breakup_aftermath' AND status = 'ACTIVE'")).as("regression: each ex has their own aftermath; the second used to be dropped").isEqualTo(2);
+    assertThat(engine.recentDrops()).as("and nothing about it is refused").noneMatch(d -> d.reason().contains("breakup_aftermath"));
     assertThatThrownBy(() -> incidents.breakup(pair.a(), pair.b(), live.now())).isInstanceOf(Incidents.Refused.class);
   }
 
@@ -241,6 +243,31 @@ class DirectorPlayTests {
     live.fastForward(hours);
     assertThat(live.awaitIdle(Duration.ofSeconds(30))).isTrue();
     assertThat(backfills.get()).isPositive();
+  }
+
+  /** The green dots follow routines, and don't flicker from one look to the next. */
+  @Test
+  void whoIsAroundFollowsTheirRoutine_AndHoldsSteady() {
+    var zone = java.time.ZoneId.of("America/Chicago");
+    long day = java.time.LocalDate.of(2026, 11, 4).atStartOfDay(zone).toInstant().toEpochMilli();
+    int[] small = new int[1], evening = new int[1];
+    engine.locked(w -> {
+      for (var p : w.residents()) {
+        for (int i = 0; i < 60; i++) {
+          long at = day + i * 24 * HOUR;
+          if (app.radiance.sim.Presence.around(p, at + 4 * HOUR, zone, w.seed)) small[0]++;
+          if (app.radiance.sim.Presence.around(p, at + 20 * HOUR, zone, w.seed)) evening[0]++;
+        }
+      }
+      var someone = w.residents().getFirst();
+      long bucket = day + 20 * HOUR;
+      assertThat(app.radiance.sim.Presence.around(someone, bucket + 1_000, zone, w.seed))
+          .as("the same answer within twenty minutes").isEqualTo(app.radiance.sim.Presence.around(someone, bucket + 19 * 60_000, zone, w.seed));
+      assertThat(app.radiance.sim.Presence.around(w.person(w.userId), bucket, zone, w.seed)).as("R isn't a contact of his own").isFalse();
+      return null;
+    });
+    assertThat(evening[0]).as("evenings are busier than 4 am").isGreaterThan(small[0]);
+    assertThat(live.around()).isNotNull();
   }
 
   @Test

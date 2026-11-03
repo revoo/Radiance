@@ -1,5 +1,5 @@
 import { Activity, BookOpen, Clapperboard, Clock, Coins, FileText, Moon, Network, ScrollText, SlidersHorizontal, UserRound } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { NavLink, useParams } from "react-router";
 import { PacerPage } from "../pages/PacerPage.tsx";
 import { useTime } from "./api.ts";
@@ -40,6 +40,11 @@ function Now() {
 export function DirectorPage() {
   const { tab } = useParams();
   const current = TABS.find((t) => t.id === tab) ?? TABS[0]!;
+  const active = useRef<HTMLAnchorElement>(null);
+  // on a phone the tabs scroll sideways: keep the open one in view
+  useEffect(() => {
+    active.current?.scrollIntoView?.({ block: "nearest", inline: "center" });
+  }, [current.id]);
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2 px-1">
@@ -52,6 +57,7 @@ export function DirectorPage() {
         {TABS.map((t) => (
           <NavLink
             key={t.id}
+            ref={t.id === current.id ? active : undefined}
             to={`/director/${t.id}`}
             aria-current={t.id === current.id ? "page" : undefined}
             className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold transition ${

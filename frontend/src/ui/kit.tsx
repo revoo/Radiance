@@ -12,11 +12,13 @@ const SIZES = { xs: "size-6 text-[10px]", sm: "size-8 text-xs", md: "size-10 tex
  * A resident's (or R's) face: initials on a two-tone gradient drawn from their id, until M12 brings
  * real avatars. {@code ring} draws the brand gradient around it (R, or someone who's live right now).
  */
-export function Avatar({ actor, size = "md", ring = false, link = true }: {
+export function Avatar({ actor, size = "md", ring = false, link = true, online = false }: {
   actor: Pick<Actor, "id" | "name" | "handle"> & { avatarUrl?: string | null };
   size?: keyof typeof SIZES;
   ring?: boolean;
   link?: boolean;
+  /** Draws the green dot: they're around right now. */
+  online?: boolean;
 }) {
   const pulse = useLive((s) => s.pulses[actor.id]);
   const [broken, setBroken] = useState(false);
@@ -44,12 +46,22 @@ export function Avatar({ actor, size = "md", ring = false, link = true }: {
       )}
     </span>
   );
-  const body = ring ? (
+  const framed = ring ? (
     <span className="ring-brand inline-flex h-fit shrink-0 rounded-full">
       <span className="inline-flex rounded-full bg-panel p-[2px]">{face}</span>
     </span>
   ) : (
     face
+  );
+  const body = online ? (
+    <span className="relative inline-flex h-fit shrink-0">
+      {framed}
+      <span title="Around now" className="absolute bottom-0 right-0 size-2.5 rounded-full bg-good ring-2 ring-panel">
+        <span className="sr-only">Around now</span>
+      </span>
+    </span>
+  ) : (
+    framed
   );
   if (!link) return body;
   return (

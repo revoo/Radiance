@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Sun } from "lucide-react";
 import { Route, Routes } from "react-router";
 import { ApiError } from "./api/client.ts";
@@ -11,11 +12,10 @@ import { LoginPage } from "./pages/LoginPage.tsx";
 import { MessengerPage } from "./pages/MessengerPage.tsx";
 import { NotificationsPage } from "./pages/NotificationsPage.tsx";
 import { OnboardingPage } from "./pages/OnboardingPage.tsx";
-import { DirectorPage } from "./director/DirectorPage.tsx";
 import { PostPage } from "./pages/PostPage.tsx";
 import { ProfilePage } from "./pages/ProfilePage.tsx";
 import { Layout, Logo } from "./shell/Layout.tsx";
-import { Empty } from "./ui/kit.tsx";
+import { Empty, Skeleton } from "./ui/kit.tsx";
 
 function Splash() {
   return (
@@ -32,6 +32,17 @@ function Splash() {
  * Who R is decides what he sees: the login, onboarding (or a note to run genesis), or the network.
  * Signed in and onboarded, the stream and heartbeats keep the session live.
  */
+// the console stays out of the game's download until it's opened
+const DirectorPage = lazy(() => import("./director/DirectorPage.tsx").then((m) => ({ default: m.DirectorPage })));
+
+function Console() {
+  return (
+    <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+      <DirectorPage />
+    </Suspense>
+  );
+}
+
 export default function App() {
   const me = useMe();
   const ready = Boolean(me.data?.onboarded && me.data.actor);
@@ -70,9 +81,9 @@ export default function App() {
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/messages" element={<MessengerPage me={actor} />} />
         <Route path="/messages/:threadId" element={<MessengerPage me={actor} />} />
-        <Route path="/director" element={<DirectorPage />} />
-        <Route path="/director/:tab" element={<DirectorPage />} />
-        <Route path="/director/:tab/:sub" element={<DirectorPage />} />
+        <Route path="/director" element={<Console />} />
+        <Route path="/director/:tab" element={<Console />} />
+        <Route path="/director/:tab/:sub" element={<Console />} />
         <Route path="*" element={<FeedPage me={actor} />} />
       </Routes>
     </Layout>

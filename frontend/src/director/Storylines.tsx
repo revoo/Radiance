@@ -1,6 +1,6 @@
 import { ChevronDown, Lock, Search } from "lucide-react";
 import { useState } from "react";
-import { worldNow } from "../live/store.ts";
+import { useWorldNow } from "../live/store.ts";
 import { Avatar, Card, Empty, Segmented } from "../ui/kit.tsx";
 import { type ArcView, useArcEvents, useArcs } from "./api.ts";
 import { field, human, Loading, Pill, Problem, span, when } from "./ui.tsx";
@@ -90,9 +90,9 @@ export function Storylines() {
   const arcs = useArcs();
   const [status, setStatus] = useState<ArcView["status"]>("ACTIVE");
   const [q, setQ] = useState("");
+  const now = useWorldNow();
   if (arcs.isPending) return <Loading what="storylines" />;
   if (arcs.error) return <Problem error={arcs.error} />;
-  const now = worldNow();
   const needle = q.trim().toLowerCase();
   const shown = arcs.data.filter((a) => a.status === status).filter((a) =>
     !needle || a.defId.includes(needle) || a.summary.toLowerCase().includes(needle) || a.people.some((p) => p.name.toLowerCase().includes(needle)));

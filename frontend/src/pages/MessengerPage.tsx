@@ -2,6 +2,7 @@ import { ArrowLeft, MessagesSquare, Search, SendHorizontal, SquarePen } from "lu
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { useConversation, useMe, useOpenThread, usePeople, usePerson, useReadThread, useSendDm, useThreads } from "../api/queries.ts";
+import { useOnline } from "../api/queries.ts";
 import { LikeMeter } from "../ui/LikeMeter.tsx";
 import type { Actor, DmMessage, DmThread } from "../api/types.ts";
 import { live, useLive, useWorldNow } from "../live/store.ts";
@@ -24,6 +25,7 @@ function Dots() {
 
 function ThreadRow({ t, active }: { t: DmThread; active: boolean }) {
   const now = useWorldNow();
+  const online = useOnline();
   const typing = useLive((s) => s.typing[`dm:${t.id}`] ?? EMPTY).length > 0 || t.typing;
   const last = t.lastMessage;
   const unread = t.unread > 0;
@@ -33,7 +35,7 @@ function ThreadRow({ t, active }: { t: DmThread; active: boolean }) {
       aria-current={active ? "page" : undefined}
       className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 transition ${active ? "bg-accent-soft" : "hover:bg-panel-2"}`}
     >
-      <Avatar actor={t.with} size="lg" link={false} ring={typing} />
+      <Avatar actor={t.with} size="lg" link={false} ring={typing} online={online.has(t.with.id)} />
       <span className="min-w-0 flex-1">
         <span className={`block truncate text-[15px] ${unread ? "font-extrabold" : "font-semibold"}`}>{t.with.name}</span>
         <span className={`flex items-center gap-1 text-[13px] ${unread ? "font-semibold text-ink" : "text-muted"}`}>
@@ -184,6 +186,7 @@ function Chat({ threadId, me }: { threadId: string; me: Actor }) {
   const end = useRef<HTMLDivElement>(null);
   const box = useRef<HTMLTextAreaElement>(null);
   const messages = convo.data?.messages ?? EMPTY;
+  const online = useOnline();
   const typing = typingLive.length ? typingLive : (convo.data?.typing ?? EMPTY);
   const them = convo.data?.thread.with;
   const lastTheirs = [...messages].reverse().find((m) => !m.you)?.id;
@@ -238,7 +241,7 @@ function Chat({ threadId, me }: { threadId: string; me: Actor }) {
         <Link to="/messages" aria-label="Back to chats" className="rounded-full p-1.5 text-muted hover:bg-panel-2 md:hidden">
           <ArrowLeft className="size-5" />
         </Link>
-        <Avatar actor={them} size="md" ring={typing.length > 0} />
+        <Avatar actor={them} size="md" ring={typing.length > 0} online={online.has(them.id)} />
         <div className="min-w-0 leading-tight">
           <Link to={`/people/${them.handle}`} className="block truncate font-bold hover:underline">
             {them.name}
