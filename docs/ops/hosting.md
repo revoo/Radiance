@@ -113,7 +113,7 @@ played anything you'd miss (this deletes the world; keep a backup if unsure):
 
 ```bash
 docker compose stop
-mv data data.old && mkdir data
+mv data data.old && mkdir -p data/avatars && cp avatars-approved/*.jpg data/avatars/
 docker compose run --rm radiance genesis --seed 7 --authored --import
 docker compose up -d
 ```

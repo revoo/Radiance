@@ -1,6 +1,7 @@
 # Progress
 
 ## Resume here
+- **Ready for R's UAT (2026-11-03).** docs/v1-readiness.md is the validated checklist, with findings and known limits. The approved avatars are in `/opt/hosting/radiance/avatars-approved`, the source for `data/avatars` in any new world. R is the only user: no stakeholder deliverables.
 - **First real calls, 2026-11-03.** Bake-off on the server with a throwaway data dir: 10 threads, Haiku 5.5, $0.0044, all
   valid. Its fixtures come from `Simulation`, which has no persona rows, so their voice cards are blank: it proves the plumbing
   and the cost floor, not voice. One real FLUX image worked. Found and fixed: Workers AI answers 400 to `seed` (every picture
