@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ME, mockFetch } from "../test/render.tsx";
 import { Layout } from "../shell/Layout.tsx";
 import type { GraphEdge } from "./api.ts";
+import type { PacerStep } from "../api/types.ts";
+import { QueueTimeline } from "../pages/PacerPage.tsx";
 import { DirectorPage } from "./DirectorPage.tsx";
 import { filterTies, forceLayout, tieColor, tiesFrom, tieWidth } from "./layout.ts";
 import { directorOn, isDirectorShortcut, reloadDirector, setDirector } from "./mode.ts";
@@ -135,6 +137,22 @@ describe("ties", () => {
     expect(tieColor(250, "familiarity")).toContain(" 100%");
     expect(tieWidth(-100)).toBe(tieWidth(100));
     expect(tieWidth(100)).toBeGreaterThan(tieWidth(0));
+  });
+});
+
+describe("the pacing timeline", () => {
+  it("puts each step in its state's row, and only the last five minutes", () => {
+    const step = (state: PacerStep["state"], ago: number, kind: PacerStep["kind"] = "REACTION"): PacerStep => ({ at: NOW - ago, state, kind, actorId: "a" });
+    const { container } = render(
+      <QueueTimeline now={NOW} steps={[step("PLANNED", 1000), step("PLANNED", 2000, "COMMENT"), step("RELEASED", 500), step("HELD", 3000), step("DROPPED", 400), step("DROPPED", 10 * 60_000)]} />,
+    );
+    expect(screen.getByTestId("lane-PLANNED")).toHaveTextContent("2");
+    expect(screen.getByTestId("lane-RELEASED")).toHaveTextContent("1");
+    expect(screen.getByTestId("lane-HELD")).toHaveTextContent("1");
+    expect(screen.getByTestId("lane-DROPPED")).toHaveTextContent("1");
+    expect(screen.getByTestId("lane-BACKGROUND")).toHaveTextContent("0");
+    expect(container.querySelectorAll("rect")).toHaveLength(1);
+    expect(screen.getByRole("img")).toHaveAccessibleName(/2 planned, 1 held, 1 released, 1 dropped, 0 left to air later/);
   });
 });
 

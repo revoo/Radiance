@@ -173,4 +173,29 @@ class PacerTests {
     }
     return max;
   }
+
+  /** The monitor's timeline (SPEC §5.16): each response's way through the queue. */
+  @Test
+  void theMonitorSeesWhatHappensToEachResponse() {
+    var p = pacer(7);
+    long t0 = 1_000_000;
+    for (String post : List.of("a", "b", "c", "d")) p.plan(post, t0, crowd(post, 15, 10), true, false);
+    run(p, t0, t0 + 20 * 60_000);
+    var steps = p.snapshot(t0 + 20 * 60_000).steps();
+    var states = new java.util.HashMap<String, Integer>();
+    steps.forEach(x -> states.merge(x.state(), 1, Integer::sum));
+    assertThat(states.get("PLANNED")).as("planned").isPositive();
+    assertThat(states.get("RELEASED")).as("released").isPositive();
+    assertThat(states.get("HELD")).as("four posts at once hit the per-minute limits").isPositive();
+    assertThat(states.get("RELEASED") + states.getOrDefault("DROPPED", 0)).as("everything planned goes one way or the other").isEqualTo(states.get("PLANNED"));
+    assertThat(states.getOrDefault("BACKGROUND", 0) + states.get("PLANNED")).as("and nothing is lost").isEqualTo(100);
+    assertThat(steps).allSatisfy(x -> assertThat(x.actorId()).isNotBlank());
+  }
+
+  @Test
+  void theTimelineStaysBounded() {
+    var p = pacer(7);
+    for (int i = 0; i < 40; i++) p.plan("post" + i, 1_000_000L, crowd("post" + i, 30, 0), false, false);
+    assertThat(p.snapshot(1_000_000L).steps().size()).isLessThanOrEqualTo(400);
+  }
 }

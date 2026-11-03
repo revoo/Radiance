@@ -186,12 +186,15 @@ export type Onboard = {
   backstory: Backstory;
 };
 
+export type PacerStep = { at: number; state: "PLANNED" | "HELD" | "RELEASED" | "DROPPED" | "BACKGROUND"; kind: "REACTION" | "COMMENT"; actorId: string };
+
 export type PacerMonitor = {
   sessionId: string | null;
   sessionStartedAt: number | null;
   lastHeartbeat: number | null;
   typing: { key: string; postId: string; actorId: string; name: string; since: number }[];
   pacer: {
+    steps?: PacerStep[];
     now: number;
     pending: number;
     commentsLastMinute: number;

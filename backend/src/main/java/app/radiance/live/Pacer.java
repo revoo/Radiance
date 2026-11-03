@@ -44,7 +44,12 @@ public final class Pacer {
   /** The pacing monitor's view of the session. */
   public record Snapshot(long now, int pending, int commentsLastMinute, int reactionsLastMinute,
       int notificationsLastMinute, int maxCommentsPerMinute, int maxNotificationsPerMinute, Long breathingUntil,
-      Long lastSeen, Long lastHook, List<BurstStats> bursts) {}
+      Long lastSeen, Long lastHook, List<BurstStats> bursts, List<Step> steps) {}
+
+  /** One thing that happened to a planned response, for the monitor's timeline. */
+  public record Step(long at, String state, Kind kind, String actorId) {}
+
+  private static final int STEPS_KEPT = 400;
 
   private static final long MINUTE = 60_000L;
 
@@ -124,6 +129,7 @@ public final class Pacer {
         if (b.reply && !c.addressee() && b.pileOn >= maxPileOn) {
           unpaced.add(c.key());
           b.unpaced++;
+          step(start, "BACKGROUND", c);
           continue;
         }
         if (b.nextComment == Long.MIN_VALUE) {
@@ -136,12 +142,14 @@ public final class Pacer {
         if (at > tail) {
           unpaced.add(c.key());
           b.unpaced++;
+          step(start, "BACKGROUND", c);
           continue;
         }
         if (b.reply && !c.addressee()) b.pileOn++;
         b.nextComment = at;
       }
       pending.add(new Waiting(c, at, b));
+      step(start, "PLANNED", c);
     }
     return unpaced;
   }
@@ -169,10 +177,17 @@ public final class Pacer {
         pending.remove(w);
         out.add(w.c);
         released(w, now);
+        held.remove(w.c.key());
+        step(now, "RELEASED", w.c);
       } else if (w.c.kind() == Kind.REACTION && now - w.at > reactionHold) {
         pending.remove(w);
         w.burst.dropped++;
         droppedKeys.add(w.c.key());
+        held.remove(w.c.key());
+        step(now, "DROPPED", w.c);
+      } else if (held.add(w.c.key())) {
+        // its time came and the limits said wait
+        step(now, "HELD", w.c);
       }
     }
     maxCommentsPerMinute = Math.max(maxCommentsPerMinute, comments.inLastMinute(now));
@@ -180,6 +195,13 @@ public final class Pacer {
   }
 
   private final List<String> droppedKeys = new ArrayList<>();
+  private final java.util.ArrayDeque<Step> steps = new java.util.ArrayDeque<>();
+  private final java.util.Set<String> held = new java.util.HashSet<>();
+
+  private void step(long at, String state, Candidate c) {
+    steps.addLast(new Step(at, state, c.kind(), c.actorId()));
+    while (steps.size() > STEPS_KEPT) steps.removeFirst();
+  }
 
   /** Keys dropped since the last call (reactions held past the maximum hold). */
   public List<String> dropped() {
@@ -308,7 +330,7 @@ public final class Pacer {
     return new Snapshot(now, pending.size(), comments.inLastMinute(now), reactions.inLastMinute(now),
         notifications.inLastMinute(now), maxCommentsPerMinute, maxNotificationsPerMinute,
         breathingUntil > now ? breathingUntil : null, lastSeen == Long.MIN_VALUE ? null : lastSeen,
-        lastHook == Long.MIN_VALUE ? null : lastHook, stats);
+        lastHook == Long.MIN_VALUE ? null : lastHook, stats, List.copyOf(steps));
   }
 
   public BurstStats burst(String trigger) {

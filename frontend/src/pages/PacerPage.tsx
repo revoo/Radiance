@@ -1,5 +1,6 @@
 import { Activity, Gauge, Hourglass, Zap } from "lucide-react";
 import { usePacer } from "../api/queries.ts";
+import type { PacerStep } from "../api/types.ts";
 import { Card, Empty } from "../ui/kit.tsx";
 
 function Meter({ label, value, limit, icon }: { label: string; value: number; limit: number; icon: React.ReactNode }) {
@@ -18,6 +19,54 @@ function Meter({ label, value, limit, icon }: { label: string; value: number; li
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-panel-2">
         <div className={`h-full rounded-full transition-all duration-500 ${hot ? "bg-bad" : "bg-brand"}`} style={{ width: `${pct}%` }} />
       </div>
+    </Card>
+  );
+}
+
+const LANES: { state: PacerStep["state"]; label: string }[] = [
+  { state: "PLANNED", label: "Planned" },
+  { state: "HELD", label: "Held" },
+  { state: "RELEASED", label: "Released" },
+  { state: "DROPPED", label: "Dropped" },
+  { state: "BACKGROUND", label: "Left to air later" },
+];
+const WINDOW = 5 * 60_000;
+
+/** The queue over the last five minutes, one row per state: a dot for a reaction, a square for a comment. */
+export function QueueTimeline({ steps, now }: { steps: PacerStep[]; now: number }) {
+  const w = 640, left = 116, row = 26;
+  const x = (at: number) => left + ((at - (now - WINDOW)) / WINDOW) * (w - left - 34);
+  const recent = steps.filter((s) => s.at >= now - WINDOW);
+  return (
+    <Card className="p-4">
+      <h3 className="text-sm font-bold">The queue, last five minutes</h3>
+      <svg viewBox={`0 0 ${w} ${row * LANES.length + 18}`} className="mt-2 block h-auto w-full" role="img" aria-label={`Pacer queue: ${LANES.map((l) => `${recent.filter((s) => s.state === l.state).length} ${l.label.toLowerCase()}`).join(", ")}`}>
+        {LANES.map((l, i) => {
+          const y = row * i + row / 2;
+          const inLane = recent.filter((s) => s.state === l.state);
+          return (
+            <g key={l.state}>
+              <text x={0} y={y + 4} fontSize={11} fill="var(--muted)">{l.label}</text>
+              <line x1={left} x2={w - 34} y1={y} y2={y} stroke="var(--line)" />
+              <text x={w} y={y + 4} fontSize={11} textAnchor="end" fill="var(--ink)" data-testid={`lane-${l.state}`}>{inLane.length}</text>
+              {inLane.map((s, n) => {
+                const title = <title>{`${l.label}: ${s.kind.toLowerCase()}, ${Math.round((now - s.at) / 1000)} s ago`}</title>;
+                return s.kind === "COMMENT" ? (
+                  <rect key={n} x={x(s.at) - 4} y={y - 4} width={8} height={8} rx={2} fill="var(--viz-pos)" stroke="var(--panel)" strokeWidth={1.5}>{title}</rect>
+                ) : (
+                  <circle key={n} cx={x(s.at)} cy={y} r={3.5} fill="var(--viz-pos)" stroke="var(--panel)" strokeWidth={1.5}>{title}</circle>
+                );
+              })}
+            </g>
+          );
+        })}
+        <text x={left} y={row * LANES.length + 14} fontSize={10} fill="var(--faint)">5 min ago</text>
+        <text x={w - 34} y={row * LANES.length + 14} fontSize={10} fill="var(--faint)" textAnchor="end">now</text>
+      </svg>
+      <p className="mt-1 flex gap-4 text-xs text-muted">
+        <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-[var(--viz-pos)]" /> Reaction</span>
+        <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-[var(--viz-pos)]" /> Comment</span>
+      </p>
     </Card>
   );
 }
@@ -66,6 +115,7 @@ export function PacerPage() {
               </p>
             </Card>
           </div>
+          <QueueTimeline steps={p.steps ?? []} now={p.now} />
           <Card className="overflow-x-auto">
             <table className="w-full min-w-[560px] whitespace-nowrap text-left text-sm">
               <thead className="border-b border-line text-xs uppercase tracking-wider text-muted">
