@@ -321,6 +321,22 @@ class MessengerTests {
     assertThat(packet.content()).contains("message number 74").contains("message number 45").doesNotContain("message number 44:");
   }
 
+  /** Regression, and a spoiler: Tim's reply to R carried on from his own message scripted for the next day. */
+  @Test
+  void aReplyDoesntSeeWhatItsAuthorIsScriptedToSayTomorrow() {
+    var someone = residents().get(4);
+    String thread = actions.thread(someone);
+    String me = engine.world().userId;
+    long t = db.clock.nowMs();
+    db.commit(new UnitOfWork()
+        .add("INSERT INTO dm_message (id, thread_id, sender_id, created_at, air_status, body, render_status, brief_json) VALUES ('a', ?, ?, ?, 'AIRED', 'where do you get a glove', 'RENDERED', '{}')", thread, me, t - 1_000)
+        .add("INSERT INTO dm_message (id, thread_id, sender_id, created_at, air_status, body, render_status, brief_json) VALUES ('b', ?, ?, ?, 'SCRIPTED', NULL, 'PLANNED', '{}')", thread, someone, t + 1_000)
+        .add("INSERT INTO dm_message (id, thread_id, sender_id, created_at, air_status, body, render_status, brief_json) VALUES ('c', ?, ?, ?, 'SCRIPTED', 'got a minute about my job', 'RENDERED', '{}')", thread, someone, t + 86_400_000L));
+    var packet = new ContextPacketBuilder(db.sql, LivePlayTests.LIB, "Radiance", engine.world())
+        .dms(thread, LivePlayTests.gateway(null).budgetFor(app.radiance.llm.Purpose.RENDER_DM));
+    assertThat(packet.content()).contains("where do you get a glove").doesNotContain("got a minute about my job");
+  }
+
   @Test
   void summariesComeDueEveryThirtyMessagesPastSixty() {
     assertThat(Maintenance.dmSummaryDue(60, 0)).isFalse();

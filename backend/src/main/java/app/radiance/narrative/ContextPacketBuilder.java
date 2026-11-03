@@ -157,7 +157,9 @@ public final class ContextPacketBuilder {
       authors.add(c.authorId());
       if (b.toward() != null) authors.add(b.toward());
     }
-    var threadText = threadSoFar(post, comments);
+    // nothing scripted for later: a reply mustn't see what hasn't been said yet
+    long until = targets.values().stream().mapToLong(Target::time).max().orElse(Long.MAX_VALUE);
+    var threadText = threadSoFar(post, comments.stream().filter(c -> c.body() == null || c.createdAt() <= until).toList());
     String content = fill("render-thread", today(t, post.headlineId(), authors), people(authors, t, budget),
         canon(authors, t), threadText, briefsJson(briefs, targets, authors));
     content = trim(content, budget);
@@ -177,13 +179,16 @@ public final class ContextPacketBuilder {
     var convo = new StringBuilder();
     long t = dms.isEmpty() ? world.time : dms.getFirst().createdAt();
     // the last 30 messages, with older ones summarized (SPEC §5.11)
-    var written = dms.stream().filter(m -> m.body() != null).toList();
+    // nothing scripted for later: Tim answered R by carrying on from his own message due the next day
+    long until = dms.stream().filter(m -> m.body() == null && !m.airStatus().name().equals("DROPPED")).mapToLong(m -> m.createdAt()).max().orElse(Long.MAX_VALUE);
+    var written = dms.stream().filter(m -> m.body() != null && m.createdAt() <= until).toList();
     var recent = new java.util.HashSet<>(written.subList(Math.max(0, written.size() - HISTORY), written.size()));
     if (thread.summary() != null && written.size() > HISTORY) {
       convo.append("(earlier: ").append(thread.summary()).append(")\n");
     }
     for (var m : dms) {
       if (m.body() != null) {
+        if (m.createdAt() > until) continue;
         if (recent.contains(m)) convo.append(handle(m.senderId())).append(": ").append(m.body()).append('\n');
         t = m.createdAt();
       } else if (!m.airStatus().name().equals("DROPPED")) {
