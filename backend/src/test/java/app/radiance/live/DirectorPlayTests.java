@@ -108,6 +108,9 @@ class DirectorPlayTests {
     var script = incidents.breakup(pair.a(), pair.b(), live.now());
     assertThat(script.posts).as("someone says something").isNotEmpty();
     assertThat(script.reactions).as("friends notice").isNotEmpty();
+    // Regression: Ryan commented "Sarah I love you!! Proud of you" on the post about their breakup.
+    assertThat(script.comments).noneMatch(c -> c.authorId().equals(pair.a()) || c.authorId().equals(pair.b()));
+    assertThat(script.reactions).noneMatch(r -> r.actorId().equals(pair.a()) || r.actorId().equals(pair.b()));
     assertThat(script.events).allMatch(e -> e.source() == app.radiance.story.EventRow.Source.DIRECTOR);
     String post = script.posts.getFirst().id();
     assertThat(count("SELECT COUNT(*) AS n FROM post WHERE id = ?", post)).as("nothing is there yet").isZero();

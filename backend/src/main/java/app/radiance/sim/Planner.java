@@ -497,6 +497,7 @@ final class Planner {
       if (i.status == app.radiance.kernel.AirStatus.DROPPED || i.reactors.contains(b.id) || i.commenters.contains(b.id)) continue;
       var e = w.edgeOrNull(b.id, i.authorId);
       if (!i.publicAudience && (e == null || !e.connected)) continue;
+      if (e != null && e.tags.contains("avoiding")) continue;
       feed.add(i);
     }
     feed.sort((x, y) -> Double.compare(rank(w, b, y, s.start()), rank(w, b, x, s.start())));

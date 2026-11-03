@@ -119,7 +119,8 @@ public final class Incidents {
         if (arc == null) throw new Refused("Couldn't find what's between them");
       }
       ArcEngine.jump(plan, arc, def, "breakup", at);
-      fallout(plan, now);
+      // the ex doesn't turn up to console anyone on the breakup post
+      fallout(plan, now, java.util.Set.of(a.id, b.id));
       return directed(plan.script);
     });
   }
@@ -147,6 +148,10 @@ public final class Incidents {
 
   /** People close to whoever posted notice: reactions and comments spread over the next hours, closest first. */
   private void fallout(Plan plan, long now) {
+    fallout(plan, now, java.util.Set.of());
+  }
+
+  private void fallout(Plan plan, long now, java.util.Set<String> apart) {
     var lib = engine.lib();
     var k = engine.knobs();
     var w = plan.w;
@@ -155,7 +160,7 @@ public final class Incidents {
       var item = ModelStore.postItem(post);
       var rng = RandomSource.seeded(w.seed).derive("fallout:" + post.id());
       var author = w.person(post.authorId());
-      var around = new ArrayList<>(w.residents().stream().filter(b -> !b.id.equals(author.id)).filter(b -> {
+      var around = new ArrayList<>(w.residents().stream().filter(b -> !b.id.equals(author.id) && !apart.contains(b.id)).filter(b -> {
         var e = w.edgeOrNull(b.id, author.id);
         return e != null && e.connected;
       }).toList());

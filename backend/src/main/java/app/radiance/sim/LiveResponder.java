@@ -158,7 +158,7 @@ public final class LiveResponder {
       if (id.equals(comment.toward)) {
         // R answering a comment on his own post usually closes the exchange; on theirs, it opens one
         boolean onHisPost = post.authorId.equals(user.id);
-        double p = (onHisPost ? 0.08 : 0.25) + 0.3 * Math.max(0, aff) / 100
+        double p = (onHisPost ? 0.08 : 0.4) + 0.3 * Math.max(0, aff) / 100
             + (Airing.CLASH.contains(comment.stance) ? 0.25 : 0)
             + ("QUESTION".equals(comment.stance) || "FLIRT".equals(comment.stance) ? 0.3 : 0);
         if (rng.chance(Math.min(0.85, p))) {
