@@ -15,10 +15,17 @@
 - **M12 Media and M13 Director's console done** (ADR 0021, ADR 0022), see "M13 steps" below. R's direction for the final stretch: finish M13, test thoroughly, polish, merge and deploy without pausing at milestones.
 - For real pictures, `CF_AI_API_TOKEN` still has to go in the server `.env` (`docs/ops/hosting.md`, "Pictures").
 - Next: **R's acceptance test of V1** on a fresh world with real LLM keys (`docs/ops/hosting.md`, "Real prose"). Real prose, real vision and the M2 live contract tests have never run: they need a key.
-- Live on the server at 048356d (2026-11-02): M11, the rail, the cameras. Real feeds and weather confirmed there: 128 real
-  headlines, classified by the placeholder until an LLM key goes in; 96 real weather hours.
-- To check next time: the batch's new script window (09:00 planning a full day, 11:00 planning 0); the first `meter_snapshot`
-  rows; the first scheduled backup upload; and that the camera tile shows when logged in on the live site.
+- Live on the server at ca45575 (2026-11-03): everything through M13. Real feeds and weather confirmed there earlier: 128 real
+  headlines, classified by the placeholder until an LLM key goes in; 96 real weather hours. Checked after this deploy without
+  logging in: health, security headers, every console endpoint refusing anonymous requests, migration 0007, no errors in the log.
+  Logged-in use of the live site (photos through R2, the console) hasn't been tried there; I don't have R's password. The same
+  build was checked by hand locally, served by the backend as in production.
+- For R to decide: the domain is proxied by Cloudflare, whose Web Analytics injects a beacon script. The new content security
+  policy (`WebSecurityConfig.CSP`) blocks it, so those analytics stop reporting and the console logs one harmless error. To keep
+  them, allow `https://static.cloudflareinsights.com` in `script-src` and `https://cloudflareinsights.com` in `connect-src`.
+- To check next time (the first chance is 2026-11-03, 08:30 and 09:00 UTC): the batch's new script window (09:00 planning a full
+  day, 11:00 planning 0); the first `meter_snapshot` rows, now with mood; the first scheduled backup upload; the first generated
+  placeholder pictures reaching R2; and that the camera tile shows when logged in on the live site.
 - Half-done: nothing.
 - The live world is a test world, and R will nuke it: acceptance testing comes later, with real LLM keys, on a
   fresh world (`docs/ops/hosting.md`, "Real prose"). The declarative `hosting` repo is deferred until R asks.
