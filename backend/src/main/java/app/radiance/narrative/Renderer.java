@@ -188,7 +188,7 @@ public final class Renderer {
     String gist = item.gist() == null ? null : item.gist().strip();
     switch (t.type()) {
       case "POST" -> {
-        uow.add("UPDATE post SET body = ?, render_status = 'RENDERED' WHERE id = ? AND body IS NULL", text, t.id());
+        uow.add("UPDATE post SET body = ?, gist = ?, render_status = 'RENDERED' WHERE id = ? AND body IS NULL", text, gist, t.id());
         if (t.recap() && t.eventId() != null && item.recapLine() != null && !item.recapLine().isBlank()) {
           uow.add("UPDATE event SET recap_line = ? WHERE id = ?", item.recapLine().strip(), t.eventId());
         }

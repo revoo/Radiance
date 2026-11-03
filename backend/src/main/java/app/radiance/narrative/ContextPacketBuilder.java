@@ -295,6 +295,8 @@ public final class ContextPacketBuilder {
       return sb.toString();
     }
     sb.append('\n');
+    String looks = Json.tree(personas.get(p.id).identityJson()).path("appearance").asString("");
+    if (!looks.isBlank()) sb.append("Looks: ").append(looks.split(";")[0]).append(".\n");
     var v = voice(p.id);
     sb.append("Voice: ").append(v.path("lengthBand").asString("").toLowerCase()).append(" posts; emoji ")
         .append(v.path("emojiLevel").asString("").toLowerCase()).append("; casing ").append(v.path("casing").asString("").toLowerCase())

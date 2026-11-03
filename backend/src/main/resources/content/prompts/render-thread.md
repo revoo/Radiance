@@ -34,7 +34,9 @@ Keep it true:
 For every brief return one item with:
 - `briefId`: the brief's id, exactly once each.
 - `text`: the post, comment or message itself — nothing around it.
-- `gist`: what happened, in 15 words or fewer, plain and neutral ("Jake mocked Jesse's new car").
+- `gist`: what happened, in 15 words or fewer, plain and neutral ("Jake mocked Jesse's new car"). For a photo
+  post, instead: what the camera sees, in one plain sentence ("salmon and broccoli on a sheet pan on a stove").
+  Usually that's the thing, not the person. If someone's in it, describe how they look; never name them.
 - `recapLine`: if the brief's `recapLine` is true, one gossipy line a friend would text about it;
   otherwise an empty string.
 - `introducedFacts`: each with the person's @handle as `subject`: any new detail you made up about a person or their things that later posts should

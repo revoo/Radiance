@@ -202,7 +202,7 @@ public final class ImageWork {
       var post = social.post(id).orElse(null);
       if (post == null) continue;
       String sky = weather.at(post.createdAt()).map(WeatherHour::describe).orElse(null);
-      var photo = PhotoPrompts.of(w, lib, post.id(), post.authorId(), post.arcId(), Brief.parse(post.briefJson()), sky, post.body(), lookOf(post.authorId()));
+      var photo = PhotoPrompts.of(w, lib, post.id(), post.authorId(), post.arcId(), Brief.parse(post.briefJson()), sky, seenIn(post.id()));
       if (photo.isEmpty()) continue;
       var existing = post.mediaId() == null ? null : repo.byId(post.mediaId()).orElse(null);
       var row = existing != null ? existing : pending("PHOTO", photo.get().prompt(), photo.get().seed(), photo.get().entityId());
@@ -232,9 +232,8 @@ public final class ImageWork {
 
   private enum Outcome { DONE, QUOTA, FAILED }
 
-  private String lookOf(String actorId) {
-    return sql.queryOne("SELECT identity_json FROM persona WHERE actor_id = ?", List.of(actorId), r -> r.str("identity_json"))
-        .map(j -> Json.tree(j).path("appearance").asString("")).orElse("");
+  private String seenIn(String postId) {
+    return sql.queryOne("SELECT COALESCE(gist, '') AS gist FROM post WHERE id = ?", List.of(postId), r -> r.str("gist")).orElse(null);
   }
 
   /** The better model if this picture deserves it and there's room, or null: it never holds a picture up. */

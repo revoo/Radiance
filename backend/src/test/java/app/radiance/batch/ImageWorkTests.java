@@ -148,15 +148,18 @@ class ImageWorkTests {
     assertThat(new LocalFileMediaStore(dir.resolve("media")).get(avatarOf(person.id)[0]).orElseThrow()).isEqualTo(next);
   }
 
-  /** Regression: Kristen wrote about salmon and the generic prompt gave her eggs. */
+  /**
+   * Regressions: Kristen wrote about salmon and the generic prompt gave her eggs; then, given the post's own words, the models
+   * painted them across the picture.
+   */
   @Test
-  void aPhotoShowsWhatItsWrittenPostSays() {
+  void aPhotoShowsWhatTheWriterSaysTheCameraSees_NeverThePostItself() {
     photoPost("p", 3, null, Fidelity.FULL, "a meal on a table, natural light");
-    db.commit(new UnitOfWork().add("UPDATE post SET body = ? WHERE id = ?", "Salmon and broccoli off the sheet pan, thanks @jake.zielinski", "p"));
+    db.commit(new UnitOfWork().add("UPDATE post SET body = ?, gist = ? WHERE id = ?", "Friends!! Dinner was actually good 💕", "salmon and broccoli on a sheet pan.", "p"));
     var stub = new Stub();
     run(stub, 12, 9000);
-    String prompt = stub.prompts.stream().filter(x -> x.contains("Salmon")).findFirst().orElseThrow();
-    assertThat(prompt).contains("Salmon and broccoli off the sheet pan, thanks a friend").doesNotContain("a meal on a table", "@jake");
+    String prompt = stub.prompts.stream().filter(x -> x.contains("salmon")).findFirst().orElseThrow();
+    assertThat(prompt).contains("salmon and broccoli on a sheet pan").doesNotContain("a meal on a table", "Friends!!");
     // Regression: asked for "the photo with this caption", FLUX 3 painted the caption across the picture.
     assertThat(prompt).doesNotContain("caption");
   }
@@ -187,17 +190,6 @@ class ImageWorkTests {
     assertThat(mediaStatus("saw")).isEqualTo("READY");
     assertThat(better.prompts).anyMatch(x -> x.contains("a table saw"));
     assertThat(report.failed()).isZero();
-  }
-
-  /** Regression: Lisa's anniversary photo showed a woman who looked nothing like her avatar. */
-  @Test
-  void aPhotoKnowsWhatItsPosterLooksLike() {
-    photoPost("p", 3, null, Fidelity.FULL, "a dinner out");
-    db.commit(new UnitOfWork().add("UPDATE post SET body = ? WHERE id = ?", "26 years today, dinner on Harlem", "p"));
-    db.commit(new UnitOfWork().add("UPDATE persona SET identity_json = ? WHERE actor_id = ?", "{\"appearance\":\"tall, a frosted blonde bob; usually in a kitchen\"}", author));
-    var stub = new Stub();
-    run(stub, 12, 9000);
-    assertThat(stub.prompts).anyMatch(x -> x.contains("26 years today") && x.contains("a frosted blonde bob") && !x.contains("usually in a kitchen"));
   }
 
   @Test
