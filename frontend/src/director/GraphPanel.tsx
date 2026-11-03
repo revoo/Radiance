@@ -134,7 +134,16 @@ export function GraphPanel() {
               const near = !focus || n.id === focus || shown.some((t) => (t.a === focus && t.b === n.id) || (t.b === focus && t.a === n.id));
               const r = n.you ? 16 : 12;
               return (
-                <g key={n.id} opacity={near ? 1 : 0.25} className="cursor-pointer" role="button" aria-label={n.name} onClick={() => setFocus(focus === n.id ? null : n.id)}>
+                <g
+                  key={n.id} opacity={near ? 1 : 0.25} className="cursor-pointer" role="button" tabIndex={0} aria-label={n.name} aria-pressed={n.id === focus}
+                  onClick={() => setFocus(focus === n.id ? null : n.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setFocus(focus === n.id ? null : n.id);
+                    }
+                  }}
+                >
                   <circle cx={p.x} cy={p.y} r={r} fill={n.you ? "var(--accent)" : "var(--panel-2)"} stroke={n.id === focus ? "var(--accent)" : "var(--panel)"} strokeWidth={2} />
                   <text x={p.x} y={p.y + 3.5} textAnchor="middle" fontSize={10} fontWeight={700} fill={n.you ? "#fff" : "var(--ink)"}>
                     {n.name.split(" ").map((x) => x[0]).slice(0, 2).join("")}

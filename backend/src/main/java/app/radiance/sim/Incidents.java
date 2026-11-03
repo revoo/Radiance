@@ -52,6 +52,7 @@ public final class Incidents {
 
   /** Fires one event def for {@code actor}, with {@code other} as its other party if it has one. */
   public Script event(String defId, String actor, String other, long now) {
+    if (defId == null) throw new Refused("Which event?");
     return engine.locked(w -> {
       var def = engine.lib().events().get(defId);
       if (def == null) throw new Refused("No event called " + defId);
@@ -73,6 +74,7 @@ public final class Incidents {
 
   /** Starts an arc at its first phase. */
   public Script arc(String defId, String subject, String other, long now) {
+    if (defId == null) throw new Refused("Which storyline?");
     return engine.locked(w -> {
       var arcDef = engine.lib().arcs().get(defId);
       if (arcDef == null) throw new Refused("No arc called " + defId);

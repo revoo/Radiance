@@ -366,7 +366,7 @@ describe("the panels", () => {
     fireEvent.click(container.querySelector('[data-testid="tie"]')!);
     expect(await screen.findByText("Old friends")).toBeInTheDocument();
     expect(screen.getByText("argument")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Jess Park" }));
+    fireEvent.keyDown(screen.getByRole("button", { name: "Jess Park" }), { key: "Enter" });
     expect(await screen.findByRole("link", { name: "Open in the inspector" })).toHaveAttribute("href", "/director/residents/jess.park");
     fireEvent.change(screen.getByRole("combobox", { name: "Color by" }), { target: { value: "trust" } });
     expect(screen.getByText("A lot")).toBeInTheDocument();

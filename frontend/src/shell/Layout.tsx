@@ -467,18 +467,18 @@ function BackupBanner() {
 export function Layout({ me, network, children }: { me: Actor; network: string; children: ReactNode }) {
   const { pathname } = useLocation();
   const wide = pathname.startsWith("/messages");
-  const console = pathname.startsWith("/director");
+  const directing = pathname.startsWith("/director");
   useDirectorShortcut();
   return (
     <div className="min-h-screen pb-20 pt-16 sm:pb-8">
       <TopBar me={me} network={network} />
       <div className="mx-auto flex max-w-[1320px] gap-6 px-3 pt-4 sm:px-4">
-        {!console && <LeftRail me={me} />}
-        <main className={`mx-auto w-full min-w-0 flex-1 space-y-4 ${console ? "max-w-[1280px]" : wide ? "max-w-[980px]" : "max-w-[640px]"}`}>
+        {!directing && <LeftRail me={me} />}
+        <main className={`mx-auto w-full min-w-0 flex-1 space-y-4 ${directing ? "max-w-[1280px]" : wide ? "max-w-[980px]" : "max-w-[640px]"}`}>
           <BackupBanner />
           <BackfillBanner />
           <PausedBanner />
-          {!wide && !console && (
+          {!wide && !directing && (
             <div className="xl:hidden">
               <WeatherChip />
             </div>
@@ -486,7 +486,7 @@ export function Layout({ me, network, children }: { me: Actor; network: string; 
           {children}
           <WeatherCredit />
         </main>
-        {!wide && !console && <RightRail />}
+        {!wide && !directing && <RightRail />}
       </div>
       <BottomTabs me={me} />
       <Toasts />

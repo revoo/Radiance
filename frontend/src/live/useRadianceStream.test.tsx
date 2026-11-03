@@ -2,7 +2,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { keys } from "../api/queries.ts";
-import { live } from "./store.ts";
+import { live , worldNow } from "./store.ts";
 import { applyEvent, useRadianceStream } from "./useRadianceStream.ts";
 import { QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -93,5 +93,22 @@ describe("meter.changed", () => {
     expect(spy).toHaveBeenCalledWith({ queryKey: keys.relationships });
     applyEvent(qc, "meter.changed", { actorId: "a", value: 15, delta: 3, pulse: true });
     expect(live.get().pulses.a?.delta).toBe(3);
+  });
+});
+
+describe("the world's clock", () => {
+  it("follows a fast-forward or a pause at once, and holds while paused", () => {
+    const qc = new QueryClient();
+    const invalidate = vi.spyOn(qc, "invalidateQueries");
+    const ahead = Date.now() + 6 * 3_600_000;
+    applyEvent(qc, "world.changed", { worldTime: ahead, paused: false });
+    expect(invalidate).toHaveBeenCalled();
+    expect(Math.abs(worldNow() - ahead)).toBeLessThan(2_000);
+
+    applyEvent(qc, "world.changed", { worldTime: ahead, paused: true });
+    expect(worldNow()).toBe(ahead);
+
+    live.setClock(Date.now(), false);
+    expect(Math.abs(worldNow() - Date.now())).toBeLessThan(2_000);
   });
 });

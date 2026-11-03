@@ -241,6 +241,7 @@ public class DirectorSettings implements SmartInitializingSingleton {
         } catch (RuntimeException x) {
           throw new Invalid("Route " + e.getKey() + " needs a model and a list of fallbacks");
         }
+        if (overrides.get(e.getKey()).model() == null) throw new Invalid("Route " + e.getKey() + " needs a model");
       }
     }
     try {

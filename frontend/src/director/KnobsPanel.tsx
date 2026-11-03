@@ -65,11 +65,11 @@ function Numbers({ s }: { s: Settings }) {
           <label key={k} className="block text-sm">
             <span className="flex justify-between gap-2">
               <span className="text-muted">{LABELS[k] ?? k}</span>
-              <span className="tabular-nums font-semibold">{value(k)}</span>
+              <span className="tabular-nums font-semibold">{Number(value(k).toFixed(2))}</span>
             </span>
             <input
               type="range" aria-label={LABELS[k] ?? k} min={r.min} max={r.max} step={r.whole ? 1 : (r.max - r.min) / 100}
-              value={value(k)} onChange={(e) => setDraft({ ...draft, [k]: Number(e.target.value) })} className="mt-1 w-full accent-[var(--accent)]"
+              value={value(k)} onChange={(e) => setDraft({ ...draft, [k]: Number(Number(e.target.value).toFixed(3)) })} className="mt-1 w-full accent-[var(--accent)]"
             />
           </label>
         ))}

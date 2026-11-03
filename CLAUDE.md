@@ -29,7 +29,8 @@ Source of truth: SPEC.md. Status: PROGRESS.md. Decisions: docs/adr/.
 - Simulation harness: `./gradlew simulate --args='--days=30 --seed=42'`
 - Model bake-off: `./gradlew llm-bakeoff --args='--purpose=render-thread --models=haiku,<candidate>'`
 - Live LLM contract tests (opt-in, costs cents; keys from env or .env): `./gradlew :backend:liveTest`
-- Frontend: `npm run dev` · `npm test` · `npm run build`
+- Frontend: `npm run dev` · `npm test` · `npm run lint` · `npm run build` (types: `npx tsc -b`, not `-p .`, which checks nothing)
+- Browser smoke test: `npm run e2e` in `frontend` (`PW_CHANNEL=msedge` uses an installed browser; ports 5173 and 8080 must be free)
 
 ## Conventions
 - Package by feature; the domain core is plain Java (no Spring, no I/O).

@@ -142,7 +142,10 @@ class DirectorApiTests {
     mvc.perform(post("/api/director/time/fast-forward?hours=0").with(R).with(csrf())).andExpect(status().isBadRequest());
     mvc.perform(post("/api/director/inject").with(R).with(csrf()).contentType(MediaType.APPLICATION_JSON)
         .content("{\"kind\":\"BREAKUP\",\"actor\":\"" + a + "\",\"other\":\"" + b + "\"}")).andExpect(status().isBadRequest());
-    mvc.perform(post("/api/director/inject").with(R).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"kind\":\"NOPE\"}")).andExpect(status().isBadRequest());
+    for (String bad : List.of("{\"kind\":\"NOPE\"}", "{}", "{\"kind\":\"EVENT\",\"actor\":\"" + a + "\"}", "{\"kind\":\"ARC\",\"actor\":\"" + a + "\"}", "{\"kind\":\"BREAKUP\"}",
+        "{\"kind\":\"EVENT\",\"defId\":\"nope\",\"actor\":\"" + a + "\"}")) {
+      mvc.perform(post("/api/director/inject").with(R).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(bad)).andExpect(status().isBadRequest());
+    }
   }
 
   @Test
@@ -157,7 +160,7 @@ class DirectorApiTests {
     double defaultTemptation = Knobs.defaults().temptation();
     for (String bad : List.of("{\"knobs\":{\"dramaIntensity\":99}}", "{\"knobs\":{\"nope\":1}}", "{\"knobs\":{\"profile\":\"WILD\"}}", "{\"knobs\":{\"maxDramaPerDay\":1.5}}",
         "{\"knobs\":{\"regionMix\":{\"LOCAL\":1}}}", "{\"knobs\":{\"regionMix\":{\"LOCAL\":0,\"NATIONAL\":0,\"WORLD\":0}}}", "{\"nope\":1}", "{\"imagesPerDay\":-1}", "{\"budgets\":{\"dailyUsd\":-1}}",
-        "{\"routes\":{\"render-thread\":{\"model\":\"no-such-model\"}}}", "{\"blacklist\":[\"no_such_arc\"]}", "{\"pacing\":{\"responseCurve\":null}}",
+        "{\"routes\":{\"render-thread\":{\"model\":\"no-such-model\"}}}", "{\"routes\":{\"render-thread\":{\"fallback\":[]}}}", "{\"routes\":{\"render-thread\":5}}", "{\"blacklist\":[\"no_such_arc\"]}", "{\"pacing\":{\"responseCurve\":null}}",
         "{\"knobs\":{\"temptation\":2},\"imagesPerDay\":-1}")) {
       put_(bad).andExpect(status().isBadRequest());
     }
@@ -219,9 +222,12 @@ class DirectorApiTests {
   void aBatchCanBeRunFromTheConsole_WithItsOwnSpendingWindow() throws Exception {
     mvc.perform(post("/api/director/batch/run").with(R).with(csrf())).andExpect(status().isAccepted());
     long end = System.nanoTime() + Duration.ofSeconds(60).toNanos();
+    boolean windowOpened = false;
     while (System.nanoTime() < end && (batch.isRunning() || sql.queryOne("SELECT COUNT(*) AS n FROM batch_run WHERE kind = 'MANUAL' AND status <> 'RUNNING'", List.of(), r -> r.lng("n")).orElse(0L) == 0)) {
-      Thread.sleep(50);
+      windowOpened |= llm.windows().stream().anyMatch(w -> w.id().equals("usd:batch"));
+      Thread.sleep(2);
     }
+    assertThat(windowOpened).as("regression: nothing opened usd:batch, so the per-batch limit never applied").isTrue();
     var view = read("/api/director/batch");
     assertThat(view.get("running").asBoolean()).isFalse();
     assertThat(view.get("runs").get(0).get("kind").asString()).isEqualTo("MANUAL");
