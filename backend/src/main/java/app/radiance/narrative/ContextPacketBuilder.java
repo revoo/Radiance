@@ -206,6 +206,9 @@ public final class ContextPacketBuilder {
     }
     String last = null;
     java.time.LocalDate day = null;
+    var sentPhotos = new HashMap<String, String>();
+    sql.query("SELECT id, gist FROM dm_message WHERE thread_id = ? AND media_id IS NOT NULL AND gist IS NOT NULL", List.of(threadId), r -> new String[] {r.str("id"), r.str("gist")})
+        .forEach(x -> sentPhotos.put(x[0], x[1]));
     for (var m : dms) {
       if (m.body() != null) {
         if (m.createdAt() > until) continue;
@@ -214,7 +217,10 @@ public final class ContextPacketBuilder {
           var said = world.date(m.createdAt());
           if (!said.equals(day)) convo.append("-- ").append(said.format(DAY_MARKER)).append(" --\n");
           day = said;
-          convo.append(handle(m.senderId())).append(": ").append(m.body()).append('\n');
+          convo.append(handle(m.senderId())).append(": ").append(m.body());
+          // they know what they sent: "lol look at it" has to make sense two texts later
+          if (sentPhotos.containsKey(m.id())) convo.append(" (sent a photo: ").append(sentPhotos.get(m.id())).append(')');
+          convo.append('\n');
         }
         t = m.createdAt();
         last = m.body();

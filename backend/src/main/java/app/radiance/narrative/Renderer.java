@@ -214,8 +214,8 @@ public final class Renderer {
             + " AND c.air_status = 'AIRED' AND c.render_status = 'RENDERED') WHERE id = (SELECT post_id FROM comment WHERE id = ?)",
             t.id());
       }
-      case "DM" -> uow.add("UPDATE dm_message SET body = ?, render_status = 'RENDERED' WHERE id = ? AND body IS NULL",
-          text, t.id());
+      case "DM" -> uow.add("UPDATE dm_message SET body = ?, gist = ?, render_status = 'RENDERED' WHERE id = ? AND body IS NULL",
+          text, gist, t.id());
       default -> { }
     }
     facts(uow, t, item);

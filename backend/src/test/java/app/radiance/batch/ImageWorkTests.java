@@ -179,6 +179,47 @@ class ImageWorkTests {
     assertThat(everyday.prompts).anyMatch(x -> x.contains("a plain meal")).noneMatch(x -> x.contains("a big lasting moment"));
   }
 
+  private static final app.radiance.sim.PhotoPrompts.Photo ONLINE = new app.radiance.sim.PhotoPrompts.Photo("a tile saw in a mess", 1, null);
+
+  /** R's direction: online pictures use the free model, with one in five from the premium one, chosen by the caller. */
+  @Test
+  void onlineAPictureUsesTheModelItWasAsked() {
+    var everyday = new Stub();
+    var better = new Stub();
+    var images = work(everyday, 12, 9000).withPremium(new app.radiance.media.PremiumImages(better, 100));
+    var attached = new java.util.ArrayList<String>();
+    assertThat(images.online(ONLINE, false, m -> attached.add(m.id()))).isTrue();
+    assertThat(everyday.prompts).hasSize(1);
+    assertThat(better.prompts).isEmpty();
+    assertThat(images.online(ONLINE, true, m -> attached.add(m.id()))).isTrue();
+    assertThat(better.prompts).hasSize(1);
+    assertThat(everyday.prompts).hasSize(1);
+    assertThat(attached).hasSize(2);
+  }
+
+  /** "Paid images stay capped": out of free neurons online, it's just text, and FLUX 3 isn't quietly spent. */
+  @Test
+  void onlineAFreePictureNeverQuietlyBecomesAPaidOne() {
+    var everyday = new Stub();
+    everyday.allowance = 0;
+    var better = new Stub();
+    var images = work(everyday, 12, 9000).withPremium(new app.radiance.media.PremiumImages(better, 100));
+    assertThat(images.online(ONLINE, false, m -> {})).isFalse();
+    assertThat(better.prompts).isEmpty();
+  }
+
+  /** The night's batch keeps what it needs: online stops short of the budget by that much. */
+  @Test
+  void onlineLeavesTheBatchItsShareOfFreeNeurons() {
+    var everyday = new Stub();
+    // room for 12 images a night and one more
+    int each = work(everyday, 12, 9000).limits().neuronsPerImage();
+    var images = work(everyday, 12, 13 * each);
+    assertThat(images.online(ONLINE, false, m -> {})).isTrue();
+    assertThat(images.online(ONLINE, false, m -> {})).as("what's left is the batch's").isFalse();
+    assertThat(everyday.prompts).hasSize(1);
+  }
+
   /** Found in a real run: with the day's free neurons gone, the photos just waited though FLUX 3 had credit. */
   @Test
   void outOfFreeNeurons_APictureUsesThePremiumModelIfThereIsRoom() {

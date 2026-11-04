@@ -24,7 +24,7 @@ import java.util.TreeMap;
  */
 public final class Chatter {
 
-  public enum Kind { POST, COMMENT, REPLY, ARGUMENT, LATE_REPLY, TYPO, TYPING, TAKE_BACK, TAG, OFFLINE, WRONG_CHAT, AWKWARD, PULLED_IN, ASKED_FIRST, TALKED_ABOUT, GOSSIP, QUOTED, NEIGHBORHOOD, SAVED_SEAT, PASS }
+  public enum Kind { POST, COMMENT, REPLY, ARGUMENT, LATE_REPLY, TYPO, TYPING, TAKE_BACK, TAG, OFFLINE, WRONG_CHAT, AWKWARD, PULLED_IN, ASKED_FIRST, TALKED_ABOUT, GOSSIP, QUOTED, NEIGHBORHOOD, SAVED_SEAT, DM_PHOTO, PASS }
 
   /** One turn: what to air, and for a bit of typing that comes to nothing, who and where. */
   public record Beat(Kind kind, Script script, String typingActor, String typingPost, String takeBack) {
@@ -75,12 +75,17 @@ public final class Chatter {
   private static final Map<Kind, Long> REST = Map.ofEntries(Map.entry(Kind.ARGUMENT, 6 * MIN), Map.entry(Kind.LATE_REPLY, 20 * MIN), Map.entry(Kind.TYPO, 7 * MIN),
       Map.entry(Kind.TYPING, 5 * MIN), Map.entry(Kind.TAKE_BACK, 25 * MIN), Map.entry(Kind.POST, 3 * MIN), Map.entry(Kind.TAG, 10 * MIN), Map.entry(Kind.OFFLINE, 15 * MIN),
       Map.entry(Kind.WRONG_CHAT, 25 * MIN), Map.entry(Kind.AWKWARD, 20 * MIN), Map.entry(Kind.PULLED_IN, 90 * MIN), Map.entry(Kind.ASKED_FIRST, 3 * HOUR),
-      Map.entry(Kind.TALKED_ABOUT, 2 * HOUR), Map.entry(Kind.GOSSIP, 6 * HOUR), Map.entry(Kind.QUOTED, 4 * HOUR), Map.entry(Kind.NEIGHBORHOOD, 4 * HOUR), Map.entry(Kind.SAVED_SEAT, 8 * HOUR));
+      Map.entry(Kind.TALKED_ABOUT, 2 * HOUR), Map.entry(Kind.GOSSIP, 6 * HOUR), Map.entry(Kind.QUOTED, 4 * HOUR), Map.entry(Kind.NEIGHBORHOOD, 4 * HOUR), Map.entry(Kind.SAVED_SEAT, 8 * HOUR), Map.entry(Kind.DM_PHOTO, 45 * MIN));
   /** The share of turns that try for something out of the ordinary, when one has rested long enough. */
   private static final double SOMETHING_SPECIAL = 0.22;
   private static final java.util.Set<String> FEED_TEXTURE = java.util.Set.of("borrow_something", "who_knows_a_guy", "meme_post", "throwback", "locked_out");
   private static final long PERSON_RESTS = 3 * MIN;
   private static final double GOSSIP_FAN = 55, GOSSIP_COOL = 5;
+  /** R's direction: one post in three while he's online has a picture. */
+  static final double PHOTO_SHARE = 1.0 / 3;
+  /** A picture takes longer than words: time to write it, draw it, and still land on time. */
+  private static final long PHOTO_LEAD = 25_000;
+  private static final double CLOSE_ENOUGH_FOR_PHOTOS = 45;
   /** A thread burns out: past this many in a session it goes quiet, and the room talks about something else. */
   private static final int THREAD_BURNS_OUT = 7;
   private static final long RECENT_POSTS = 18 * HOUR;
@@ -155,7 +160,7 @@ public final class Chatter {
 
   /** Something out of the ordinary, whichever has rested long enough and has what it needs right now. */
   private Beat special(List<Person> around) {
-    var kinds = new ArrayList<>(List.of(Kind.WRONG_CHAT, Kind.AWKWARD, Kind.PULLED_IN, Kind.ASKED_FIRST, Kind.TALKED_ABOUT, Kind.GOSSIP, Kind.QUOTED, Kind.NEIGHBORHOOD, Kind.SAVED_SEAT));
+    var kinds = new ArrayList<>(List.of(Kind.WRONG_CHAT, Kind.AWKWARD, Kind.PULLED_IN, Kind.ASKED_FIRST, Kind.TALKED_ABOUT, Kind.GOSSIP, Kind.QUOTED, Kind.NEIGHBORHOOD, Kind.SAVED_SEAT, Kind.DM_PHOTO));
     for (int i = kinds.size() - 1; i > 0; i--) java.util.Collections.swap(kinds, i, rng.nextInt(i + 1));
     for (var kind : kinds) {
       if (!rested(kind)) continue;
@@ -169,6 +174,7 @@ public final class Chatter {
         case QUOTED -> quoted(around);
         case NEIGHBORHOOD -> neighborhood();
         case SAVED_SEAT -> savedSeat(around);
+        case DM_PHOTO -> dmPhoto(around);
         default -> null;
       };
       if (beat != null) return beat;
@@ -249,7 +255,7 @@ public final class Chatter {
 
   // --------------------------------------------------------------------------------------------- beats
 
-  private Beat post(List<Person> around) {
+  Beat post(List<Person> around) {
     var a = around.get(rng.nextInt(around.size()));
     LocalDate date = w.date(now);
     var triggers = app.radiance.world.Calendar.triggers(date);
@@ -257,15 +263,17 @@ public final class Chatter {
     for (int i = defs.size() - 1; i > 0; i--) java.util.Collections.swap(defs, i, rng.nextInt(i + 1));
     // life admin and the feed's odds and ends come up more than a shuffle would give them
     if (rng.chance(0.35)) defs.sort(Comparator.comparing((EventDef d) -> !FEED_TEXTURE.contains(d.id())));
+    boolean photo = rng.chance(PHOTO_SHARE);
     for (EventDef def : defs) {
       if (!EVERYDAY.contains(def.category()) || !Planner.posts(def)) continue;
+      if ((def.output().post() == app.radiance.content.Vocab.PostOutput.PHOTO) != photo) continue;
       if (def.trigger() != null && def.trigger().headline() != null) continue;
       if (!Planner.calendarAllows(def, a, date, triggers, w)) continue;
       if (!Eligibility.holds(def, a, w, lib, null, now)) continue;
       if (Planner.onCooldown(w, a, def, now) || Planner.someoneJustDid(w, def, now)) continue;
       var participants = planner.participants(plan, def, a, date, rng);
       if (participants == null) continue;
-      planner.fire(plan, def, a, participants, lands);
+      planner.fire(plan, def, a, participants, photo ? lands + PHOTO_LEAD : lands);
       used(Kind.POST, a.id);
       return Beat.of(Kind.POST, plan.script);
     }
@@ -629,6 +637,21 @@ public final class Chatter {
             : "they live elsewhere in the city, so all they know is what this post says; they aren't there and don't claim to know that street"));
     used(Kind.COMMENT, b.id);
     return Beat.of(Kind.COMMENT, plan.script);
+  }
+
+  /** A close friend sends a picture of what they're dealing with right now. */
+  Beat dmPhoto(List<Person> around) {
+    var b = pick(around, x -> {
+      var e = w.edgeOrNull(x.id, w.userId);
+      return e != null && e.connected && e.affinity >= CLOSE_ENOUGH_FOR_PHOTOS;
+    });
+    if (b == null) return null;
+    var extra = new java.util.LinkedHashMap<String, Object>(Plan.extra("beat", "dmPhoto"));
+    extra.put("media", "an amateur smartphone photo of the mess or the thing they're dealing with right now");
+    plan.dm("chatter-dm-photo:" + b.id + ":" + now, lands + PHOTO_LEAD, b.id, w.userId, new Brief(null, "DM",
+        "sends R a photo of the mess or the thing they're dealing with right now, with a short line to go with it, like look at this", Stance.JOKE.name(), w.userId, "dm_warm", List.of(), 0, 0, extra));
+    used(Kind.DM_PHOTO, b.id);
+    return Beat.of(Kind.DM_PHOTO, plan.script);
   }
 
   /** A friend asks who's in for tonight and counts R in. Just the invite: nothing follows up. */

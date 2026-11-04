@@ -113,6 +113,13 @@ public final class LivePlay {
   /** When each moment last happened, across sessions: logging back in doesn't make it new. */
   private final Map<app.radiance.sim.Chatter.Kind, Long> chatterRests = new java.util.HashMap<>();
 
+  /** Pictures while R is online: null where none are set up. */
+  private OnlinePictures pictures;
+  /** DMs waiting on their picture, once their words are written. */
+  private final Map<String, String> dmPictures = new java.util.concurrent.ConcurrentHashMap<>();
+  /** The share of pictures that use the better model, to keep things interesting. */
+  private static final double PREMIUM_SHARE = 0.2;
+
   /** The pacing rules for the next session; the Director can change them. */
   private volatile app.radiance.content.Rules.PacingRules pacing;
   private final WallClock clock;
@@ -206,6 +213,11 @@ public final class LivePlay {
   }
 
   /** Turns on hourly news and weather during sessions. */
+  public LivePlay withPictures(OnlinePictures pictures) {
+    this.pictures = pictures;
+    return this;
+  }
+
   public LivePlay withChatter() {
     chatterOn = true;
     return this;
@@ -657,6 +669,27 @@ public final class LivePlay {
   }
 
   /** Renders the live responses on {@code postId} now, on a virtual thread, one render per post at a time. */
+  /** A photo post: its words first, since those say what the camera sees, then its picture. It airs as text if there's none. */
+  private void renderWithPicture(String postId, boolean better) {
+    background("live-picture", () -> {
+      var lock = renderLocks.computeIfAbsent(postId, k -> new ReentrantLock());
+      lock.lock();
+      try {
+        new Renderer(sql, lane, lib, gateway, engine.world(), networkName, softening, Priority.LIVE).renderThread(postId);
+      } catch (RuntimeException e) {
+        log.warn("Live render failed for post {}: {}", postId, e.toString());
+        return;
+      } finally {
+        lock.unlock();
+      }
+      try {
+        if (pictures.post(postId, better)) emit("media.ready", Map.of("postId", postId));
+      } catch (RuntimeException e) {
+        log.warn("No picture for post {}: {}", postId, e.toString());
+      }
+    });
+  }
+
   private void render(String postId) {
     background("live-render", () -> {
       var lock = renderLocks.computeIfAbsent(postId, k -> new ReentrantLock());
@@ -936,7 +969,12 @@ public final class LivePlay {
       long lead = draw(rules.lead());
       var beat = actions.chatter(chatterState, t, t + lead, sessionRng);
       actions.save(beat.script());
-      if (!beat.script().dms.isEmpty()) queueDms(beat.script(), wall, false);
+      if (!beat.script().dms.isEmpty()) {
+        for (var dm : beat.script().dms) {
+          if (app.radiance.sim.Brief.parse(dm.briefJson()).extra().get("media") != null) dmPictures.put(dm.id(), dm.threadId());
+        }
+        queueDms(beat.script(), wall, false);
+      }
       long dots = draw(rules.typing());
       if (beat.takeBack() != null) {
         String taken = beat.takeBack();
@@ -950,8 +988,11 @@ public final class LivePlay {
         chatterSlots.add(new ChatterSlot("COMMENT:" + c.id(), "COMMENT:" + c.id(), c.postId(), c.authorId(), name(c.authorId()), lands - dots, lands));
       }
       var posts = new LinkedHashSet<String>();
-      beat.script().posts.forEach(p -> posts.add(p.id()));
       beat.script().comments.forEach(c -> posts.add(c.postId()));
+      for (var p : beat.script().posts) {
+        if (p.kind() == app.radiance.social.PostRow.Kind.PHOTO && pictures != null) renderWithPicture(p.id(), sessionRng.chance(PREMIUM_SHARE));
+        else posts.add(p.id());
+      }
       posts.forEach(this::render);
     }
     for (var it = chatterSlots.iterator(); it.hasNext(); ) {
@@ -1118,6 +1159,18 @@ public final class LivePlay {
         wake.offer(true);
       }
       summarizeIfDue(threadId);
+      dmPictures.forEach((id, thread) -> {
+        if (!thread.equals(threadId) || pictures == null) return;
+        dmPictures.remove(id);
+        background("live-dm-picture", () -> {
+          try {
+            boolean better = RandomSource.seeded(id.hashCode()).chance(PREMIUM_SHARE);
+            if (pictures.dm(id, better)) emit("media.ready", Map.of("threadId", threadId));
+          } catch (RuntimeException e) {
+            log.warn("No picture for DM {}: {}", id, e.toString());
+          }
+        });
+      });
     });
   }
 

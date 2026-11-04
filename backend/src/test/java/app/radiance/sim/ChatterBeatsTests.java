@@ -143,6 +143,34 @@ class ChatterBeatsTests {
     }
   }
 
+  /** R's direction: one post in three online has a picture, and a close friend sometimes sends one. */
+  @Test
+  void aboutOneOnlinePostInThreeIsAPhoto_AndAPhotoInADmComesFromSomeoneClose() {
+    try (var sim = new Simulation(Simulation.Options.of(7, 2, Persona.WARM, dir)).run()) {
+      var w = sim.engine.world();
+      var friends = friends(w);
+      int photos = 0, posts = 0;
+      for (long seed = 0; seed < 300; seed++) {
+        var plan = new Plan[1];
+        var beat = chatter(sim, w, plan, List.of(), seed).post(friends);
+        if (beat == null) continue;
+        posts++;
+        if (beat.script().posts.getFirst().kind() == app.radiance.social.PostRow.Kind.PHOTO) photos++;
+      }
+      assertThat(posts).isGreaterThan(100);
+      assertThat((double) photos / posts).isBetween(0.2, 0.45);
+
+      var close = friends.getFirst();
+      w.edge(close.id, w.userId).affinity = 80;
+      var plan = new Plan[1];
+      var dm = chatter(sim, w, plan, List.of(), 1).dmPhoto(List.of(close));
+      assertThat(dm).isNotNull();
+      assertThat(Brief.parse(dm.script().dms.getFirst().briefJson()).extra()).containsKey("media");
+      w.edge(close.id, w.userId).affinity = 10;
+      assertThat(chatter(sim, w, plan, List.of(), 1).dmPhoto(List.of(close))).as("not close enough").isNull();
+    }
+  }
+
   /** Regression: Daniel, across the city, had "lived off Elston for 9 years" because a post about Elston said to notice it too. */
   @Test
   void neighborsOnTheSameBlockNoticeIt_ButTheRestOfChicagoOnlyKnowsWhatThePostSays() {

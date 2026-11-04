@@ -33,13 +33,18 @@ class FakeEventSource {
 }
 
 describe("applyEvent", () => {
-  it("puts new posts behind the pill instead of refetching the feed", () => {
-    const qc = new QueryClient();
-    const invalidate = vi.spyOn(qc, "invalidateQueries");
-    applyEvent(qc, "feed.new", { count: 2 });
-    applyEvent(qc, "feed.new", { count: 1 });
-    expect(live.get().newPosts).toBe(3);
-    expect(invalidate).not.toHaveBeenCalled();
+  /** Regression: new posts waited behind a pill, so the feed looked frozen until R clicked it. */
+  it("brings new posts in by themselves, with a pill only for someone reading further down", async () => {
+    const qcAuto = new QueryClient();
+    const spy = vi.spyOn(qcAuto, "invalidateQueries");
+    applyEvent(qcAuto, "feed.new", { count: 2 });
+    expect(spy).toHaveBeenCalledWith({ queryKey: ["feed"] });
+    expect(live.get().newPosts).toBe(0);
+    vi.stubGlobal("scrollY", 900);
+    applyEvent(qcAuto, "feed.new", { count: 2 });
+    expect(live.get().newPosts).toBe(2);
+    vi.unstubAllGlobals();
+    live.reset();
   });
 
   it("refreshes the post and its thread when a comment lands", () => {
@@ -76,6 +81,7 @@ describe("useRadianceStream", () => {
     const { unmount } = renderHook(() => useRadianceStream(true), { wrapper });
     const source = FakeEventSource.last!;
     expect(source.url).toBe("/api/stream");
+    vi.stubGlobal("scrollY", 900);
     act(() => source.emit("feed.new", { count: 4 }));
     expect(live.get().newPosts).toBe(4);
     unmount();

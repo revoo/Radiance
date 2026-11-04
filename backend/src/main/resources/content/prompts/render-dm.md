@@ -48,6 +48,9 @@ Keep it true:
   cold, and nobody goes to or watches a team that's off season.
 - A photo post's text is the caption they typed. Never describe the photo itself.
 
+A brief with `media` is a photo they're sending: `text` is what they type with it, and `gist` says what the camera sees, in one plain
+sentence ("tile dust all over a half-finished kitchen floor"). If someone's in it, describe how they look; never name them.
+
 For every brief return one item with `briefId`, `text`, a neutral `gist` of 15 words or fewer, an empty
 `recapLine`, and `introducedFacts` (small details, always including every newly named person and how they're
 related; mark life-changing ones `major`, and don't make those up). Return JSON matching the schema.

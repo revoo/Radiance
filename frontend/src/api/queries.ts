@@ -140,7 +140,7 @@ export function useFeed(mode: FeedMode) {
       api<Page<Post>>(`/api/feed?mode=${mode}&limit=20${pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : ""}`),
     initialPageParam: "",
     getNextPageParam: (last) => last.nextCursor ?? undefined,
-    // new posts wait behind the pill; they never shift the feed under R (SPEC §5.8)
+    // the stream refetches when a post lands (SPEC section 5.8); nothing else needs to
     staleTime: Infinity,
     refetchOnWindowFocus: false,
   });

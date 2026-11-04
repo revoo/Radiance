@@ -42,7 +42,7 @@ A single-player social network called **Radiance**. Thirty simulated residents o
 
 - **Must hold.** The last few minutes make sense. Residents respond to what was actually said, don't repeat themselves, and don't contradict the same conversation. Private things stay private (§5.6).
 - **Good enough.** Stable facts like names, pets, jobs and family mostly stick. A small detail wrong weeks later is fine: real friends forget things too.
-- **The batch and the session have different jobs.** The batch writes what happened while R was gone, so the world feels like it moved on. While he's on, residents post and talk more, generated live at a reasonable rate, starting the moment he logs in.
+- **Online and offline have different jobs.** Offline, the batch writes what happened while R was gone, so the world feels like it moved on. Online, while he's on, residents post and talk more, generated live at a reasonable rate, starting the moment he logs in, and new posts come into the feed by themselves. One online post in three has a picture and close friends sometimes send one in a DM, from the free model, with one in five from the premium one.
 - **Frozen.** No new work or tuning on arcs, and no more long soaks to validate them. What works stays. An arc that causes a bug gets cut, not fixed (`arc-blacklist`, §5.5).
 - **Focus.** Depth of character: what they want, what they're insecure about, what they're afraid of, and how that colors what they say. The rhythm of the community: residents talking to each other, threads that catch fire or die, activity that rises and falls through the day.
 

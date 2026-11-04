@@ -35,6 +35,8 @@ export function PostCard({ post, me, expanded = false }: { post: Post; me: Actor
   const temp = post.id.startsWith("temp-");
   const landing = useLanding(post.id, post.createdAt, NEW_POST_MS);
   const sparks = useSparks(landing && post.author.you);
+  // only near the top: further down, moving things would shift what they're reading
+  const [slidesIn] = useState(() => window.scrollY < 300);
   const short = post.body.length <= 85 && !post.body.includes("\n");
   const shown = open && comments.data ? comments.data : post.preview;
   const hidden = Math.max(0, post.commentCount - shown.reduce((n, c) => n + 1 + c.replies.length, 0));
@@ -45,7 +47,7 @@ export function PostCard({ post, me, expanded = false }: { post: Post; me: Actor
   };
 
   return (
-    <Card className={`animate-rise relative overflow-visible ${temp ? "opacity-70" : ""} ${landing ? (post.author.you ? "halo halo-you" : "halo") : ""}`}>
+    <Card className={`animate-rise relative overflow-visible ${temp ? "opacity-70" : ""} ${landing ? (post.author.you ? "halo halo-you" : `halo ${slidesIn ? "feed-in" : ""}`) : ""}`}>
       {sparks && <Sparks count={12} />}
       <article aria-label={`Post by ${post.author.name}`}>
         <header className="flex items-center gap-3 px-4 pt-4">

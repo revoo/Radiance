@@ -2,8 +2,8 @@ import { ArrowUp } from "lucide-react";
 import { live, useLive } from "../live/store.ts";
 
 /**
- * "N new posts" (SPEC §5.8): posts that air during a session wait here instead of shifting the feed
- * under R. Clicking scrolls to the top and loads them.
+ * "N new posts" (SPEC §5.8): new posts come into the feed by themselves. Someone reading further down
+ * keeps their place, and this takes them back up to see.
  */
 export function NewPostsPill({ onShow }: { onShow: () => void }) {
   const n = useLive((s) => s.newPosts);

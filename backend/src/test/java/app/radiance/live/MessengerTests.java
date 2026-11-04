@@ -493,6 +493,20 @@ class MessengerTests {
     assertThat(content).containsPattern("ost a tooth *\\([A-Z][a-z]{2} \\d+\\)");
   }
 
+  /** "lol look at it" has to make sense two texts later: they know what they sent, and it stays in this chat. */
+  @Test
+  void whoSentAPhotoKnowsWhatWasInIt() {
+    var someone = residents().get(4);
+    String thread = actions.thread(someone);
+    long t = db.clock.nowMs();
+    db.commit(new UnitOfWork()
+        .add("INSERT INTO dm_message (id, thread_id, sender_id, created_at, air_status, body, render_status, brief_json, media_id, gist) VALUES ('a', ?, ?, ?, 'AIRED', 'look at this', 'RENDERED', '{}', 'm1', 'tile dust on a kitchen floor')", thread, someone, t - 1_000)
+        .add("INSERT INTO dm_message (id, thread_id, sender_id, created_at, air_status, body, render_status, brief_json) VALUES ('b', ?, ?, ?, 'SCRIPTED', NULL, 'PLANNED', '{}')", thread, someone, t + 1_000));
+    var packet = new ContextPacketBuilder(db.sql, LivePlayTests.LIB, "Radiance", engine.world())
+        .dms(thread, LivePlayTests.gateway(null).budgetFor(app.radiance.llm.Purpose.RENDER_DM));
+    assertThat(packet.content()).contains("look at this (sent a photo: tile dust on a kitchen floor)");
+  }
+
   /** Regression: Daniel's "respectfully" spread to Sarah, Hannah and Nick. */
   @Test
   void aPhraseFromSomeoneElsesCardIsCaught_AndTheirOwnOrShortSlangIsnt() {

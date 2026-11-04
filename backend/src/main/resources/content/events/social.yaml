@@ -92,3 +92,12 @@
   importance: 1
   tags: [ humor ]
   output: { post: STATUS, brief: "a joke in a format people repost, in plain text only, the kind you'd share without comment. Their sense of humor, not a description of an image" }
+
+- id: funny_picture
+  category: SOCIAL
+  base_rate: 0.008
+  cooldown_days: 7
+  importance: 1
+  tags: [ humor ]
+  output: { post: PHOTO, brief: "a funny picture they're sharing, on whatever's going around today, with a few words of their own",
+            media: "a funny everyday absurdity, the kind of picture that gets passed around" }

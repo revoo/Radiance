@@ -230,6 +230,7 @@ export type DmMessage = {
   body: string;
   createdAt: number;
   readAt: number | null;
+  media?: Media | null;
 };
 
 export type DmThread = { id: string; with: Actor; lastMessage: DmMessage | null; unread: number; typing: boolean };

@@ -7,6 +7,7 @@ import { LikeMeter } from "../ui/LikeMeter.tsx";
 import type { Actor, DmMessage, DmThread } from "../api/types.ts";
 import { live, useLive, useWorldNow } from "../live/store.ts";
 import { emojiOnly, fullTime, relativeTime } from "../ui/format.ts";
+import { PostPhoto } from "../feed/PostPhoto.tsx";
 import { Avatar, Empty, Modal, Skeleton } from "../ui/kit.tsx";
 
 const EMPTY: never[] = [];
@@ -170,6 +171,11 @@ function Bubble({ m, first, last, them, fresh }: { m: DmMessage; first: boolean;
               } ${m.id.startsWith("temp-") ? "opacity-70" : ""}`
         }
       >
+        {m.media && (
+          <div className="-mx-2 -mt-0.5 mb-1.5 w-64 max-w-full overflow-hidden rounded-2xl" data-testid="dm-photo">
+            {m.media.url ? <PostPhoto media={m.media} /> : <Skeleton className="h-48 w-full" />}
+          </div>
+        )}
         {m.body}
       </div>
     </div>

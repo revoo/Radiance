@@ -49,6 +49,8 @@ public final class ImageWork {
   private static final long LOOK_BACK = 2 * DAY;
   private static final int GIVE_UP_AFTER_FAILURES = 3;
   private static final int HIGH_VALUE = 4;
+  /** A ceiling on paid pictures while R is online, whatever the odds of them come to. */
+  private static final int ONLINE_PREMIUM_PER_DAY = 25;
 
   private final Sql sql;
   private final WriterLane lane;
@@ -59,6 +61,8 @@ public final class ImageWork {
   private volatile Limits limits;
   private Path avatarFiles;
   private PremiumImages premium = new PremiumImages(null, 0);
+  private volatile long premiumDay;
+  private final java.util.concurrent.atomic.AtomicInteger premiumOnline = new java.util.concurrent.atomic.AtomicInteger();
 
   public ImageWork(Sql sql, WriterLane lane, MediaStore store, ImageGenerator generator, ContentLibrary lib, WallClock clock, Limits limits) {
     this.sql = sql;
@@ -106,6 +110,36 @@ public final class ImageWork {
     var report = new Report(count[0], count[1], count[2], count[3], count[5]);
     if (report.any()) log.info("Images: {}", report);
     return report;
+  }
+
+  /**
+   * One picture while R is online, for a post or DM that's about to land. The free model first, keeping back what the night's batch
+   * needs. {@code better} asks for the premium one. A free picture never quietly becomes a paid one here: if there's no room, or it
+   * fails, it's just text. Takes seconds: call it off the live loop.
+   *
+   * @return whether the picture is ready
+   */
+  public boolean online(PhotoPrompts.Photo photo, boolean better, java.util.function.Consumer<MediaRow> attach) {
+    long wall = clock.nowMs();
+    long today = wall - wall % DAY;
+    var repo = new MediaRepository(sql);
+    int neurons = (int) Math.min(Integer.MAX_VALUE, repo.generatedSince(today)) * limits.neuronsPerImage();
+    boolean paid = better && premium.generator() != null && premiumToday(today) < ONLINE_PREMIUM_PER_DAY;
+    if (!paid && neurons + limits.neuronsPerImage() > limits.neuronBudget() - limits.photosPerDay() * limits.neuronsPerImage()) return false;
+    var row = pending("PHOTO", photo.prompt(), photo.seed(), photo.entityId());
+    lane.run(() -> sql.commit(repo.save(new UnitOfWork(), row)));
+    attach.accept(row);
+    // perRun spent means the fallback to the premium model is closed: only `paid` opens it
+    int[] count = {0, 0, 0, 0, neurons, paid ? 0 : Integer.MAX_VALUE};
+    return generate(row, count, paid) == Outcome.DONE;
+  }
+
+  private int premiumToday(long today) {
+    if (premiumDay != today) {
+      premiumDay = today;
+      premiumOnline.set(0);
+    }
+    return premiumOnline.getAndIncrement();
   }
 
   private boolean affordable(int[] count) {
@@ -183,7 +217,9 @@ public final class ImageWork {
   }
 
   private void photos(SimWorld w, long worldNow, long today, int[] count) {
-    long used = sql.queryOne("SELECT COUNT(*) AS n FROM media WHERE origin = 'GENERATED' AND kind = 'PHOTO' AND status = 'READY' AND created_at >= ?",
+    // what R's online sessions used doesn't come out of the night's allowance
+    long used = sql.queryOne("SELECT COUNT(*) AS n FROM media WHERE origin = 'GENERATED' AND kind = 'PHOTO' AND status = 'READY' AND created_at >= ?"
+        + " AND id NOT IN (SELECT media_id FROM post WHERE origin = 'LIVE' AND media_id IS NOT NULL) AND id NOT IN (SELECT media_id FROM dm_message WHERE media_id IS NOT NULL)",
         List.of(today), r -> r.lng("n")).orElse(0L);
     int room = (int) Math.max(0, limits.photosPerDay() - used);
     if (room == 0) return;

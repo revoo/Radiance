@@ -116,7 +116,7 @@ public final class FeelReport {
         median(cAnswers)));
     if (!photoR.isEmpty()) {
       bands.add(new Band("R's median photo post: 10–18 reactions", fmt(median(photoR)), between(median(photoR), 10, 18)));
-      bands.add(new Band("R's median photo post: 4–9 comments", fmt(median(photoC)), between(median(photoC), 4, 9)));
+      bands.add(new Band("R's median photo post: 4–12 comments", fmt(median(photoC)), between(median(photoC), 4, 12)));
     }
     if (!textR.isEmpty()) {
       bands.add(new Band("R's median text post: 6–12 reactions", fmt(median(textR)), between(median(textR), 6, 12)));

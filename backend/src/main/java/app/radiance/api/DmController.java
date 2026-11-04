@@ -79,10 +79,11 @@ class DmController {
   Views.DmConversation messages(@PathVariable String id) {
     var reads = new Reads(sql, live);
     var t = mine(reads, id);
-    var messages = sql.query("SELECT id, sender_id, body, created_at, read_at FROM dm_message WHERE thread_id = ?"
+    var media = new app.radiance.media.MediaRepository(sql);
+    var messages = sql.query("SELECT id, sender_id, body, created_at, read_at, media_id FROM dm_message WHERE thread_id = ?"
         + " AND air_status = 'AIRED' AND body IS NOT NULL ORDER BY created_at, id", List.of(id),
         r -> new Views.DmMessage(r.str("id"), id, r.str("sender_id"), r.str("sender_id").equals(reads.userId()), r.str("body"),
-            r.lng("created_at"), r.lngOrNull("read_at")));
+            r.lng("created_at"), r.lngOrNull("read_at"), r.isNull("media_id") ? null : media.byId(r.str("media_id")).map(Reads::mediaView).orElse(null)));
     var typing = live.typingIn(id).stream().map(x -> new Views.Typing(x.actorId(), x.name())).toList();
     return new Views.DmConversation(thread(reads, t), messages, typing);
   }
@@ -98,7 +99,7 @@ class DmController {
     var made = sql.queryOne("SELECT created_at FROM dm_message WHERE id = ?", List.of(messageId), r -> r.lng("created_at"))
         .orElseThrow();
     return ResponseEntity.status(HttpStatus.CREATED)
-        .body(new Views.DmMessage(messageId, id, reads.userId(), true, text, made, null));
+        .body(new Views.DmMessage(messageId, id, reads.userId(), true, text, made, null, null));
   }
 
   @PostMapping("/{id}/read")
@@ -122,7 +123,7 @@ class DmController {
     var last = sql.queryOne("SELECT id, sender_id, body, created_at, read_at FROM dm_message WHERE thread_id = ?"
         + " AND air_status = 'AIRED' AND body IS NOT NULL ORDER BY created_at DESC, id DESC LIMIT 1", List.of(t.id()),
         r -> new Views.DmMessage(r.str("id"), t.id(), r.str("sender_id"), r.str("sender_id").equals(me), r.str("body"),
-            r.lng("created_at"), r.lngOrNull("read_at"))).orElse(null);
+            r.lng("created_at"), r.lngOrNull("read_at"), null)).orElse(null);
     int unread = sql.queryOne("SELECT COUNT(*) AS n FROM dm_message WHERE thread_id = ? AND sender_id = ?"
         + " AND air_status = 'AIRED' AND body IS NOT NULL AND read_at IS NULL", List.of(t.id(), other), r -> r.lng("n"))
         .orElse(0L).intValue();

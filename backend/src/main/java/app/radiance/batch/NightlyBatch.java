@@ -125,6 +125,11 @@ public final class NightlyBatch {
     return this;
   }
 
+  /** The image generator, for pictures while R is online. */
+  public ImageWork imageWork() {
+    return imageWork;
+  }
+
   public ImageWork.Limits imageLimits() {
     return imageWork == null ? new ImageWork.Limits(0, 0, 0) : imageWork.limits();
   }

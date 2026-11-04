@@ -52,7 +52,13 @@ export function applyEvent(qc: QueryClient, name: string, d: Data, refresh = ref
       void qc.invalidateQueries({ queryKey: ["person"] });
       break;
     case "feed.new":
-      live.addNewPosts((d.count as number) ?? 1);
+      // they come in as they happen; someone reading further down keeps their place and gets a pill back up
+      void qc.invalidateQueries({ queryKey: ["feed"] });
+      if (window.scrollY > NEAR_THE_TOP) live.addNewPosts((d.count as number) ?? 1);
+      break;
+    case "media.ready":
+      if (d.threadId) void qc.invalidateQueries({ queryKey: keys.conversation(d.threadId as string) });
+      if (d.postId) void refresh(qc, d.postId as string);
       break;
     case "comment.removed":
     case "comment.aired": {
@@ -101,8 +107,12 @@ export function applyEvent(qc: QueryClient, name: string, d: Data, refresh = ref
   }
 }
 
+/** Further down than this, someone's reading: new posts don't announce themselves by moving things. */
+const NEAR_THE_TOP = 300;
+
 const EVENTS = [
   "feed.new",
+  "media.ready",
   "post.aired",
   "comment.aired",
   "comment.removed",

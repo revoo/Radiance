@@ -53,6 +53,6 @@ class LiveConfig {
       }
     };
     return new LivePlay(sql, lane, engine, actions, appraiser, gateway, clock, lease, backfill, world.networkName(),
-        softening, idleTimeout, coldShoulderRate).withNews(weatherSources, headlineFeeds).withChatter();
+        softening, idleTimeout, coldShoulderRate).withNews(weatherSources, headlineFeeds).withChatter().withPictures(new OnlinePictures(sql, lane, engine, engine.lib(), batch.imageWork()));
   }
 }

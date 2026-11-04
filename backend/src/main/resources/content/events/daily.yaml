@@ -170,3 +170,12 @@
   importance: 1
   tags: [ home ]
   output: { post: STATUS, brief: "a small mess of the moment, locked out, a parking ticket, a wrong order, a dead phone. They post it as it's happening" }
+
+- id: snapshot_now
+  category: DAILY
+  base_rate: 0.012
+  cooldown_days: 3
+  importance: 1
+  tags: [ home ]
+  output: { post: PHOTO, brief: "a picture of whatever's in front of them right now that's worth showing someone, with a few words",
+            media: "amateur smartphone photo of whatever is in front of them right now" }
