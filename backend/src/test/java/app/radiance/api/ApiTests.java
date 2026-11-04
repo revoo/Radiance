@@ -244,7 +244,7 @@ class ApiTests {
         .add("UPDATE post SET headline_id = 'fake', created_at = ?, audience = 'PUBLIC' WHERE id = ?", now - 60_000, posts.get(1))
         .add("UPDATE post SET headline_id = 'hidden', created_at = ?, air_status = 'SCRIPTED' WHERE id = ?", now - 60_000, posts.get(2))
         .add(insert, "strangers", "https://example.com/strangers", "Wire", "A story only strangers posted", now, now, now)
-        .add("UPDATE post SET headline_id = 'strangers', created_at = ?, comment_count = 5000 WHERE id = ?", now - 60_000, stranger)
+        .add("UPDATE post SET headline_id = 'strangers', created_at = ?, comment_count = 5 WHERE id = ?", now - 60_000, stranger)
         .add("INSERT INTO weather_hour (hour, temp_f, feels_like_f, precip_in, snow_in, wind_mph, wmo_code, kind, fetched_at)"
             + " VALUES (?, 34.4, 27, 0, 0.1, 5, 71, 'FORECAST', ?) ON CONFLICT (hour) DO UPDATE SET temp_f = 34.4,"
             + " feels_like_f = 27, snow_in = 0.1, wmo_code = 71", now - now % 3_600_000L, now)
@@ -272,9 +272,10 @@ class ApiTests {
         .andExpect(jsonPath("$.talkedAbout[0].posts").value(1))
         .andExpect(jsonPath("$.talkedAbout[0].comments").value(1000))
         .andExpect(jsonPath("$.talkedAbout[?(@.title == 'A story nobody has posted yet')]").isEmpty())
-        // regression: R clicked a story from a non-friend's post and got a 404 behind a spinner
-        .andExpect(jsonPath("$.talkedAbout[?(@.title == 'A story only strangers posted')]").isEmpty());
-    mvc.perform(get("/api/posts/" + stranger).with(R)).andExpect(status().isNotFound());
+        // regression, both ways: a story from a non-friend's post was a 404 behind a spinner, and then hiding
+        // those emptied the whole tile on a fresh world, where no friend had posted any. A news take is out in the open
+        .andExpect(jsonPath("$.talkedAbout[?(@.title == 'A story only strangers posted')]").exists());
+    mvc.perform(get("/api/posts/" + stranger).with(R)).andExpect(status().isOk());
   }
 
   @Test

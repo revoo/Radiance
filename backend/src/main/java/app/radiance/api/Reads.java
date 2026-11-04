@@ -144,8 +144,13 @@ final class Reads {
         + VISIBLE, List.of(id), Reads::postRow);
     if (row.isEmpty()) return Optional.empty();
     var r = row.get();
-    if (!(r[1].equals(userId) || r[4].equals("PUBLIC") || friends().contains(r[1]))) return Optional.empty();
+    if (!(r[1].equals(userId) || r[4].equals("PUBLIC") || friends().contains(r[1]) || isNewsTake(id))) return Optional.empty();
     return Optional.of(posts(List.<String[]>of(r)).getFirst());
+  }
+
+  /** Someone's take on the news is out in the open: the rail lists them all, so each of them has to open. */
+  private boolean isNewsTake(String postId) {
+    return sql.queryOne("SELECT id FROM post WHERE id = ? AND headline_id IS NOT NULL", List.of(postId), x -> x.str("id")).isPresent();
   }
 
   /** Whether R can see this post, or the post this comment is on. */
@@ -251,11 +256,9 @@ final class Reads {
   }
 
   /** The faces on a story: the latest few who've posted about it. */
-  private List<Views.Actor> peopleOn(String headlineId, List<String> authors) {
-    var params = new ArrayList<Object>(List.of(headlineId));
-    params.addAll(authors);
+  private List<Views.Actor> peopleOn(String headlineId) {
     return sql.query("SELECT author_id, MAX(created_at) AS t FROM post WHERE headline_id = ? AND " + VISIBLE
-        + " AND " + seenBy(authors) + " GROUP BY author_id ORDER BY t DESC, author_id LIMIT 3", params, r -> actor(r.str("author_id")));
+        + " GROUP BY author_id ORDER BY t DESC, author_id LIMIT 3", List.of(headlineId), r -> actor(r.str("author_id")));
   }
 
   private Views.Weather weatherNow(long worldTime, long top) {
@@ -281,28 +284,13 @@ final class Reads {
   Views.Rail rail(long worldTime) {
     long top = worldTime - worldTime % WeatherHour.HOUR;
     var weather = weatherNow(worldTime, top);
-    // only what R can open: a story from strangers' posts would lead nowhere
-    var authors = readableAuthors();
-    var params = new ArrayList<Object>(List.of(worldTime - TALKED_WINDOW, worldTime));
-    params.addAll(authors);
     var talked = sql.query("SELECT h.id, h.title, h.source, h.region, h.controversy, h.sensitivity, MIN(p.id) AS post_id, COUNT(*) AS posts,"
         + " SUM(p.comment_count) AS comments"
         + " FROM post p JOIN headline h ON h.id = p.headline_id WHERE p.created_at >= ? AND p.created_at <= ? AND " + VISIBLE
-        + " AND " + seenBy(authors) + " GROUP BY h.id ORDER BY COUNT(*) + SUM(p.comment_count) DESC, h.id LIMIT 5", params,
+        + " GROUP BY h.id ORDER BY COUNT(*) + SUM(p.comment_count) DESC, h.id LIMIT 5", List.of(worldTime - TALKED_WINDOW, worldTime),
         r -> new Views.Talked(r.str("title"), r.str("source"), r.str("post_id"), (int) r.lng("posts"), (int) r.lng("comments"),
-            r.str("region"), r.isNull("controversy") ? 0 : r.dbl("controversy"), r.str("sensitivity"), peopleOn(r.str("id"), authors)));
+            r.str("region"), r.isNull("controversy") ? 0 : r.dbl("controversy"), r.str("sensitivity"), peopleOn(r.str("id"))));
     return new Views.Rail(weather, talked, live.around(), birthdays(worldTime));
-  }
-
-  private List<String> readableAuthors() {
-    var authors = new ArrayList<>(friends());
-    if (userId != null) authors.add(userId);
-    return authors;
-  }
-
-  /** The SQL for "R can read this post": bind {@code authors} after it. */
-  private static String seenBy(List<String> authors) {
-    return "(audience = 'PUBLIC'" + (authors.isEmpty() ? "" : " OR author_id IN (" + marks(authors.size()) + ")") + ")";
   }
 
   /** R's friends with a birthday today, in the world's time zone. */

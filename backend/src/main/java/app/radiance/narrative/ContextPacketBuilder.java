@@ -300,7 +300,7 @@ public final class ContextPacketBuilder {
   private String todaySoFar(long t, Set<String> people, String thisPost) {
     var date = world.date(t);
     long from = date.atStartOfDay(world.zone).toInstant().toEpochMilli();
-    var rows = sql.query("SELECT c.author_id, c.gist, c.post_id, p.author_id AS post_author, p.audience FROM comment c JOIN post p ON p.id = c.post_id"
+    var rows = sql.query("SELECT c.author_id, c.gist, c.post_id, p.author_id AS post_author, CASE WHEN p.headline_id IS NULL THEN p.audience ELSE 'PUBLIC' END AS audience FROM comment c JOIN post p ON p.id = c.post_id"
         + " WHERE c.created_at >= ? AND c.created_at < ? AND c.gist IS NOT NULL AND c.air_status <> 'DROPPED' ORDER BY c.created_at DESC LIMIT 200",
         List.of(from, t), r -> new String[] {r.str("author_id"), r.str("gist"), r.str("post_id"), r.str("post_author"), r.str("audience")});
     var lines = new ArrayList<String>();

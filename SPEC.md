@@ -791,6 +791,7 @@ The weight multiplier for LIFE/DRAMA defs is a function of `target − tension`.
 - Arc defs declare knowers per phase (romance `secret_dating`: the couple plus each one's closest friend). GOSSIP events can spread knowledge along high-trust edges, with a small leak probability that can turn into drama. Knowledge changes apply when their event airs.
 - A context packet includes, for each author, only what that author knows. Secrets inside a multi-author packet are labeled with who knows them, and non-knowers get a `must_not_reveal:<topic>` linter rule.
 - Knowers may hint (the best friend's 👀). That's intended.
+- A take on the news is out in the open, whoever posted it: R can open any story the rail lists, and residents can have seen it.
 - **Everything a prompt reads has an audience**, enforced where it's read (R's framing: access control, and a DM thread is a tenant). A fact or memory from a DM reaches only that DM's writer, and stays out of compaction and relationship summaries, which would lose where it came from. "Today so far" holds only what everyone in the packet could have seen. Nothing unaired is read. A canary test plants a secret in each source and checks every kind of prompt; add any new source to it.
 - Known limit: a multi-author thread is one prompt, so its private lines (who's secretly seeing whom) share a model call, held back by labels and the linter rather than a wall. Writing each author in their own call would be the wall, at more cost and less interplay.
 
