@@ -588,7 +588,10 @@ public final class UserActions {
       int count = curt || stung ? 1 : 1 + (rng.chance(0.4) ? 1 : 0) + (e.affinity > 30 && rng.chance(0.2) ? 1 : 0);
       long recent = sql.queryOne("SELECT COUNT(*) AS n FROM dm_message WHERE thread_id = ? AND sender_id = ?"
           + " AND created_at > ?", List.of(threadId, w.userId, now - 30 * 60_000L), x -> x.lng("n")).orElse(0L);
-      boolean wrapUp = recent >= 8 || ("WORK".equals(b.location) && rng.chance(0.15));
+      // once, and then they've said it. Regression: past eight texts, Cody said "gtg, dish pit" in every reply for a month
+      boolean wrappedUp = sql.queryOne("SELECT COUNT(*) AS n FROM dm_message WHERE thread_id = ? AND sender_id = ? AND created_at > ?"
+          + " AND brief_json LIKE '%endConversation%'", List.of(threadId, other, now - 30 * 60_000L), x -> x.lng("n")).orElse(0L) > 0;
+      boolean wrapUp = !wrappedUp && (recent >= 12 || ("WORK".equals(b.location) && rng.chance(0.15)));
       for (int i = 0; i < count; i++) {
         boolean last = i == count - 1;
         String text = i == 0

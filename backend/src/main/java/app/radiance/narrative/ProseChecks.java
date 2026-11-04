@@ -33,7 +33,7 @@ public final class ProseChecks {
     return Pattern.compile("(?i)(^|\\balso )" + Pattern.quote(author.split(" ")[0]) + ",").matcher(text).find();
   }
 
-  static final Pattern SLIP = Pattern.compile("(?i)\\bno wait,? i'?m\\b|\\.\\.\\.\\s*(no wait|wait no|i mean)\\b");
+  static final Pattern SLIP = Pattern.compile("(?i)\\bno wait\\b|\\.\\.\\.\\s*(wait no|i mean)\\b");
 
   /** Five words in a row is saying it again; shorter runs are just how people talk. */
   private static final int REPEAT_RUN = 5;

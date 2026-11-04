@@ -39,9 +39,11 @@ public final class Maintenance {
   static final long COMPACT_AGE = 7 * DAY;
   static final double MATERIAL = 15;
   /** DM threads longer than this get their older messages summarized (SPEC §5.11). */
-  static final int DM_SUMMARIZE_OVER = 60;
+  static final int DM_SUMMARIZE_OVER = 90;
   /** Packets show this many recent messages; the summary covers the rest. */
-  static final int DM_RECENT = 30;
+  static final int DM_RECENT = 60;
+  /** A summary waits until this many messages have left the window: each one costs a call. */
+  private static final int DM_SUMMARY_STEP = 30;
 
   private final Sql sql;
   private final WriterLane lane;
@@ -93,11 +95,11 @@ public final class Maintenance {
   }
 
   /**
-   * A thread of {@code written} messages needs a (new) summary once it's longer than 60 and at least 30
+   * A thread of {@code written} messages needs a (new) summary once it's longer than 90 and at least 30
    * messages outside the packet's recent window aren't in the summary yet.
    */
   public static boolean dmSummaryDue(long written, long summarized) {
-    return written > DM_SUMMARIZE_OVER && written - DM_RECENT - summarized >= DM_RECENT;
+    return written > DM_SUMMARIZE_OVER && written - DM_RECENT - summarized >= DM_SUMMARY_STEP;
   }
 
   /** DM_SUMMARY: the earlier summary plus the messages that scrolled out of the recent window, in a few sentences. */
@@ -121,11 +123,11 @@ public final class Maintenance {
         .replace("{{earlier}}", thread.summary() == null ? "(none yet)" : thread.summary())
         .replace("{{messages}}", text.toString().strip());
     var r = gateway.call(new LlmRequest<>(Purpose.SUMMARY, List.of(), List.of(new Part.Text(prompt)), RelationSummary.class,
-        400, Duration.ofSeconds(60), Priority.BACKGROUND));
+        500, Duration.ofSeconds(60), Priority.BACKGROUND));
     if (!r.ok() || r.value().summary() == null || r.value().summary().isBlank()) {
       throw new IllegalStateException("thread summary failed: " + r.outcome());
     }
-    String summary = words(r.value().summary(), 160);
+    String summary = words(r.value().summary(), 220);
     var uow = new DmRepository(sql).summarize(new UnitOfWork(), threadId, summary);
     uow.add("UPDATE dm_thread SET summarized_count = ? WHERE id = ?", upTo, threadId);
     lane.run(() -> sql.commit(uow));

@@ -198,6 +198,7 @@ class RendererTests {
   /** Regression: "I'm at 3-something Rockwell... no wait, you're asking where I live." */
   @Test
   void catchingYourselfMidTextIsASlip() {
+    assertThat(ProseChecks.slipped("Cody Garrett", "a charge nurse thing at megan's place tonight, no wait that's not mine")).isTrue();
     assertThat(ProseChecks.slipped("Jessica Vogel", "I'm at 3-something Rockwell... no wait, you're asking where I live.")).isTrue();
   }
 

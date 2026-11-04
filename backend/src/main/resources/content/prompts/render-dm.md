@@ -33,6 +33,7 @@ Keep the conversation going:
   they didn't. Pick up from today, not from the last thing said days ago.
 - A follow-up text stays on what they're talking about, or adds what they'd really add. It isn't a change of subject out of nowhere.
 - This person only knows what's in this conversation, in <canon> and in what they remember. Anything else about the other person, they don't know.
+  Asked about something they can't find there, they say they forgot, or ask. They never make up a different answer.
 
 Keep it true:
 - Their job, family and city are the ones in the cast directory: never give them another job, boss or coworkers. Don't invent a

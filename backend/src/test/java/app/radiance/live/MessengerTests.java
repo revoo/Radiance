@@ -298,7 +298,7 @@ class MessengerTests {
     String me = engine.world().userId;
     var uow = new UnitOfWork();
     long t = db.clock.nowMs() - 3_600_000L;
-    for (int i = 0; i < 75; i++) {
+    for (int i = 0; i < 105; i++) {
       uow.add("INSERT INTO dm_message (id, thread_id, sender_id, created_at, air_status, body, render_status, brief_json)"
           + " VALUES (?, ?, ?, ?, 'AIRED', ?, 'RENDERED', '{}')", "m" + (1000 + i), thread, i % 2 == 0 ? me : someone, t + i,
           "message number " + i);
@@ -314,11 +314,11 @@ class MessengerTests {
     assertThat(db.sql.queryOne("SELECT summarized_count FROM dm_thread WHERE id = ?", List.of(thread), r -> r.lng("summarized_count"))
         .orElseThrow()).isEqualTo(45);
 
-    // the packet: the summary, then only the last 30 messages
+    // the packet: the summary, then only the last 60 messages
     var packet = new ContextPacketBuilder(db.sql, LivePlayTests.LIB, "Radiance", engine.world())
         .dms(thread, gateway.budgetFor(app.radiance.llm.Purpose.RENDER_DM));
     assertThat(packet.content()).contains("(earlier: ");
-    assertThat(packet.content()).contains("message number 74").contains("message number 45").doesNotContain("message number 44:");
+    assertThat(packet.content()).contains("message number 104").contains("message number 45").doesNotContain("message number 44:");
   }
 
   /** Regression, and a spoiler: Tim's reply to R carried on from his own message scripted for the next day. */
@@ -528,19 +528,81 @@ class MessengerTests {
   }
 
   @Test
-  void summariesComeDueEveryThirtyMessagesPastSixty() {
-    assertThat(Maintenance.dmSummaryDue(60, 0)).isFalse();
-    assertThat(Maintenance.dmSummaryDue(61, 0)).isTrue();
-    assertThat(Maintenance.dmSummaryDue(80, 45)).isFalse();
-    assertThat(Maintenance.dmSummaryDue(105, 45)).isTrue();
+  void summariesComeDueEveryThirtyMessagesPastNinety() {
+    assertThat(Maintenance.dmSummaryDue(90, 0)).isFalse();
+    assertThat(Maintenance.dmSummaryDue(91, 0)).isTrue();
+    assertThat(Maintenance.dmSummaryDue(120, 45)).isFalse();
+    assertThat(Maintenance.dmSummaryDue(135, 45)).isTrue();
     var counts = new ArrayList<Long>();
     long done = 0;
     for (long n = 1; n <= 200; n++) {
       if (Maintenance.dmSummaryDue(n, done)) {
         counts.add(n);
-        done = n - 30;
+        done = n - 60;
       }
     }
-    assertThat(counts).containsExactly(61L, 91L, 121L, 151L, 181L);
+    assertThat(counts).containsExactly(91L, 121L, 151L, 181L);
+  }
+
+  /** Regression: in one long sitting no batch ran, so past 30 messages Cody had lost the landlord's name, and made one up. */
+  @Test
+  void aLongChatIsRememberedWithoutWaitingForTheBatch() throws Exception {
+    var live = live(LivePlayTests.gateway(null), 1.0);
+    var someone = residents().get(4);
+    String thread = actions.thread(someone);
+    String me = engine.world().userId;
+    long t = db.clock.nowMs();
+    var uow = new UnitOfWork();
+    for (int i = 0; i < 95; i++) {
+      uow.add("INSERT INTO dm_message (id, thread_id, sender_id, created_at, air_status, body, render_status, brief_json) VALUES (?, ?, ?, ?, 'AIRED', ?, 'RENDERED', '{}')",
+          String.format("old-%03d", i), thread, i % 2 == 0 ? me : someone, t - 95_000L + i * 1_000L, "line " + i);
+    }
+    db.commit(uow);
+
+    var packet = new ContextPacketBuilder(db.sql, LivePlayTests.LIB, "Radiance", engine.world());
+    db.commit(new UnitOfWork().add("INSERT INTO dm_message (id, thread_id, sender_id, created_at, air_status, body, render_status, brief_json) VALUES ('next', ?, ?, ?, 'SCRIPTED', NULL, 'PLANNED', '{}')", thread, someone, t + 1_000));
+    var content = packet.dms(thread, LivePlayTests.gateway(null).budgetFor(app.radiance.llm.Purpose.RENDER_DM)).content();
+    assertThat(content).contains(": line 94\n", ": line 40\n").doesNotContain(": line 30\n");
+    db.commit(new UnitOfWork().add("DELETE FROM dm_message WHERE id = 'next'"));
+
+    live.touch();
+    live.tick();
+    live.dm(thread, "what was my landlord's name again").orElseThrow();
+    long deadline = System.currentTimeMillis() + 20_000;
+    String summary = null;
+    while (summary == null && System.currentTimeMillis() < deadline) {
+      live.tick();
+      Thread.sleep(50);
+      summary = new DmRepository(db.sql).thread(thread).orElseThrow().summary();
+    }
+    assertThat(summary).as("summarized in live play").isNotBlank();
+    live.stop();
+    assertThat(live.awaitIdle(Duration.ofSeconds(20))).isTrue();
+  }
+
+  /** Regression: past eight texts, Cody said "gtg, dish pit" in every reply for a month. */
+  @Test
+  void someoneWrapsAChatUpOnce_NotInEveryReply() {
+    var someone = residents().get(4);
+    String thread = actions.thread(someone);
+    String me = engine.world().userId;
+    long t = db.clock.nowMs();
+    var uow = new UnitOfWork();
+    for (int i = 0; i < 12; i++) {
+      uow.add("INSERT INTO dm_message (id, thread_id, sender_id, created_at, air_status, body, render_status, brief_json) VALUES (?, ?, ?, ?, 'AIRED', ?, 'RENDERED', '{}')",
+          "r-" + i, thread, me, t - 60_000L + i * 1_000L, "text " + i);
+    }
+    db.commit(uow);
+    var warm = new UserActions.Reading(java.util.Map.of(), List.of(), 0, "SUPPORT", "{}");
+    String first = actions.dm(thread, "one more thing", warm, t).orElseThrow();
+    var reply = actions.dmReply(thread, first, 1.0, t);
+    assertThat(reply.script().dms).anyMatch(m -> app.radiance.sim.Brief.parse(m.briefJson()).extra().containsKey("endConversation"));
+    actions.save(reply.script());
+
+    db.clock.advance(Duration.ofMinutes(1));
+    long later = db.clock.nowMs();
+    String second = actions.dm(thread, "wait, one more", warm, later).orElseThrow();
+    var again = actions.dmReply(thread, second, 1.0, later);
+    assertThat(again.script().dms).isNotEmpty().noneMatch(m -> app.radiance.sim.Brief.parse(m.briefJson()).extra().containsKey("endConversation"));
   }
 }

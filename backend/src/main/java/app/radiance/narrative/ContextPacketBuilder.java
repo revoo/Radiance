@@ -183,7 +183,7 @@ public final class ContextPacketBuilder {
   }
 
   /** DM history in a render packet; older messages are in the thread summary. */
-  static final int HISTORY = 30;
+  static final int HISTORY = 60;
 
   /** RENDER_DM: the scripted messages in one thread, with the conversation so far. */
   public Packet dms(String threadId, PromptBudget budget) {
@@ -194,7 +194,7 @@ public final class ContextPacketBuilder {
     var targets = new LinkedHashMap<String, Target>();
     var convo = new StringBuilder();
     long t = dms.isEmpty() ? world.time : dms.getFirst().createdAt();
-    // the last 30 messages, with older ones summarized (SPEC §5.11)
+    // the latest messages, with older ones summarized (SPEC §5.11)
     // nothing scripted for later: Tim answered R by carrying on from his own message due the next day
     long until = dms.stream().filter(m -> m.body() == null && !m.airStatus().name().equals("DROPPED")).mapToLong(m -> m.createdAt()).max().orElse(Long.MAX_VALUE);
     var written = dms.stream().filter(m -> m.body() != null && m.createdAt() <= until).toList();

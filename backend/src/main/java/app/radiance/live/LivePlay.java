@@ -987,6 +987,19 @@ public final class LivePlay {
         lock.unlock();
         wake.offer(true);
       }
+      summarizeIfDue(threadId);
+    });
+  }
+
+  /** A long chat can't wait for the nightly batch: what leaves the window would be forgotten until then. */
+  private void summarizeIfDue(String threadId) {
+    if (gateway.degradationLevel() >= 1) return;
+    background("live-dm-summary", () -> {
+      try {
+        new app.radiance.narrative.Maintenance(sql, lane, lib, gateway, engine.world(), networkName).summarizeThread(threadId);
+      } catch (RuntimeException e) {
+        log.warn("Summarizing DM thread {} failed; the batch will retry: {}", threadId, e.toString());
+      }
     });
   }
 

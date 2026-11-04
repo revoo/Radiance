@@ -14,7 +14,7 @@ Then reply with (1) anything in the spec that looks contradictory, outdated or u
 Once I approve, start M0 (create CLAUDE.md from Appendix E first) and work milestone by milestone. Stop at every ⏸ REVIEW checkpoint and tell me exactly what to look at.
 ```
 
-Spec version 1.7 · 2026-10-27 · platform facts verified 2026-10-26/27 (Appendix C) · version history in Appendix G
+Spec version 1.8 · 2026-11-03 · platform facts verified 2026-10-26/27 (Appendix C) · version history in Appendix G
 
 **Contents** — 0 Working agreement · 1 What we're building · 2 Principles · 3 Architecture & stack · 4 Data model & persistence · 5 Systems · 6 Genesis · 7 API · 8 Frontend · 9 Configuration · 10 Testing · 11 Engineering showcase · 12 Milestones · 13 Later · Appendices A–G
 
@@ -38,11 +38,20 @@ Spec version 1.7 · 2026-10-27 · platform facts verified 2026-10-26/27 (Appendi
 
 A single-player social network called **Radiance**. Thirty simulated residents of Chicagoland — the city and its suburbs — live their lives on a Facebook-style network, and R is the thirty-first member. Inspirations: RimWorld's storyteller and emergent narrative, automatic story generators, game pacing, and the texture of real small-community Facebook.
 
-**North-star scenario.** R hasn't logged in for four days. He opens the app and the feed is simply there, because the nightly batch wrote each day as it came. A recap card says: Sarah and her boyfriend broke up on Tuesday; Jesse bought another fixer-upper car and, by consensus, got ripped off again; Tim and Sarah went at it about socialism under a news link; Sam's kitchen renovation hit a plumbing setback. Under Sarah's breakup post her usual supporters offer condolences, Jake is trolling, and a vague post from Sarah about "some people" who "need to learn to read the room" makes it obvious Mike has been in her DMs. Jessica, who has been quietly seeing someone for a month without telling anyone, skipped the group's wine night with a flimsy excuse — her best friend's comment has a suspicious 👀. R's photo from the lakefront has fourteen reactions and a string of comments, and one of them suggests she finds him a bit pretentious. R replies. Within seconds a like lands and a small +2 floats over her name, then she answers, then Jake jumps in — quick feedback at a game's pace, never a flood.
+**What matters most (v1.8, R's direction after the first play test).** Believability: these are real people with real lives, insecurities, fears and ambitions, in a community that breathes. Every interaction in the moment should feel like it came from a real person, and the feed should feel live and active. Continuity over weeks is not the priority: the technology isn't there yet, and cracks will show.
+
+- **Must hold.** The last few minutes make sense. Residents respond to what was actually said, don't repeat themselves, and don't contradict the same conversation. Private things stay private (§5.6).
+- **Good enough.** Stable facts like names, pets, jobs and family mostly stick. A small detail wrong weeks later is fine: real friends forget things too.
+- **Frozen.** No new work or tuning on arcs, and no more long soaks to validate them. What works stays. An arc that causes a bug gets cut, not fixed (`arc-blacklist`, §5.5).
+- **Focus.** Depth of character: what they want, what they're insecure about, what they're afraid of, and how that colors what they say. The rhythm of the community: residents talking to each other, threads that catch fire or die, activity that rises and falls through the day.
+
+**The test for any new work: does it make the next 20 minutes feel more real and alive? If not, it can wait.** Where this section disagrees with anything below, this section wins.
+
+**North-star scenario** (kept from before; the recap and the storylines in it are frozen, not the goal). R hasn't logged in for four days. He opens the app and the feed is simply there, because the nightly batch wrote each day as it came. A recap card says: Sarah and her boyfriend broke up on Tuesday; Jesse bought another fixer-upper car and, by consensus, got ripped off again; Tim and Sarah went at it about socialism under a news link; Sam's kitchen renovation hit a plumbing setback. Under Sarah's breakup post her usual supporters offer condolences, Jake is trolling, and a vague post from Sarah about "some people" who "need to learn to read the room" makes it obvious Mike has been in her DMs. Jessica, who has been quietly seeing someone for a month without telling anyone, skipped the group's wine night with a flimsy excuse — her best friend's comment has a suspicious 👀. R's photo from the lakefront has fourteen reactions and a string of comments, and one of them suggests she finds him a bit pretentious. R replies. Within seconds a like lands and a small +2 floats over her name, then she answers, then Jake jumps in — quick feedback at a game's pace, never a flood.
 
 **Pillars**
 1. **Alive, not a puppet show.** Everyone has their own life, schedule and agenda. R's posts get more than their share of attention, by design and by a knob, but residents respond as themselves: the grouch still grumbles, and nobody is there just to applaud.
-2. **Continuity.** The world remembers. Storylines progress in real time and never vanish silently. A secret stays secret until it leaks; a renovation drags on for months.
+2. **Believable right now.** The last few minutes always make sense, and everyone sounds like a person with something on their mind. The world mostly remembers: stable facts stick, secrets stay secret, and storylines keep running as they are, without being the point.
 3. **Earned relationships, generous attention.** Every resident has a Sims-style like-meter for R, and for each other, that moves with every interaction. Impressions come from what R actually posts and says — some like him, some find him pretentious, some develop a crush — while his posts, photos most of all, draw plenty of engagement and his replies the least.
 4. **Game-paced.** No waiting: the day is ready whenever R logs in, and while he's on, residents answer in seconds, paced like a good game.
 5. **Grounded.** Chicagoland, today: real places, real weather, real headlines (mostly national, some world, a little local), real holidays and seasons, mundane life, the real register of Facebook.
@@ -739,6 +748,8 @@ The weight multiplier for LIFE/DRAMA defs is a function of `target − tension`.
 
 ### 5.5 Arcs, constraints & continuity
 
+**Frozen since v1.8 (§1).** Arcs keep running as they are: no new arcs, phases or tuning. One that causes a bug goes on `arc-blacklist`.
+
 **Arc defs** (YAML in `content/arcs/`): roles; start conditions and base rate; phases (duration range, constraint tags, beat templates, entry/exit events, probabilistic transitions); visibility per phase; `max_silence_days`; exclusivity; recurrence (for quirk loops); terminal phases; an optional `abandon` exit used if the arc is blacklisted mid-world. An arc's phase is a function of elapsed time plus events, so skipping three weeks lands in the right phase and emits the missed transitions in order.
 
 **Starter arcs (15):** romance (talking → secret dating → soft launch → official → engaged → married, or breakup), breakup_aftermath, job_search, job_loss, home_project, car_saga (recurring), training_goal (e.g., a half marathon), injury_recovery, feud, side_hustle, moving, new_pet, new_hobby (curious → beginner → hooked → a milestone, or fizzled, closed with a post or a joke at their own expense), school (thinking about it → applying → waiting → accepted, waitlisted or rejected → enrolled → first term), affair (flirting → a secret affair → it ends quietly or is discovered → they split or stay together; it starts only from an attached resident low enough on faithfulness, and R can be the other person if he plays along; Appendix A.9). Each arc def names the event-mix category its beats count toward (§5.4). On by default and switchable (`radiance.content.sensitive-arcs: true`): grief over an off-network relative.
@@ -779,6 +790,8 @@ The weight multiplier for LIFE/DRAMA defs is a function of `target − tension`.
 - Arc defs declare knowers per phase (romance `secret_dating`: the couple plus each one's closest friend). GOSSIP events can spread knowledge along high-trust edges, with a small leak probability that can turn into drama. Knowledge changes apply when their event airs.
 - A context packet includes, for each author, only what that author knows. Secrets inside a multi-author packet are labeled with who knows them, and non-knowers get a `must_not_reveal:<topic>` linter rule.
 - Knowers may hint (the best friend's 👀). That's intended.
+- **Everything a prompt reads has an audience**, enforced where it's read (R's framing: access control, and a DM thread is a tenant). A fact or memory from a DM reaches only that DM's writer, and stays out of compaction and relationship summaries, which would lose where it came from. "Today so far" holds only what everyone in the packet could have seen. Nothing unaired is read. A canary test plants a secret in each source and checks every kind of prompt; add any new source to it.
+- Known limit: a multi-author thread is one prompt, so its private lines (who's secretly seeing whom) share a model call, held back by labels and the linter rather than a wall. Writing each author in their own call would be the wall, at more cost and less interplay.
 
 ### 5.7 Memory
 
@@ -957,7 +970,8 @@ Live contract tests (§10) verify what each alias in use declares.
 - **Cold shoulder, not silence.** How warm, long and engaged a reply is depends on the relationship and mood. Residents who dislike R answer curtly; only a hostile one (a like-meter at −50 or below, which in practice means a grouch) may leave him on Seen, which shows right away. Knob: `cold-shoulder-rate`.
 - **Resident → R.** DMs to R come from `DM_USER_*` event defs: a crush checking in (single, or attached and not very faithful), asking for advice, venting about another resident, gossip, complaining about R's comment, sharing a headline. While R is offline they're scripted and waiting for him at login; while he's online the Pacer can surface one as a hook. Rate-limited by `dm-initiation-rate` and the relationship.
 - **Resident ↔ resident** DMs are simulated as events, memories and knowledge, not rendered conversations. They surface through posts ("some people need to learn what 'no' means 🙄") and the Director's console, which can render one on demand (stretch).
-- Threads longer than 60 messages get older messages summarized into `dm_thread.summary`.
+- Prompts show a thread's last 60 messages. Past 90, older ones are summarized into `dm_thread.summary`, as soon as they're due in live play (they can't wait for the batch: they'd be forgotten until then).
+- Someone wraps a chat up once (past 12 of R's texts in 30 world-minutes, or at work), and not again for 30 world-minutes.
 
 ### 5.12 Headlines & weather
 
@@ -1364,6 +1378,8 @@ radiance:
 ---
 
 ## 10. Testing & quality
+
+Since v1.8: no more long soaks to validate storylines. The offline 30-day harness stays as a cheap regression guard, and its bands may move when the community gets busier: they describe a feel, and the new test is the next 20 minutes. Checks of believability are short replays with real models of what R actually does (a chat, an absurd post, an insult), read by eye.
 
 - **Unit tests** for the pure core: engagement math; OU exactness (a statistical test that one big step matches many small ones); arc transitions and analytic advance; constraint filtering; the blacklist; fidelity and backfill partitioning; memory scoring; `UnitOfWork` parameter chunking; airing validation and drop cascades; the Pacer's rules (curves, token buckets, priority release, breathing room) against a fake clock; the writer lease (takeover, and fencing that aborts a stale writer's unit); roster validation and invariant 11; temperament gains, bounds and tapering; event-mix calibration; weather conditions and their airing re-checks; budget windows (parking, resuming at the reset, and quota errors that close a provider's window).
 - **Gateway tests:** the schema generator against every output record; parse, validate and repair against malformed output (prose around the JSON, code fences, wrong enum casing, missing fields); routing, fallbacks and the circuit breaker against a scripted fake provider; usage normalization per adapter from recorded responses (`ReplayLlm`).
@@ -1929,6 +1945,7 @@ Source of truth: SPEC.md. Status: PROGRESS.md. Decisions: docs/adr/.
 
 ## Appendix G — Version history
 
+- **1.8** (2026-11-03) — The pivot, from R's first play test: believability in the moment over continuity over weeks (§1). Arcs frozen. Focus moves to depth of character and the rhythm of the community. Everything a prompt reads has an audience (§5.6).
 - **1.7** (2026-10-27) — Faithfulness: attached residents of both genders flirt and accept flirting, with R and with each other, along a ladder set by faithfulness, happiness at home, attraction and exposure; jealousy, and an affair arc (§5.2, §5.3, §5.5, A.9). Uncensored models noted, with P9's hard lines enforced in code (§5.10).
 - **1.6** (2026-10-27) — Budget windows that reset, with all non-live work as resumable jobs that park and resume (P5, §5.15), and resumable work-bouts for Claude Code itself (§0). Unsanitized real people replace the old content rating: biases and a few strong prejudices, MOCK and HOSTILE stances, an `edge` knob, no softening on refusal, and a short list of hard lines (P9, §5.2, §5.8, §5.10).
 - **1.5** (2026-10-27) — Generous attention: R's posts draw more than their share of engagement (salience 2.0, a 50% attention cap, LOCAL backstory), weighted by content kind, so photos get the most and replies the least (§5.8). Sims-style like-meters on every relationship, shaped by temperament (grouches, typical residents, sweethearts) and mood, with pulses and a Relationships page for R (§5.2, §5.3, §5.9, §8). Births in residents' off-network families are allowed (§5.5).
