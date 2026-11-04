@@ -24,7 +24,7 @@ import java.util.TreeMap;
  */
 public final class Chatter {
 
-  public enum Kind { POST, COMMENT, REPLY, ARGUMENT, LATE_REPLY, TYPO, TYPING, TAKE_BACK, PASS }
+  public enum Kind { POST, COMMENT, REPLY, ARGUMENT, LATE_REPLY, TYPO, TYPING, TAKE_BACK, TAG, OFFLINE, PASS }
 
   /** One turn: what to air, and for a bit of typing that comes to nothing, who and where. */
   public record Beat(Kind kind, Script script, String typingActor, String typingPost, String takeBack) {
@@ -61,7 +61,7 @@ public final class Chatter {
 
   private static final long MIN = 60_000L, HOUR = 60 * MIN, DAY = 24 * HOUR;
   /** How long each kind of moment rests. */
-  private static final Map<Kind, Long> REST = Map.of(Kind.ARGUMENT, 6 * MIN, Kind.LATE_REPLY, 20 * MIN, Kind.TYPO, 7 * MIN, Kind.TYPING, 5 * MIN, Kind.TAKE_BACK, 25 * MIN, Kind.POST, 3 * MIN);
+  private static final Map<Kind, Long> REST = Map.of(Kind.ARGUMENT, 6 * MIN, Kind.LATE_REPLY, 20 * MIN, Kind.TYPO, 7 * MIN, Kind.TYPING, 5 * MIN, Kind.TAKE_BACK, 25 * MIN, Kind.POST, 3 * MIN, Kind.TAG, 10 * MIN, Kind.OFFLINE, 15 * MIN);
   private static final long PERSON_RESTS = 3 * MIN;
   /** A thread burns out: past this many in a session it goes quiet, and the room talks about something else. */
   private static final int THREAD_BURNS_OUT = 7;
@@ -111,8 +111,10 @@ public final class Chatter {
     double u = rng.nextDouble();
     Beat beat = null;
     if (u < 0.2) beat = rested(Kind.POST) ? post(around) : null;
-    else if (u < 0.52) beat = comment(around, false);
-    else if (u < 0.74) beat = reply(around);
+    else if (u < 0.47) beat = comment(around, false);
+    else if (u < 0.52) beat = rested(Kind.TAG) ? tag(around) : null;
+    else if (u < 0.70) beat = reply(around);
+    else if (u < 0.74) beat = rested(Kind.OFFLINE) ? takeItOffline(around) : null;
     else if (u < 0.82) beat = rested(Kind.ARGUMENT) && st.argument == null ? startArgument(around) : null;
     else if (u < 0.87) beat = rested(Kind.TYPO) ? comment(around, true) : null;
     else if (u < 0.91) beat = rested(Kind.LATE_REPLY) ? lateReply(around) : null;
@@ -339,6 +341,45 @@ public final class Chatter {
     if (b == null) return null;
     used(Kind.TYPING, b.id);
     return new Beat(Kind.TYPING, plan.script, b.id, post.id, null);
+  }
+
+  /** Someone pulls a friend into a thread: a glimpse of what's between them. */
+  private Beat tag(List<Person> around) {
+    var threads = threads();
+    if (threads.isEmpty()) return null;
+    var post = threads.get(rng.nextInt(threads.size()));
+    var b = pick(around, x -> !avoids(x, post.authorId) && !post.commenters.contains(x.id) && knows(x, post.authorId));
+    if (b == null) return null;
+    var pals = w.residents().stream().filter(x -> !x.id.equals(b.id) && !x.id.equals(post.authorId) && knows(b, x.id) && !avoids(b, x.id)).toList();
+    if (pals.isEmpty()) return null;
+    var pal = pals.get(rng.nextInt(pals.size()));
+    var extra = new java.util.LinkedHashMap<String, Object>(Plan.extra("on", post.id));
+    extra.put("mentions", List.of(pal.id));
+    plan.comment("chatter-tag:" + b.id + ":" + post.id + ":" + now, lands, post.id, null, b.id,
+        new Brief(post.defId, post.category, "tags @" + pal.handle + " with barely any words, as if this is obviously about something only the two of them know", Stance.JOKE.name(),
+            post.authorId, "joke_comment", post.topics, post.controversy, post.drama, extra));
+    used(Kind.TAG, b.id);
+    st.saidOn.merge(post.id, 1, Integer::sum);
+    return Beat.of(Kind.TAG, plan.script);
+  }
+
+  /** "ok calling you": the rest of it happens where R can't see. */
+  private Beat takeItOffline(List<Person> around) {
+    var ids = threads().stream().map(i -> i.id).toList();
+    var said = w.items.values().stream()
+        .filter(i -> i.type == Item.Type.COMMENT && i.aired() && ids.contains(i.postId) && !i.authorId.equals(w.userId) && i.time > now - HOUR)
+        .sorted(Comparator.comparing((Item i) -> i.id)).toList();
+    for (var c : said) {
+      var post = w.items.get(c.postId);
+      var b = pick(around, x -> !avoids(x, c.authorId) && knows(x, c.authorId));
+      if (post == null || b == null) continue;
+      plan.comment("chatter-offline:" + b.id + ":" + c.id, lands, post.id, c.id, b.id,
+          brief(post, Stance.SUPPORT, c.authorId, null, "a few words taking this somewhere private, like calling or texting them right now, with no hint of what about"));
+      used(Kind.OFFLINE, b.id);
+      st.saidOn.merge(post.id, 1, Integer::sum);
+      return Beat.of(Kind.OFFLINE, plan.script);
+    }
+    return null;
   }
 
   /** Someone thinks better of what they just said. Never once R or anyone has answered it. */
