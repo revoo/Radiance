@@ -50,7 +50,7 @@ public final class Chatter {
     }
   }
 
-  record Local(String postId, List<String> people, long until) {}
+  record Local(String postId, List<String> people, long until, boolean sameBlock) {}
 
   /** A session's memory of what it's done, so nothing turns into a habit. */
   public static final class State {
@@ -613,7 +613,7 @@ public final class Chatter {
     var post = plan.post("chatter-local:" + a.id + ":" + now, lands, a.id, app.radiance.social.PostRow.Kind.STATUS,
         new Brief(null, "DAILY", "right now, where they live in " + pick.getKey() + ": " + what + ". They post what they can see or hear, confused or amused, as it happens", null, null, null, List.of("local"), 0.1, 0.1, Map.of()),
         null, null, null, 2);
-    st.local = new Local(post.id(), pick.getValue().stream().map(p -> p.id).toList(), now + HOUR);
+    st.local = new Local(post.id(), pick.getValue().stream().map(p -> p.id).toList(), now + HOUR, !pick.getKey().equals("Chicago"));
     used(Kind.NEIGHBORHOOD, a.id);
     return Beat.of(Kind.NEIGHBORHOOD, plan.script);
   }
@@ -625,7 +625,8 @@ public final class Chatter {
     if (neighbors.isEmpty()) return null;
     var b = neighbors.get(rng.nextInt(neighbors.size()));
     plan.comment("chatter-local-reply:" + b.id + ":" + post.id, lands, post.id, null, b.id,
-        brief(post, Stance.SUPPORT, post.authorId, null, "they live there too and they've noticed the same thing, from where they are"));
+        brief(post, Stance.SUPPORT, post.authorId, null, st.local.sameBlock() ? "they live there too and they've noticed the same thing, from where they are"
+            : "they live elsewhere in the city, so all they know is what this post says; they aren't there and don't claim to know that street"));
     used(Kind.COMMENT, b.id);
     return Beat.of(Kind.COMMENT, plan.script);
   }

@@ -143,6 +143,13 @@ class ChatterBeatsTests {
     }
   }
 
+  /** Regression: Daniel, across the city, had "lived off Elston for 9 years" because a post about Elston said to notice it too. */
+  @Test
+  void neighborsOnTheSameBlockNoticeIt_ButTheRestOfChicagoOnlyKnowsWhatThePostSays() {
+    assertThat(new Chatter.Local("p", List.of(), 0, true).sameBlock()).isTrue();
+    assertThat(new Chatter.Local("p", List.of(), 0, false).sameBlock()).isFalse();
+  }
+
   @Test
   void aSavedSeatNamesHim_AndWrongChatComesInTwoParts_AndASecondLoginDoesntRepeatThem() {
     try (var sim = new Simulation(Simulation.Options.of(7, 2, Persona.WARM, dir)).run()) {

@@ -167,6 +167,10 @@ public final class Renderer {
       String again = author == null || item.text() == null ? null
           : firstTry ? ProseChecks.repeats(item.text(), packet.content(), handle, packets.catchphrases(author.id))
           : ProseChecks.sentAlready(item.text(), packet.content(), handle) ? "this exact text" : null;
+      if (firstTry && author != null && item.text() != null) {
+        String borrowed = packets.someoneElsesPhrase(item.text(), author.id);
+        if (borrowed != null) ps.add(new ProseChecks.Problem("borrowed", "\"" + borrowed + "\" is how someone else talks, not " + author.name + ": say it their own way"));
+      }
       if (again != null) {
         ps.add(new ProseChecks.Problem("repeat", "they already said \"" + again + "\" in this conversation: don't say it again; answer what was just said, with something new"));
       }

@@ -493,6 +493,20 @@ class MessengerTests {
     assertThat(content).containsPattern("ost a tooth *\\([A-Z][a-z]{2} \\d+\\)");
   }
 
+  /** Regression: Daniel's "respectfully" spread to Sarah, Hannah and Nick. */
+  @Test
+  void aPhraseFromSomeoneElsesCardIsCaught_AndTheirOwnOrShortSlangIsnt() {
+    var who = residents();
+    db.commit(new UnitOfWork()
+        .add("UPDATE persona SET voice_json = ? WHERE actor_id = ?", "{\"slang\":[\"respectfully\",\"bro\"],\"catchphrases\":[\"Tell me I'm wrong.\"]}", who.get(4))
+        .add("UPDATE persona SET voice_json = ? WHERE actor_id = ?", "{\"slang\":[\"hon\"],\"catchphrases\":[]}", who.get(5)));
+    var builder = new ContextPacketBuilder(db.sql, LivePlayTests.LIB, "Radiance", engine.world());
+    assertThat(builder.someoneElsesPhrase("Respectfully, a toaster is an appliance.", who.get(5))).isEqualTo("respectfully");
+    assertThat(builder.someoneElsesPhrase("ok but tell me i'm wrong", who.get(5))).isEqualTo("tell me i'm wrong");
+    assertThat(builder.someoneElsesPhrase("Respectfully, no.", who.get(4))).isNull();
+    assertThat(builder.someoneElsesPhrase("bro what", who.get(5))).isNull();
+  }
+
   /** Regression: "I have receipts" in 92 of one person's items in a month, and "sorry not sorry" closing every text. */
   @Test
   void aCatchphraseJustUsedComesOffTheirCard() {

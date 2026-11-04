@@ -59,6 +59,8 @@ public final class ContextPacketBuilder {
   private static final java.time.format.DateTimeFormatter DAY_MARKER = java.time.format.DateTimeFormatter.ofPattern("EEEE, MMM d", Locale.US);
   /** A catchphrase they've used in this many of their latest items stays off their card for now. */
   static final int CATCHPHRASE_REST = 12;
+  /** Shorter slang ("anyway", "bro") is just how people talk. */
+  private static final int DISTINCTIVE = 10;
   /** How much of what a brief answers is repeated in it, right where the writer looks. */
   static final int ANSWERING_CHARS = 300;
   static final int THREAD_TAIL = 20;
@@ -481,6 +483,26 @@ public final class ContextPacketBuilder {
         + " UNION ALL SELECT body, created_at FROM dm_message WHERE sender_id = ? AND body IS NOT NULL AND air_status = 'AIRED')"
         + " ORDER BY created_at DESC LIMIT " + CATCHPHRASE_REST, List.of(id, id, id), r -> r.str("body"))).toLowerCase(Locale.ROOT);
     return catchphrases(id).stream().filter(x -> !said.contains(x.toLowerCase(Locale.ROOT))).toList();
+  }
+
+  /** A distinctive phrase from someone else's voice card in {@code text}, or null. Regression: Daniel's "respectfully" was all over the cast. */
+  public String someoneElsesPhrase(String text, String authorId) {
+    String said = " " + text.toLowerCase(Locale.ROOT).replaceAll("[^\\p{L}\\p{N}' ]+", " ").replaceAll("\\s+", " ") + " ";
+    var own = new java.util.HashSet<String>();
+    var v = voice(authorId);
+    v.path("slang").forEach(x -> own.add(x.asString("").toLowerCase(Locale.ROOT)));
+    v.path("catchphrases").forEach(x -> own.add(x.asString("").toLowerCase(Locale.ROOT)));
+    for (var row : personas.values()) {
+      if (row.actorId().equals(authorId)) continue;
+      var card = Json.tree(row.voiceJson());
+      for (String field : List.of("slang", "catchphrases")) {
+        for (var x : card.path(field)) {
+          String phrase = x.asString("").toLowerCase(Locale.ROOT).replaceAll("[^\\p{L}\\p{N}' ]+", " ").strip();
+          if (phrase.length() >= DISTINCTIVE && !own.contains(phrase) && said.contains(" " + phrase + " ")) return phrase;
+        }
+      }
+    }
+    return null;
   }
 
   /** A voice card's catchphrases. */
