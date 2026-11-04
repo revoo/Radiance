@@ -234,6 +234,7 @@ public final class Chatter {
         plan.comment("chatter-fix:" + c.id(), lands + 6_000 + rng.nextInt(7_000), post.id, null, b.id,
             brief(post, stance, post.authorId, null, "a correction of that typo right after, and nothing else: a star and the fixed word, like *their"));
         used(Kind.TYPO, b.id);
+        st.saidOn.merge(post.id, 2, Integer::sum);
         return Beat.of(Kind.TYPO, plan.script);
       }
       plan.comment("chatter:" + b.id + ":" + post.id + ":" + now, lands, post.id, null, b.id, Planner.commentBrief(post, stance, post.authorId, null));
@@ -290,7 +291,7 @@ public final class Chatter {
 
   private Beat continueArgument() {
     var a = st.argument;
-    if (a.turnsLeft <= 0) {
+    if (a.turnsLeft <= 0 || st.saidOn.getOrDefault(a.postId, 0) >= THREAD_BURNS_OUT) {
       st.argument = null;
       return null;
     }
