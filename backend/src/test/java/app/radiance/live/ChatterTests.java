@@ -139,6 +139,9 @@ class ChatterTests {
     visible.add(me);
     assertThat(db.sql.query("SELECT p.author_id, p.headline_id FROM comment c JOIN post p ON p.id = c.post_id WHERE c.origin = 'LIVE'", List.of(),
         r -> r.isNull("headline_id") ? r.str("author_id") : me)).allMatch(visible::contains);
+    // a thread burns out instead of taking the whole session
+    assertThat(db.sql.query("SELECT COUNT(*) AS n FROM comment WHERE origin = 'LIVE' GROUP BY post_id", List.of(), r -> r.lng("n")))
+        .allMatch(n -> n <= 8);
     // nobody talks over themselves: no one has a lopsided share of what was said
     var byAuthor = db.sql.query("SELECT author_id, COUNT(*) AS n FROM comment WHERE origin = 'LIVE' GROUP BY author_id", List.of(), r -> r.lng("n"));
     long total = byAuthor.stream().mapToLong(Long::longValue).sum();

@@ -37,6 +37,8 @@ public final class ProseChecks {
 
   /** Five words in a row is saying it again; shorter runs are just how people talk. */
   private static final int REPEAT_RUN = 5;
+  /** Quoting a few of someone's words back at them is normal; this many is copying them. */
+  private static final int COPY_RUN = 7;
 
   /**
    * What {@code handle} is saying again from their own earlier lines in this packet's conversation: a run of
@@ -45,7 +47,6 @@ public final class ProseChecks {
    */
   static String repeats(String text, String packet, String handle, List<String> catchphrases) {
     String said = ownLines(packet, handle);
-    if (said.isBlank()) return null;
     String mine = " " + plain(text) + " ";
     for (String phrase : catchphrases) {
       String p = " " + plain(phrase) + " ";
@@ -56,6 +57,12 @@ public final class ProseChecks {
       String run = String.join(" ", java.util.Arrays.copyOfRange(words, i, i + REPEAT_RUN));
       if (said.contains(" " + run + " ")) return run;
     }
+    // Regression: Rick sent Nick's whole comment back, down to Nick's aside about a Jewel coupon
+    String everyone = ownLines(packet, null);
+    for (int i = 0; i + COPY_RUN <= words.length; i++) {
+      String run = String.join(" ", java.util.Arrays.copyOfRange(words, i, i + COPY_RUN));
+      if (everyone.contains(" " + run + " ")) return run;
+    }
     return null;
   }
 
@@ -65,7 +72,7 @@ public final class ProseChecks {
     return mine.split(" ").length >= REPEAT_RUN && ownLines(packet, handle).contains(" " + mine + " ");
   }
 
-  /** Everything {@code handle} has said in this packet's conversation, in plain words, space-delimited. */
+  /** Everything {@code handle} (or with null, anyone) has said in this packet's conversation, in plain words, space-delimited. */
   private static String ownLines(String packet, String handle) {
     int from = Math.max(packet.indexOf("<conversation>"), packet.indexOf("<thread>"));
     if (from < 0) return "";
@@ -73,7 +80,8 @@ public final class ProseChecks {
     var own = new StringBuilder();
     for (String line : packet.substring(from, to < 0 ? packet.length() : to).split("\\R")) {
       String l = line.strip();
-      if (l.startsWith(handle + ": ")) own.append(' ').append(plain(l.substring(handle.length() + 2)));
+      if (handle != null && l.startsWith(handle + ": ")) own.append(' ').append(plain(l.substring(handle.length() + 2)));
+      if (handle == null && l.startsWith("@") && l.contains(": ")) own.append(' ').append(plain(l.substring(l.indexOf(": ") + 2)));
     }
     return own + " ";
   }

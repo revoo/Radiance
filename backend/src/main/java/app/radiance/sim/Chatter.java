@@ -56,12 +56,15 @@ public final class Chatter {
     boolean opened;
     final Map<Kind, Long> lastOf = new HashMap<>();
     final Map<String, Long> lastBy = new HashMap<>();
+    final Map<String, Integer> saidOn = new HashMap<>();
   }
 
   private static final long MIN = 60_000L, HOUR = 60 * MIN, DAY = 24 * HOUR;
   /** How long each kind of moment rests. */
   private static final Map<Kind, Long> REST = Map.of(Kind.ARGUMENT, 6 * MIN, Kind.LATE_REPLY, 20 * MIN, Kind.TYPO, 7 * MIN, Kind.TYPING, 5 * MIN, Kind.TAKE_BACK, 25 * MIN, Kind.POST, 3 * MIN);
   private static final long PERSON_RESTS = 3 * MIN;
+  /** A thread burns out: past this many in a session it goes quiet, and the room talks about something else. */
+  private static final int THREAD_BURNS_OUT = 7;
   private static final long RECENT_POSTS = 18 * HOUR;
   private static final int THREADS_TO_PICK_FROM = 8;
   private static final List<Category> EVERYDAY = List.of(Category.DAILY, Category.HOBBY, Category.FAMILY, Category.SOCIAL);
@@ -174,6 +177,7 @@ public final class Chatter {
   private List<Item> threads() {
     return w.items.values().stream()
         .filter(i -> i.type == Item.Type.POST && i.aired() && i.time > now - RECENT_POSTS && canSee(i))
+        .filter(i -> st.saidOn.getOrDefault(i.id, 0) < THREAD_BURNS_OUT || i.authorId.equals(w.userId))
         .sorted(Comparator.comparingLong((Item i) -> -i.time).thenComparing(i -> i.id))
         .limit(THREADS_TO_PICK_FROM).toList();
   }
@@ -232,6 +236,7 @@ public final class Chatter {
       }
       plan.comment("chatter:" + b.id + ":" + post.id + ":" + now, lands, post.id, null, b.id, Planner.commentBrief(post, stance, post.authorId, null));
       used(Kind.COMMENT, b.id);
+      st.saidOn.merge(post.id, 1, Integer::sum);
       return Beat.of(Kind.COMMENT, plan.script);
     }
     return null;
@@ -252,6 +257,7 @@ public final class Chatter {
     var stance = stanceOn(b, w.person(c.authorId), c);
     plan.comment("chatter-reply:" + b.id + ":" + c.id, lands, post.id, c.id, b.id, Planner.commentBrief(post, stance, c.authorId, null));
     used(Kind.REPLY, b.id);
+    st.saidOn.merge(post.id, 1, Integer::sum);
     return Beat.of(Kind.REPLY, plan.script);
   }
 
@@ -301,6 +307,7 @@ public final class Chatter {
     a.lastComment = c.id();
     a.nextUp = other;
     a.turnsLeft--;
+    st.saidOn.merge(post.id, 1, Integer::sum);
     used(Kind.ARGUMENT, who.id);
     return Beat.of(Kind.ARGUMENT, plan.script);
   }

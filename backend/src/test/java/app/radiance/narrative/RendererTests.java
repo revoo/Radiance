@@ -187,6 +187,22 @@ class RendererTests {
     assertThat(ProseChecks.repeats("I am so proud of you all", "<thread>\n  @a.b: I am so proud of you\n</thread>", "@a.b", java.util.List.of())).isEqualTo("i am so proud of");
   }
 
+  /** Regression: Rick sent Nick's whole comment back, down to Nick's aside about a Jewel coupon. */
+  @Test
+  void copyingSomeoneElsesLineIsCaught_ButQuotingAFewWordsIsnt() {
+    String packet = """
+        <thread>
+        @gary.moran (status post): nobody read the bill
+          @nick.grabowski: read chapter 1 before you tell Tim to sit down, the calendar is public
+        </thread>
+        <briefs>[]</briefs>
+        """;
+    assertThat(ProseChecks.repeats("Gary, read chapter 1 before you tell Tim to sit down.", packet, "@ricardo.ocampo", java.util.List.of()))
+        .isEqualTo("read chapter 1 before you tell tim");
+    assertThat(ProseChecks.repeats("sit down? you sit down, Nick", packet, "@ricardo.ocampo", java.util.List.of())).isNull();
+    assertThat(ProseChecks.repeats("read chapter 1? nobody has", packet, "@ricardo.ocampo", java.util.List.of())).isNull();
+  }
+
   @Test
   void aTextSentWordForWordAgainIsCaught_ButAShortOneIsJustTalking() {
     String packet = "<conversation>\n@r.ocampo: ok bro, six o'clock, got it\n@r.ocampo: ok bro\n</conversation>\n<briefs>[]</briefs>";
