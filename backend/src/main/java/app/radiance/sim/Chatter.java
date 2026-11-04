@@ -24,7 +24,7 @@ import java.util.TreeMap;
  */
 public final class Chatter {
 
-  public enum Kind { POST, COMMENT, REPLY, ARGUMENT, LATE_REPLY, TYPO, TYPING, TAKE_BACK, TAG, OFFLINE, PASS }
+  public enum Kind { POST, COMMENT, REPLY, ARGUMENT, LATE_REPLY, TYPO, TYPING, TAKE_BACK, TAG, OFFLINE, WRONG_CHAT, AWKWARD, PULLED_IN, ASKED_FIRST, TALKED_ABOUT, GOSSIP, QUOTED, NEIGHBORHOOD, SAVED_SEAT, PASS }
 
   /** One turn: what to air, and for a bit of typing that comes to nothing, who and where. */
   public record Beat(Kind kind, Script script, String typingActor, String typingPost, String takeBack) {
@@ -50,19 +50,37 @@ public final class Chatter {
     }
   }
 
+  record Local(String postId, List<String> people, long until) {}
+
   /** A session's memory of what it's done, so nothing turns into a habit. */
   public static final class State {
     Argument argument;
     boolean opened;
-    final Map<Kind, Long> lastOf = new HashMap<>();
+    Map<Kind, Long> lastOf = new HashMap<>();
     final Map<String, Long> lastBy = new HashMap<>();
     final Map<String, Integer> saidOn = new HashMap<>();
+    /** Something happening on one block right now, good for an hour. */
+    Local local;
+
+    public State() {}
+
+    /** A session that remembers when each moment last happened: logging in again doesn't make it new. */
+    public State(Map<Kind, Long> remembered) {
+      this.lastOf = remembered;
+    }
   }
 
   private static final long MIN = 60_000L, HOUR = 60 * MIN, DAY = 24 * HOUR;
   /** How long each kind of moment rests. */
-  private static final Map<Kind, Long> REST = Map.of(Kind.ARGUMENT, 6 * MIN, Kind.LATE_REPLY, 20 * MIN, Kind.TYPO, 7 * MIN, Kind.TYPING, 5 * MIN, Kind.TAKE_BACK, 25 * MIN, Kind.POST, 3 * MIN, Kind.TAG, 10 * MIN, Kind.OFFLINE, 15 * MIN);
+  private static final Map<Kind, Long> REST = Map.ofEntries(Map.entry(Kind.ARGUMENT, 6 * MIN), Map.entry(Kind.LATE_REPLY, 20 * MIN), Map.entry(Kind.TYPO, 7 * MIN),
+      Map.entry(Kind.TYPING, 5 * MIN), Map.entry(Kind.TAKE_BACK, 25 * MIN), Map.entry(Kind.POST, 3 * MIN), Map.entry(Kind.TAG, 10 * MIN), Map.entry(Kind.OFFLINE, 15 * MIN),
+      Map.entry(Kind.WRONG_CHAT, 25 * MIN), Map.entry(Kind.AWKWARD, 20 * MIN), Map.entry(Kind.PULLED_IN, 90 * MIN), Map.entry(Kind.ASKED_FIRST, 3 * HOUR),
+      Map.entry(Kind.TALKED_ABOUT, 2 * HOUR), Map.entry(Kind.GOSSIP, 6 * HOUR), Map.entry(Kind.QUOTED, 4 * HOUR), Map.entry(Kind.NEIGHBORHOOD, 4 * HOUR), Map.entry(Kind.SAVED_SEAT, 8 * HOUR));
+  /** The share of turns that try for something out of the ordinary, when one has rested long enough. */
+  private static final double SOMETHING_SPECIAL = 0.22;
+  private static final java.util.Set<String> FEED_TEXTURE = java.util.Set.of("borrow_something", "who_knows_a_guy", "meme_post", "throwback", "locked_out");
   private static final long PERSON_RESTS = 3 * MIN;
+  private static final double GOSSIP_FAN = 55, GOSSIP_COOL = 5;
   /** A thread burns out: past this many in a session it goes quiet, and the room talks about something else. */
   private static final int THREAD_BURNS_OUT = 7;
   private static final long RECENT_POSTS = 18 * HOUR;
@@ -80,8 +98,10 @@ public final class Chatter {
   private final long lands;
   private final RandomSource rng;
   private final State st;
+  private final List<String> hisLines;
 
-  Chatter(ContentLibrary lib, Knobs k, SimWorld w, Plan plan, State st, long now, long lands, RandomSource rng) {
+  /** @param hisLines what R has said in public lately: only his posts and comments, never his DMs */
+  Chatter(ContentLibrary lib, Knobs k, SimWorld w, Plan plan, State st, long now, long lands, RandomSource rng, List<String> hisLines) {
     this.lib = lib;
     this.k = k;
     this.planner = new Planner(lib, k);
@@ -91,6 +111,7 @@ public final class Chatter {
     this.now = now;
     this.lands = lands;
     this.rng = rng;
+    this.hisLines = hisLines;
   }
 
   /** The next thing to happen. {@code quiet} lets fewer things through, when hardly anyone's around. */
@@ -108,6 +129,14 @@ public final class Chatter {
       var turn = continueArgument();
       if (turn != null) return turn;
     }
+    if (st.local != null && now < st.local.until() && rng.chance(0.35)) {
+      var more = aroundTheBlock();
+      if (more != null) return more;
+    }
+    if (rng.chance(SOMETHING_SPECIAL)) {
+      var special = special(around);
+      if (special != null) return special;
+    }
     double u = rng.nextDouble();
     Beat beat = null;
     if (u < 0.2) beat = rested(Kind.POST) ? post(around) : null;
@@ -122,6 +151,29 @@ public final class Chatter {
     else if (u < 0.96) beat = rested(Kind.TAKE_BACK) ? takeBack() : null;
     if (beat == null && u < 0.96) beat = comment(around, false);
     return beat == null ? Beat.of(Kind.PASS, plan.script) : beat;
+  }
+
+  /** Something out of the ordinary, whichever has rested long enough and has what it needs right now. */
+  private Beat special(List<Person> around) {
+    var kinds = new ArrayList<>(List.of(Kind.WRONG_CHAT, Kind.AWKWARD, Kind.PULLED_IN, Kind.ASKED_FIRST, Kind.TALKED_ABOUT, Kind.GOSSIP, Kind.QUOTED, Kind.NEIGHBORHOOD, Kind.SAVED_SEAT));
+    for (int i = kinds.size() - 1; i > 0; i--) java.util.Collections.swap(kinds, i, rng.nextInt(i + 1));
+    for (var kind : kinds) {
+      if (!rested(kind)) continue;
+      var beat = switch (kind) {
+        case WRONG_CHAT -> wrongChat(around);
+        case AWKWARD -> awkward(around);
+        case PULLED_IN -> pulledIn();
+        case ASKED_FIRST -> askedFirst(around);
+        case TALKED_ABOUT -> talkedAbout(around);
+        case GOSSIP -> gossip(around);
+        case QUOTED -> quoted(around);
+        case NEIGHBORHOOD -> neighborhood();
+        case SAVED_SEAT -> savedSeat(around);
+        default -> null;
+      };
+      if (beat != null) return beat;
+    }
+    return null;
   }
 
   /** Someone around reacts to something recent: no writing, and it's what makes a feed tick. */
@@ -203,6 +255,8 @@ public final class Chatter {
     var triggers = app.radiance.world.Calendar.triggers(date);
     var defs = new ArrayList<>(new TreeMap<>(lib.events()).values());
     for (int i = defs.size() - 1; i > 0; i--) java.util.Collections.swap(defs, i, rng.nextInt(i + 1));
+    // life admin and the feed's odds and ends come up more than a shuffle would give them
+    if (rng.chance(0.35)) defs.sort(Comparator.comparing((EventDef d) -> !FEED_TEXTURE.contains(d.id())));
     for (EventDef def : defs) {
       if (!EVERYDAY.contains(def.category()) || !Planner.posts(def)) continue;
       if (def.trigger() != null && def.trigger().headline() != null) continue;
@@ -221,6 +275,17 @@ public final class Chatter {
   private Beat comment(List<Person> around, boolean withATypo) {
     var threads = threads();
     if (threads.isEmpty()) return null;
+    // on someone's birthday, everyone piles on
+    var birthdays = threads.stream().filter(i -> i.defId != null && i.defId.startsWith("birthday")).toList();
+    if (!withATypo && !birthdays.isEmpty() && rng.chance(0.7)) {
+      var post = birthdays.get(rng.nextInt(birthdays.size()));
+      var b = pick(around, x -> !avoids(x, post.authorId) && !post.commenters.contains(x.id) && knows(x, post.authorId));
+      if (b != null) {
+        plan.comment("chatter-bday:" + b.id + ":" + post.id, lands, post.id, null, b.id, Planner.commentBrief(post, Stance.CONGRATS, post.authorId, null));
+        used(Kind.COMMENT, b.id);
+        return Beat.of(Kind.COMMENT, plan.script);
+      }
+    }
     for (int tries = 0; tries < 6; tries++) {
       var post = threads.get(Math.min(rng.nextInt(threads.size()), rng.nextInt(threads.size())));
       if (Planner.crowded(w, post, 0)) continue;
@@ -381,6 +446,206 @@ public final class Chatter {
       return Beat.of(Kind.OFFLINE, plan.script);
     }
     return null;
+  }
+
+  /** Meant for a private chat, sent here: a line about something else, and a moment later they notice. */
+  Beat wrongChat(List<Person> around) {
+    var threads = threads();
+    if (threads.isEmpty()) return null;
+    var post = threads.get(rng.nextInt(threads.size()));
+    var b = pick(around, x -> !avoids(x, post.authorId) && knows(x, post.authorId));
+    if (b == null) return null;
+    var c = plan.comment("chatter-wrong:" + b.id + ":" + post.id + ":" + now, lands, post.id, null, b.id,
+        brief(post, Stance.SUPPORT, null, null, "meant for a private chat and sent here by mistake: a mundane line about their own day, to someone else, nothing to do with this post. Ignore `answering`"));
+    plan.comment("chatter-wrong-fix:" + c.id(), lands + 8_000 + rng.nextInt(8_000), post.id, null, b.id,
+        brief(post, Stance.SUPPORT, null, null, "realizes that went to the wrong place: a few mortified words, like wrong chat, in their own way, and nothing else"));
+    used(Kind.WRONG_CHAT, b.id);
+    st.saidOn.merge(post.id, 2, Integer::sum);
+    return Beat.of(Kind.WRONG_CHAT, plan.script);
+  }
+
+  /** A coworker or relative says what they shouldn't in public: only among real ties. */
+  Beat awkward(List<Person> around) {
+    for (var post : threads()) {
+      if (post.authorId.equals(w.userId)) continue;
+      var b = pick(around, x -> !avoids(x, post.authorId) && !post.commenters.contains(x.id) && tie(x, post.authorId) != null);
+      if (b == null) continue;
+      plan.comment("chatter-awkward:" + b.id + ":" + post.id, lands, post.id, null, b.id,
+          brief(post, Stance.JOKE, post.authorId, null, "they're " + tie(b, post.authorId) + ", and in public they say something a bit too familiar or too revealing about the poster's ordinary life, small and harmless, with no idea it's awkward"));
+      used(Kind.AWKWARD, b.id);
+      st.saidOn.merge(post.id, 1, Integer::sum);
+      return Beat.of(Kind.AWKWARD, plan.script);
+    }
+    return null;
+  }
+
+  private String tie(Person b, String other) {
+    var e = w.edgeOrNull(b.id, other);
+    if (e == null) return null;
+    return switch (e.kind) {
+      case COWORKER -> "their coworker";
+      case FAMILY -> "their relative";
+      default -> null;
+    };
+  }
+
+  /** "@russ settle this": R gets called into an argument that's going right now. */
+  Beat pulledIn() {
+    var a = st.argument;
+    if (a == null) return null;
+    var post = w.items.get(a.postId);
+    var parent = w.items.get(a.lastComment);
+    if (post == null || parent == null || !parent.aired() || post.commenters.contains(w.userId)) return null;
+    var who = w.person(a.nextUp);
+    var e = w.edgeOrNull(who.id, w.userId);
+    if (e == null || !e.connected) return null;
+    String other = a.nextUp.equals(a.a) ? a.b : a.a;
+    var extra = new java.util.LinkedHashMap<String, Object>(Plan.extra("on", post.id));
+    extra.put("mentions", List.of(w.userId));
+    var c = plan.comment("chatter-pulled:" + who.id + ":" + a.lastComment, lands, post.id, a.lastComment, who.id,
+        new Brief(post.defId, post.category, "tags @" + w.person(w.userId).handle + " to settle this, in a few words. He hasn't said anything here yet", Stance.DISAGREE.name(), other, "debate_exchange",
+            post.topics, post.controversy, post.drama, extra));
+    a.lastComment = c.id();
+    a.nextUp = other;
+    a.turnsLeft--;
+    used(Kind.PULLED_IN, who.id);
+    st.saidOn.merge(post.id, 1, Integer::sum);
+    return Beat.of(Kind.PULLED_IN, plan.script);
+  }
+
+  /** A friend asks R something practical before he's said a word to them. */
+  Beat askedFirst(List<Person> around) {
+    var b = pick(around, x -> {
+      var e = w.edgeOrNull(x.id, w.userId);
+      return e != null && e.connected && e.affinity >= 15;
+    });
+    if (b == null) return null;
+    plan.dm("chatter-ask:" + b.id + ":" + now, lands, b.id, w.userId, new Brief(null, "DM",
+        "asks R something practical because they figure he'd know, a good plumber, a mechanic, somewhere to eat, in a line or two. No small talk first", Stance.SUPPORT.name(), w.userId, "dm_warm", List.of(), 0, 0, Plan.extra("beat", "askedFirst")));
+    used(Kind.ASKED_FIRST, b.id);
+    return Beat.of(Kind.ASKED_FIRST, plan.script);
+  }
+
+  /** Two people talking about R on a thread he isn't in. All they can use is what he actually posted. */
+  Beat talkedAbout(List<Person> around) {
+    String name = w.person(w.userId).name.split(" ")[0];
+    String source = hisLines.isEmpty() ? "They have nothing specific, so it stays vague" : "All they know is what he said in public: \"" + hisLines.get(rng.nextInt(hisLines.size())) + "\". If that doesn't fit, it stays vague";
+    for (var post : threads()) {
+      if (post.authorId.equals(w.userId) || post.commenters.contains(w.userId)) continue;
+      var b = pick(around, x -> !avoids(x, post.authorId) && !post.commenters.contains(x.id) && knows(x, post.authorId));
+      if (b == null) continue;
+      plan.comment("chatter-about:" + b.id + ":" + post.id, lands, post.id, null, b.id,
+          brief(post, Stance.JOKE, post.authorId, null, "brings up " + name + " in passing, the way you mention a friend who isn't in the thread, by first name and with no tag. " + source + ". Never invent anything he did"));
+      used(Kind.TALKED_ABOUT, b.id);
+      st.saidOn.merge(post.id, 1, Integer::sum);
+      return Beat.of(Kind.TALKED_ABOUT, plan.script);
+    }
+    return null;
+  }
+
+  /** Second-hand, and true: code picks who, from how they really feel about R. */
+  Beat gossip(List<Person> around) {
+    var b = pick(around, x -> {
+      var e = w.edgeOrNull(x.id, w.userId);
+      return e != null && e.connected && e.affinity >= 25;
+    });
+    if (b == null) return null;
+    var who = new ArrayList<Person>();
+    for (var x : w.residents()) {
+      if (x.id.equals(b.id) || !knows(b, x.id)) continue;
+      var e = w.edgeOrNull(x.id, w.userId);
+      if (e != null && (e.affinity >= GOSSIP_FAN || e.affinity <= GOSSIP_COOL)) who.add(x);
+    }
+    if (who.isEmpty()) return null;
+    var x = who.get(rng.nextInt(who.size()));
+    boolean likes = w.edge(x.id, w.userId).affinity >= GOSSIP_FAN;
+    plan.dm("chatter-gossip:" + b.id + ":" + x.id + ":" + now, lands, b.id, w.userId, new Brief(null, "DM",
+        "tells R, second-hand, that @" + x.handle + (likes ? " really likes him and has said so" : " isn't exactly his biggest fan and has let it slip") + ". A line or two, no details beyond that, and nothing invented about why", Stance.SUPPORT.name(), w.userId,
+        "dm_warm", List.of(), 0, 0, Plan.extra("beat", "gossip")));
+    used(Kind.GOSSIP, b.id);
+    return Beat.of(Kind.GOSSIP, plan.script);
+  }
+
+  /** Something R really said stuck with someone. The words are his, exactly. */
+  Beat quoted(List<Person> around) {
+    if (hisLines.isEmpty()) return null;
+    String line = hisLines.get(rng.nextInt(hisLines.size()));
+    for (var post : threads()) {
+      if (post.authorId.equals(w.userId)) continue;
+      var b = pick(around, x -> !avoids(x, post.authorId) && !post.commenters.contains(x.id) && knows(x, post.authorId));
+      if (b == null) continue;
+      var extra = new java.util.LinkedHashMap<String, Object>(Plan.extra("on", post.id));
+      extra.put("mentions", List.of(w.userId));
+      plan.comment("chatter-quoted:" + b.id + ":" + post.id, lands, post.id, null, b.id,
+          new Brief(post.defId, post.category, "quotes something @" + w.person(w.userId).handle + " said, word for word, because it stuck with them and it fits here: \"" + line + "\"", Stance.JOKE.name(), post.authorId, "joke_comment",
+              post.topics, post.controversy, post.drama, extra));
+      used(Kind.QUOTED, b.id);
+      st.saidOn.merge(post.id, 1, Integer::sum);
+      return Beat.of(Kind.QUOTED, plan.script);
+    }
+    return null;
+  }
+
+  /** Something happening on one block: code picks what, and who lives there. Good for an hour, then forgotten. */
+  Beat neighborhood() {
+    var table = lib.tables().get("neighborhood-events");
+    if (table == null || table.isEmpty()) return null;
+    var areas = new TreeMap<String, List<Person>>();
+    var byHandle = w.byHandle();
+    for (var r : lib.roster().residents()) {
+      var p = byHandle.get(r.resolvedHandle());
+      if (p == null || r.livesIn() == null) continue;
+      String area = r.livesIn().endsWith(", Chicago") ? "Chicago" : r.livesIn();
+      areas.computeIfAbsent(area, x -> new ArrayList<>()).add(p);
+    }
+    var fit = new ArrayList<>(areas.entrySet().stream().filter(x -> x.getValue().size() >= 2 && x.getValue().stream().anyMatch(p -> {
+      var e = w.edgeOrNull(p.id, w.userId);
+      return e != null && e.connected;
+    })).toList());
+    if (fit.isEmpty()) return null;
+    var pick = fit.get(rng.nextInt(fit.size()));
+    var known = pick.getValue().stream().filter(p -> {
+      var e = w.edgeOrNull(p.id, w.userId);
+      return e != null && e.connected;
+    }).toList();
+    var a = known.get(rng.nextInt(known.size()));
+    String what = String.valueOf(table.get(rng.nextInt(table.size())).get("what"));
+    var post = plan.post("chatter-local:" + a.id + ":" + now, lands, a.id, app.radiance.social.PostRow.Kind.STATUS,
+        new Brief(null, "DAILY", "right now, where they live in " + pick.getKey() + ": " + what + ". They post what they can see or hear, confused or amused, as it happens", null, null, null, List.of("local"), 0.1, 0.1, Map.of()),
+        null, null, null, 2);
+    st.local = new Local(post.id(), pick.getValue().stream().map(p -> p.id).toList(), now + HOUR);
+    used(Kind.NEIGHBORHOOD, a.id);
+    return Beat.of(Kind.NEIGHBORHOOD, plan.script);
+  }
+
+  private Beat aroundTheBlock() {
+    var post = w.items.get(st.local.postId());
+    if (post == null || !post.aired()) return null;
+    var neighbors = st.local.people().stream().filter(id -> !id.equals(post.authorId) && !post.commenters.contains(id)).map(w::person).toList();
+    if (neighbors.isEmpty()) return null;
+    var b = neighbors.get(rng.nextInt(neighbors.size()));
+    plan.comment("chatter-local-reply:" + b.id + ":" + post.id, lands, post.id, null, b.id,
+        brief(post, Stance.SUPPORT, post.authorId, null, "they live there too and they've noticed the same thing, from where they are"));
+    used(Kind.COMMENT, b.id);
+    return Beat.of(Kind.COMMENT, plan.script);
+  }
+
+  /** A friend asks who's in for tonight and counts R in. Just the invite: nothing follows up. */
+  Beat savedSeat(List<Person> around) {
+    int hour = java.time.Instant.ofEpochMilli(now).atZone(w.zone).getHour();
+    if (hour < 10 || hour > 20) return null;
+    var a = pick(around, x -> {
+      var e = w.edgeOrNull(x.id, w.userId);
+      return e != null && e.connected && e.affinity >= 25;
+    });
+    if (a == null) return null;
+    var extra = new java.util.LinkedHashMap<String, Object>();
+    extra.put("mentions", List.of(w.userId));
+    plan.post("chatter-seat:" + a.id + ":" + now, lands, a.id, app.radiance.social.PostRow.Kind.STATUS,
+        new Brief(null, "SOCIAL", "something happening tonight that suits them, who's in? And they count @" + w.person(w.userId).handle + " in without asking, in a few words, like saving him a seat", null, null, null, List.of(), 0, 0, extra),
+        null, null, null, 2);
+    used(Kind.SAVED_SEAT, a.id);
+    return Beat.of(Kind.SAVED_SEAT, plan.script);
   }
 
   /** Someone thinks better of what they just said. Never once R or anyone has answered it. */

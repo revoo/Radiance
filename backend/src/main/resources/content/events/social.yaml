@@ -84,3 +84,11 @@
   tags: [ physical, outing ]
   excludes: { tags: [ injured, homebound ] }
   output: { post: STATUS, brief: "Hot Giardiniera 16-inch result: a win, a blowout, or a no-glove injury" }
+
+- id: meme_post
+  category: SOCIAL
+  base_rate: 0.012
+  cooldown_days: 7
+  importance: 1
+  tags: [ humor ]
+  output: { post: STATUS, brief: "a joke in a format people repost, in plain text only, the kind you'd share without comment. Their sense of humor, not a description of an image" }

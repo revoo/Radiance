@@ -110,6 +110,8 @@ public final class LivePlay {
   private long nextBeat, nextReaction, noticeAt = Long.MAX_VALUE;
   private double chatterPace = 1;
   private final List<ChatterSlot> chatterSlots = new ArrayList<>();
+  /** When each moment last happened, across sessions: logging back in doesn't make it new. */
+  private final Map<app.radiance.sim.Chatter.Kind, Long> chatterRests = new java.util.HashMap<>();
 
   /** The pacing rules for the next session; the Director can change them. */
   private volatile app.radiance.content.Rules.PacingRules pacing;
@@ -899,7 +901,7 @@ public final class LivePlay {
       chatterState = null;
       return;
     }
-    chatterState = new app.radiance.sim.Chatter.State();
+    chatterState = new app.radiance.sim.Chatter.State(chatterRests);
     chatterPace = 0.8 + 0.5 * sessionRng.nextDouble();
     nextBeat = wall + draw(pacing.chatter().firstAfter());
     nextReaction = wall + draw(pacing.chatter().firstAfter()) + draw(pacing.chatter().reactionGap()) / 2;
@@ -934,6 +936,7 @@ public final class LivePlay {
       long lead = draw(rules.lead());
       var beat = actions.chatter(chatterState, t, t + lead, sessionRng);
       actions.save(beat.script());
+      if (!beat.script().dms.isEmpty()) queueDms(beat.script(), wall, false);
       long dots = draw(rules.typing());
       if (beat.takeBack() != null) {
         String taken = beat.takeBack();

@@ -216,7 +216,15 @@ public final class UserActions {
 
   /** The community's next small move while R is on: see {@link Chatter}. */
   public Chatter.Beat chatter(Chatter.State st, long now, long lands, RandomSource rng) {
-    return engine.locked(w -> new Chatter(engine.lib(), engine.knobs(), w, chatterPlan(w, now), st, now, lands, rng).next());
+    return engine.locked(w -> new Chatter(engine.lib(), engine.knobs(), w, chatterPlan(w, now), st, now, lands, rng, hisLines(w)).next());
+  }
+
+  /** What R has said where others could see it. Never his DMs: those are between him and one person (SPEC section 5.6). */
+  private List<String> hisLines(SimWorld w) {
+    if (w.userId == null) return List.of();
+    return sql.query("SELECT body FROM (SELECT body, created_at FROM post WHERE author_id = ? AND body IS NOT NULL AND air_status = 'AIRED'"
+        + " UNION ALL SELECT body, created_at FROM comment WHERE author_id = ? AND body IS NOT NULL AND air_status = 'AIRED') ORDER BY created_at DESC LIMIT 12",
+        List.of(w.userId, w.userId), r -> r.str("body")).stream().filter(x -> !x.isBlank() && x.length() <= 200).toList();
   }
 
   /** A resident deletes their own comment. Returns its post. */
@@ -239,7 +247,7 @@ public final class UserActions {
 
   /** Someone around reacts to something recent. */
   public Script chatterReaction(Chatter.State st, long now, long lands, RandomSource rng) {
-    return engine.locked(w -> new Chatter(engine.lib(), engine.knobs(), w, chatterPlan(w, now), st, now, lands, rng).reaction());
+    return engine.locked(w -> new Chatter(engine.lib(), engine.knobs(), w, chatterPlan(w, now), st, now, lands, rng, List.of()).reaction());
   }
 
   private Plan chatterPlan(SimWorld w, long t) {

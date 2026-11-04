@@ -588,7 +588,9 @@ public final class Airing {
           List.of("flirt"), null, c.id()));
       jealousy(w, receiver, c.authorId(), t, ctx);
     }
-    if (w.userId != null && !c.authorId().equals(w.userId)) {
+    if (w.userId != null && !c.authorId().equals(w.userId) && b.extra().get("mentions") instanceof List<?> named && named.contains(w.userId)) {
+      out.notifications.add(note(w, "MENTION", c.authorId(), "COMMENT", c.id(), t));
+    } else if (w.userId != null && !c.authorId().equals(w.userId)) {
       if (c.parentId() != null && w.userId.equals(receiver)) {
         out.notifications.add(note(w, "REPLY", c.authorId(), "COMMENT", c.id(), t));
       } else if (post != null && w.userId.equals(post.authorId)) {

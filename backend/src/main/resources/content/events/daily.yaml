@@ -146,3 +146,27 @@
   tags: [ food ]
   output: { post: PHOTO, brief: "Friday fish fry at a parish hall or a tavern",
             media: "a paper plate of fried fish, fries and coleslaw on a long folding table" }
+
+- id: borrow_something
+  category: DAILY
+  base_rate: 0.012
+  cooldown_days: 10
+  importance: 1
+  tags: [ home ]
+  output: { post: STATUS, brief: "life admin: they need to borrow something today, a ladder, a drill, a folding table, jumper cables. One line, asking the feed" }
+
+- id: who_knows_a_guy
+  category: DAILY
+  base_rate: 0.012
+  cooldown_days: 10
+  importance: 1
+  tags: [ home ]
+  output: { post: STATUS, brief: "life admin: they need a recommendation, a plumber, a dentist, a mechanic, someone for the gutters. One question, asking the feed" }
+
+- id: locked_out
+  category: DAILY
+  base_rate: 0.006
+  cooldown_days: 30
+  importance: 1
+  tags: [ home ]
+  output: { post: STATUS, brief: "a small mess of the moment, locked out, a parking ticket, a wrong order, a dead phone. They post it as it's happening" }
