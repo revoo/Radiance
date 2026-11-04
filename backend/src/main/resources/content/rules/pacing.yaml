@@ -14,6 +14,12 @@ hold: { reactions_max: 2m, comments: until_next_slot }
 breathing_room: { after_releases: 3, within: 30s, pause: [20s, 40s] }
 typing: { show_when_late: true, give_up_after: 45s }
 dm: { typing_starts: [1s, 3s], ms_per_char: 30, max_typing_delay: 6s, burst_gap: [2s, 5s] }
+chatter:                                 # what the community does while R is on, from the moment he logs in
+  first_after: [2s, 5s]                 # how soon the first thing starts
+  gap: [25s, 70s]                       # between things being said; more apart when few are around
+  reaction_gap: [8s, 25s]               # between reactions ticking up, which cost nothing
+  lead: [14s, 26s]                      # from deciding to landing: time to write it, and for typing dots
+  typing: [6s, 12s]                     # how long the dots show first
 hooks:
   quiet_gap: 4m
   min_interval: 10m

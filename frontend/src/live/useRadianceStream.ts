@@ -54,6 +54,7 @@ export function applyEvent(qc: QueryClient, name: string, d: Data, refresh = ref
     case "feed.new":
       live.addNewPosts((d.count as number) ?? 1);
       break;
+    case "comment.removed":
     case "comment.aired": {
       const postId = d.postId as string;
       void qc.invalidateQueries({ queryKey: keys.comments(postId) });
@@ -104,6 +105,7 @@ const EVENTS = [
   "feed.new",
   "post.aired",
   "comment.aired",
+  "comment.removed",
   "reaction.changed",
   "typing.started",
   "typing.stopped",

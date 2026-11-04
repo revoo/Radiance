@@ -104,6 +104,13 @@ public final class LivePlay {
   private final Appraiser appraiser;
   private final LlmGateway gateway;
   private final ContentLibrary lib;
+  /** The session's own chatter. Off unless asked for: tests of the Pacer want only what R causes. */
+  private volatile boolean chatterOn;
+  private app.radiance.sim.Chatter.State chatterState;
+  private long nextBeat, nextReaction, noticeAt = Long.MAX_VALUE;
+  private double chatterPace = 1;
+  private final List<ChatterSlot> chatterSlots = new ArrayList<>();
+
   /** The pacing rules for the next session; the Director can change them. */
   private volatile app.radiance.content.Rules.PacingRules pacing;
   private final WallClock clock;
@@ -197,6 +204,11 @@ public final class LivePlay {
   }
 
   /** Turns on hourly news and weather during sessions. */
+  public LivePlay withChatter() {
+    chatterOn = true;
+    return this;
+  }
+
   public LivePlay withNews(WeatherSources weatherSources, HeadlineFeeds headlineFeeds) {
     this.weatherSources = weatherSources;
     this.headlineFeeds = headlineFeeds;
@@ -259,6 +271,22 @@ public final class LivePlay {
   public List<String> around() {
     long t = now();
     return engine.locked(w -> w.residents().stream().filter(p -> app.radiance.sim.Presence.around(p, t, w.zone, w.seed)).map(p -> p.id).toList());
+  }
+
+  /** Where people around are, for the contacts list. */
+  public Map<String, String> whereabouts() {
+    long t = now();
+    return engine.locked(w -> {
+      var out = new java.util.HashMap<String, String>();
+      for (var p : w.residents()) {
+        if (!app.radiance.sim.Presence.around(p, t, w.zone, w.seed) || p.location == null) continue;
+        if (p.location.equals("WORK")) out.put(p.id, "at work");
+        else if (p.location.equals("OUT")) out.put(p.id, "out and about");
+        else if (p.location.startsWith("TRAVELING")) out.put(p.id, "traveling");
+        else out.put(p.id, "at home");
+      }
+      return out;
+    });
   }
 
   public boolean paused() {
@@ -390,6 +418,7 @@ public final class LivePlay {
     dmSlots.clear();
     // a resident with a crush on R finds a reason to message him early in his session (SPEC §12 M8)
     crushAt = wall + 2 * 60_000L + (long) (sessionRng.nextDouble() * 18 * 60_000L);
+    startChatter(wall);
     String id = sessionId;
     lane.run(() -> sql.commit(new UnitOfWork().add("INSERT INTO session_log (id, started_at, ended_at) VALUES (?, ?, ?)",
         id, wall, wall)));
@@ -572,7 +601,9 @@ public final class LivePlay {
 
   /** Typing indicators on {@code postId} right now, for a post view loaded mid-indicator. */
   public synchronized List<Typing> typingOn(String postId) {
-    return typing.values().stream().filter(x -> x.announced && x.postId.equals(postId)).map(Slot::view).toList();
+    var out = new ArrayList<>(typing.values().stream().filter(x -> x.announced && x.postId.equals(postId)).map(Slot::view).toList());
+    chatterSlots.stream().filter(x -> x.announced && x.postId.equals(postId)).forEach(x -> out.add(new Typing(x.typingKey, x.postId, x.actorId, x.name, x.typingAt)));
+    return out;
   }
 
   public synchronized Monitor monitor() {
@@ -735,6 +766,7 @@ public final class LivePlay {
     }
     if (!ready.isEmpty()) actions.release(ready, t);
     dmTurn(t, wall);
+    chatterTurn(t, wall);
     if (wall >= crushAt) {
       crushAt = Long.MAX_VALUE;
       crushCheckIn(t, wall);
@@ -764,7 +796,7 @@ public final class LivePlay {
 
     if (pacer.hookDue(wall)) hook(t, wall);
     long next = Math.min(pacer.nextWake(wall), lastAir + AIR_EVERY);
-    if (!typing.isEmpty() || !dmSlots.isEmpty()) next = Math.min(next, wall + 250);
+    if (!typing.isEmpty() || !dmSlots.isEmpty() || !chatterSlots.isEmpty()) next = Math.min(next, wall + 250);
     if (crushAt != Long.MAX_VALUE) next = Math.min(next, crushAt);
     return Math.max(20, Math.min(1_000, next - wall));
   }
@@ -857,6 +889,101 @@ public final class LivePlay {
       }
       return out;
     });
+  }
+
+  // ------------------------------------------------------------------------------- the session's chatter
+
+  private void startChatter(long wall) {
+    chatterSlots.clear();
+    if (!chatterOn || pacing.chatter() == null) {
+      chatterState = null;
+      return;
+    }
+    chatterState = new app.radiance.sim.Chatter.State();
+    chatterPace = 0.8 + 0.5 * sessionRng.nextDouble();
+    nextBeat = wall + draw(pacing.chatter().firstAfter());
+    nextReaction = wall + draw(pacing.chatter().firstAfter()) + draw(pacing.chatter().reactionGap()) / 2;
+    long away = sql.queryOne("SELECT COALESCE(MAX(ended_at), 0) AS t FROM session_log WHERE id <> ?", List.of(sessionId), r -> r.lng("t")).orElse(0L);
+    noticeAt = away > 0 && wall - away >= NOTICED_AFTER_MS ? wall + 20_000 + (long) (sessionRng.nextDouble() * 60_000) : Long.MAX_VALUE;
+  }
+
+  private long draw(List<String> range) {
+    long lo = Durations.parse(range.get(0)).toMillis(), hi = Durations.parse(range.get(range.size() - 1)).toMillis();
+    return lo + (long) (sessionRng.nextDouble() * Math.max(0, hi - lo));
+  }
+
+  /** One turn: reactions tick up, the next thing gets planned and starts writing, and typing dots come and go. */
+  private void chatterTurn(long t, long wall) {
+    if (chatterState == null) return;
+    var rules = pacing.chatter();
+    if (wall >= nextReaction) {
+      nextReaction = wall + (long) (draw(rules.reactionGap()) * chatterPace);
+      actions.save(actions.chatterReaction(chatterState, t, t + 1_500, sessionRng));
+    }
+    if (wall >= noticeAt) {
+      noticeAt = Long.MAX_VALUE;
+      var back = actions.noticedBack(t, sessionRng);
+      if (back.size() > 0) {
+        actions.save(back);
+        queueDms(back, wall, false);
+      }
+    }
+    // short of the budget, it goes quiet rather than spending what R's own replies need
+    if (wall >= nextBeat && gateway.degradationLevel() < 2) {
+      nextBeat = wall + (long) (draw(rules.gap()) * chatterPace);
+      long lead = draw(rules.lead());
+      var beat = actions.chatter(chatterState, t, t + lead, sessionRng);
+      actions.save(beat.script());
+      long dots = draw(rules.typing());
+      if (beat.takeBack() != null) {
+        String taken = beat.takeBack();
+        actions.takeBack(taken).ifPresent(post -> emit("comment.removed", Map.of("id", taken, "postId", post)));
+      }
+      if (beat.typingActor() != null) {
+        chatterSlots.add(new ChatterSlot(null, "stopped:" + wall, beat.typingPost(), beat.typingActor(), name(beat.typingActor()), wall, wall + dots));
+      }
+      for (var c : beat.script().comments) {
+        long lands = wall + (c.createdAt() - t);
+        chatterSlots.add(new ChatterSlot("COMMENT:" + c.id(), "COMMENT:" + c.id(), c.postId(), c.authorId(), name(c.authorId()), lands - dots, lands));
+      }
+      var posts = new LinkedHashSet<String>();
+      beat.script().posts.forEach(p -> posts.add(p.id()));
+      beat.script().comments.forEach(c -> posts.add(c.postId()));
+      posts.forEach(this::render);
+    }
+    for (var it = chatterSlots.iterator(); it.hasNext(); ) {
+      var slot = it.next();
+      if (!slot.announced && wall >= slot.typingAt) {
+        slot.announced = true;
+        emit("typing.started", Map.of("postId", slot.postId, "actorId", slot.actorId, "name", slot.name, "key", slot.typingKey, "kind", "comment"));
+      }
+      if (wall < slot.landsAt) continue;
+      String status = slot.key == null ? "DROPPED" : renderStatus(Set.of(slot.key)).getOrDefault(slot.key, "DROPPED");
+      // written late: the dots stay up a little longer
+      if (status.equals("PLANNED") && wall - slot.landsAt <= pacer.typingGiveUp()) continue;
+      if (slot.key != null) engine.tryAdvanceTo(now(), 50);
+      if (slot.announced) emit("typing.stopped", Map.of("postId", slot.postId, "actorId", slot.actorId, "key", slot.typingKey));
+      if (status.equals("RENDERED")) emit("comment.aired", Map.of("id", slot.key.substring("COMMENT:".length()), "postId", slot.postId, "authorId", slot.actorId));
+      it.remove();
+    }
+  }
+
+  private static final long NOTICED_AFTER_MS = 12 * 3_600_000L;
+
+  private static final class ChatterSlot {
+    final String key, typingKey, postId, actorId, name;
+    final long typingAt, landsAt;
+    boolean announced;
+
+    ChatterSlot(String key, String typingKey, String postId, String actorId, String name, long typingAt, long landsAt) {
+      this.key = key;
+      this.typingKey = typingKey;
+      this.postId = postId;
+      this.actorId = actorId;
+      this.name = name;
+      this.typingAt = typingAt;
+      this.landsAt = landsAt;
+    }
   }
 
   private void hook(long t, long wall) {

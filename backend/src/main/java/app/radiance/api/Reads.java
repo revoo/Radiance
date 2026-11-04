@@ -23,6 +23,7 @@ import java.util.TreeMap;
 final class Reads {
 
   private static final long DAY = 86_400_000L;
+  private static final long ACTIVE_SHOWS_FOR = 90 * 60_000L;
   private static final long TALKED_WINDOW = 36 * WeatherHour.HOUR;
   private static final String VISIBLE = "air_status = 'AIRED' AND render_status = 'RENDERED' AND body IS NOT NULL";
 
@@ -290,7 +291,18 @@ final class Reads {
         + " GROUP BY h.id ORDER BY COUNT(*) + SUM(p.comment_count) DESC, h.id LIMIT 5", List.of(worldTime - TALKED_WINDOW, worldTime),
         r -> new Views.Talked(r.str("title"), r.str("source"), r.str("post_id"), (int) r.lng("posts"), (int) r.lng("comments"),
             r.str("region"), r.isNull("controversy") ? 0 : r.dbl("controversy"), r.str("sensitivity"), peopleOn(r.str("id"))));
-    return new Views.Rail(weather, talked, live.around(), birthdays(worldTime));
+    return new Views.Rail(weather, talked, live.around(), presence(worldTime), birthdays(worldTime));
+  }
+
+  /** A line for the contacts list: where someone around is, or how long ago someone else was on. */
+  private java.util.Map<String, String> presence(long worldTime) {
+    var out = new java.util.HashMap<>(live.whereabouts());
+    long from = worldTime - ACTIVE_SHOWS_FOR;
+    sql.query("SELECT author_id, MAX(t) AS t FROM (SELECT author_id, created_at AS t FROM comment WHERE created_at > ? AND created_at <= ? AND " + VISIBLE
+        + " UNION ALL SELECT author_id, created_at AS t FROM post WHERE created_at > ? AND created_at <= ? AND " + VISIBLE + ") GROUP BY author_id",
+        List.of(from, worldTime, from, worldTime), r -> new Object[] {r.str("author_id"), r.lng("t")})
+        .forEach(x -> out.putIfAbsent((String) x[0], "active " + Math.max(1, (worldTime - (long) x[1]) / 60_000) + "m ago"));
+    return out;
   }
 
   /** R's friends with a birthday today, in the world's time zone. */

@@ -35,4 +35,4 @@
   output:
     post: LINK
     stance_from: politics_axes
-    brief: "share the link with a one-liner: 'wow', 'about time', 'of course', or a single emoji"
+    brief: "share the link with the shortest possible reaction, in their own words, or just an emoji"

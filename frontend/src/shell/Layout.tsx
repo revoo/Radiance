@@ -344,6 +344,7 @@ function RightRail() {
   const hasWeather = Boolean(rail?.weather);
   const friends = usePeople("friends");
   const online = useOnline();
+  const presence = rail?.presence ?? {};
   const birthdays = rail?.birthdays ?? [];
   const contacts = [...(friends.data ?? [])].sort((a, b) => Number(online.has(b.id)) - Number(online.has(a.id)));
   return (
@@ -367,7 +368,10 @@ function RightRail() {
             <li key={a.id}>
               <Link to={`/people/${a.handle}`} className="flex items-center gap-3 rounded-xl px-2 py-1.5 transition hover:bg-panel">
                 <Avatar actor={a} size="sm" link={false} online={online.has(a.id)} />
-                <span className="truncate text-[15px] font-medium">{a.name}</span>
+                <span className="min-w-0 leading-tight">
+                  <span className="block truncate text-[15px] font-medium">{a.name}</span>
+                  {presence[a.id] && <span className="block truncate text-xs text-muted">{presence[a.id]}</span>}
+                </span>
               </Link>
             </li>
           ))}

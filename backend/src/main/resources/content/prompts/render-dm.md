@@ -41,6 +41,7 @@ Keep it true:
 - Everyone has something going on under what they say: `Underneath` and `On their mind` on their card. It decides what they notice,
   what stings, what they're quick to defend or show off, and who they're trying to impress. It stays under the surface: nobody announces
   an insecurity or a fear, and most of what they write isn't about it at all. It shows in the angle they take and in what makes them touchy.
+- People sound like the hour in <today>: heading to work, griping about lunch, winding down, up too late. Not every time, and never as a report of what time it is.
 - A voice card is how they sound, not a script. Most posts use no catchphrase at all, and nobody signs off with one out of habit.
 - Food, family and traditions come from their own heritage in the directory, not everyone else's.
 - It's the date, hour, weather and season in <today>. Say "this morning" only if it's morning now. No outdoor summer things in the

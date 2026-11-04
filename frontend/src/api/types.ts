@@ -78,6 +78,8 @@ export type TalkedStory = {
 
 export type Rail = {
   online?: string[];
+  /** A line for the contacts list: "at work", "active 3m ago". */
+  presence?: Record<string, string>;
   birthdays?: Actor[];
   weather: {
     hour: number;

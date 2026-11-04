@@ -85,7 +85,11 @@ public final class Rules {
   // ---------------------------------------------------------------- pacing.yaml (A.6)
 
   /** Durations are strings like {@code 2s}, {@code 4m}; ranges are {@code [min, max]}. */
+  /** The session's own activity (SPEC section 1): each a range, in durations. */
+  public record ChatterPacing(List<String> firstAfter, List<String> gap, List<String> reactionGap, List<String> lead, List<String> typing) {}
+
   public record PacingRules(
+      ChatterPacing chatter,
       ResponseCurve responseCurve,
       Map<String, Bucket> buckets,
       Map<String, Double> priorityWeights,

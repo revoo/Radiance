@@ -10,10 +10,10 @@
   - *Arcs are woven in, not bolted on:* planner, airing, prompts, Director tabs and genesis' pinned storylines. Freezing is free; removing would be a project and isn't proposed. `arc-blacklist` is already live-tunable.
   - *Just-finished work that's now past the line:* summaries during long chats. It was nearly done and is cheap, so it stays; no more in that direction.
 - **The plan (R, 2026-11-03).** The batch writes what happened while R was gone. While he's on, residents post and talk more, generated live at a reasonable rate, starting the moment he logs in.
-  1. *Character depth* (in progress): wants, fears and values on the card, an authored inner life for each of the 30 (`cast/inner-lives.yaml`). Read by eye on real Haiku.
-  2. *Session chatter:* a loop that, while R is online, plans the next few minutes with the existing planner and renders them just before they air, so they can see what just happened. Going at once on login. A live-tunable rate.
+  1. *Character depth* (done; read on real Haiku 2026-11-03: nobody announces it, no fixation): wants, fears and values on the card, an authored inner life for each of the 30 (`cast/inner-lives.yaml`). Read by eye on real Haiku.
+  2. *Session chatter* (built: `sim/Chatter.java`, `chatter` in `pacing.yaml`, on in `LiveConfig`; includes arguments, typos with corrections, typing that stops, late replies, taken-back comments, being noticed back): a loop that, while R is online, plans the next few minutes with the existing planner and renders them just before they air, so they can see what just happened. Going at once on login. A live-tunable rate.
   3. *Threads that catch fire or die:* when a comment airs in a session, others may answer it, planned then and there.
-  4. *The batch's new job:* only what happened while R was gone. Stop pre-writing the hours he's online, and move that budget to the session.
+  4. *The batch's new job (not started, and may not be needed: scripted items still air alongside chatter at about one post and one comment per 30 minutes):* only what happened while R was gone. Stop pre-writing the hours he's online, and move that budget to the session.
   5. *Check the daily rise and fall*, and let the feel bands move with all this.
 - **R's list for the session (2026-11-03), in the order I'd build it, after the chatter loop exists:**
   - *Small human mess, which R expects to matter most:* typos with a quick correction, someone starting to type and stopping, a post edited or deleted, a reply to a two-day-old comment.

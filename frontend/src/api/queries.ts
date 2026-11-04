@@ -123,8 +123,9 @@ export function useRail() {
   return useQuery({
     queryKey: ["rail"],
     queryFn: () => api<Rail>("/api/rail"),
-    staleTime: 5 * 60_000,
-    refetchInterval: 5 * 60_000,
+    // who's around changes as you watch
+    staleTime: 60_000,
+    refetchInterval: 60_000,
   });
 }
 

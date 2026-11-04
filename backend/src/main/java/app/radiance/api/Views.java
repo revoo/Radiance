@@ -30,7 +30,7 @@ final class Views {
   record Link(String url, String source, String title) {}
 
   /** The right rail: the weather now, and the news the network is talking about. */
-  record Rail(Weather weather, List<Talked> talkedAbout, List<String> online, List<Actor> birthdays) {}
+  record Rail(Weather weather, List<Talked> talkedAbout, List<String> online, java.util.Map<String, String> presence, List<Actor> birthdays) {}
 
   record Weather(long hour, long tempF, long feelsLikeF, long windMph, int wmo, long highF, long lowF, String sky,
       String description, List<WeatherSoon> next) {}

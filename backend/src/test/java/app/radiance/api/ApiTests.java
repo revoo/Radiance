@@ -274,7 +274,9 @@ class ApiTests {
         .andExpect(jsonPath("$.talkedAbout[?(@.title == 'A story nobody has posted yet')]").isEmpty())
         // regression, both ways: a story from a non-friend's post was a 404 behind a spinner, and then hiding
         // those emptied the whole tile on a fresh world, where no friend had posted any. A news take is out in the open
-        .andExpect(jsonPath("$.talkedAbout[?(@.title == 'A story only strangers posted')]").exists());
+        .andExpect(jsonPath("$.talkedAbout[?(@.title == 'A story only strangers posted')]").exists())
+        // someone who just posted shows when they were on, unless they're around and it says where they are
+        .andExpect(jsonPath("$.presence", org.hamcrest.Matchers.aMapWithSize(org.hamcrest.Matchers.greaterThan(0))));
     mvc.perform(get("/api/posts/" + stranger).with(R)).andExpect(status().isOk());
   }
 

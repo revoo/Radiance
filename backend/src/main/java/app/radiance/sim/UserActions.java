@@ -47,6 +47,9 @@ public final class UserActions {
   public record Reading(Map<String, Double> features, List<String> topics, double controversy, String stance,
       String appraisalJson) {}
 
+  private static final long NOTICED_BACK_REST = 4 * 86_400_000L;
+  private static final double NOTICED_BACK_ODDS = 0.35;
+
   /** Below this meter, a resident leaves R's request pending. */
   private static final double ACCEPTS_FROM_METER = 0;
   private static final double ASKS_FROM_METER = 25;
@@ -208,6 +211,64 @@ public final class UserActions {
     return engine.locked(w -> {
       var comment = item(w, commentId);
       return comment == null ? new Script() : new LiveResponder(engine.lib(), engine.knobs()).onComment(w, comment, r.features(), now, HORIZON);
+    });
+  }
+
+  /** The community's next small move while R is on: see {@link Chatter}. */
+  public Chatter.Beat chatter(Chatter.State st, long now, long lands, RandomSource rng) {
+    return engine.locked(w -> new Chatter(engine.lib(), engine.knobs(), w, chatterPlan(w, now), st, now, lands, rng).next());
+  }
+
+  /** A resident deletes their own comment. Returns its post. */
+  public Optional<String> takeBack(String commentId) {
+    return engine.locked(w -> {
+      var c = item(w, commentId);
+      if (c == null || c.type != Item.Type.COMMENT) return Optional.<String>empty();
+      c.status = AirStatus.DROPPED;
+      var post = w.items.get(c.postId);
+      if (post != null) {
+        post.commenters.remove(c.authorId);
+        post.commentCount = Math.max(0, post.commentCount - 1);
+      }
+      lane.run(() -> sql.commit(new UnitOfWork()
+          .add("UPDATE comment SET air_status = 'DROPPED', render_status = 'DROPPED' WHERE id = ?", commentId)
+          .add("UPDATE post SET comment_count = (SELECT COUNT(*) FROM comment c WHERE c.post_id = post.id AND c.air_status = 'AIRED' AND c.render_status = 'RENDERED') WHERE id = ?", c.postId)));
+      return Optional.of(c.postId);
+    });
+  }
+
+  /** Someone around reacts to something recent. */
+  public Script chatterReaction(Chatter.State st, long now, long lands, RandomSource rng) {
+    return engine.locked(w -> new Chatter(engine.lib(), engine.knobs(), w, chatterPlan(w, now), st, now, lands, rng).reaction());
+  }
+
+  private Plan chatterPlan(SimWorld w, long t) {
+    return new Plan(w, engine.lib(), engine.knobs(), new Slice(t, t + 3_600_000L, Fidelity.FULL),
+        new Plan.Inputs(List.of(), engine.weather(t - 3_600_000L, t + 3_600_000L), Set.of(), Map.of(), ContentOrigin.LIVE), new HashMap<>());
+  }
+
+  /**
+   * A friend noticing R is back, sparingly: only after a real absence, not often, and otherwise never. A stock line
+   * would be a tell inside a week, so the brief asks for their own words.
+   */
+  public Script noticedBack(long now, RandomSource rng) {
+    return engine.locked(w -> {
+      var plan = plan(w, now);
+      long lately = sql.queryOne("SELECT COUNT(*) AS n FROM dm_message WHERE created_at > ? AND brief_json LIKE '%noticedBack%'",
+          List.of(now - NOTICED_BACK_REST), x -> x.lng("n")).orElse(0L);
+      if (lately > 0 || !rng.chance(NOTICED_BACK_ODDS)) return plan.script;
+      var friends = w.residents().stream().filter(b -> {
+        var e = w.edgeOrNull(b.id, w.userId);
+        return e != null && e.connected && e.affinity >= 30;
+      }).toList();
+      if (friends.isEmpty()) return plan.script;
+      var b = friends.get(rng.nextInt(friends.size()));
+      var extra = new java.util.LinkedHashMap<String, Object>();
+      extra.put("noticedBack", true);
+      plan.dm("noticed-back:" + b.id + ":" + now, now + HORIZON, b.id, w.userId, new Brief(null, "DM",
+          "R has just turned up again after being away a while, and this person noticed; one casual line, in their own words, no stock phrase", Stance.SUPPORT.name(), w.userId,
+          "dm_warm", List.of(), 0, 0, extra));
+      return plan.script;
     });
   }
 

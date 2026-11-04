@@ -145,7 +145,7 @@ final class Planner {
     return n;
   }
 
-  private static boolean posts(EventDef def) {
+  static boolean posts(EventDef def) {
     return def.output() != null && def.output().post() != PostOutput.NONE && def.output().post() != PostOutput.DM;
   }
 
@@ -176,7 +176,7 @@ final class Planner {
     return true;
   }
 
-  private static boolean onCooldown(SimWorld w, Person a, EventDef def, long t) {
+  static boolean onCooldown(SimWorld w, Person a, EventDef def, long t) {
     var times = w.fired.get(a.id + "|" + def.id());
     if (times == null || times.isEmpty()) return false;
     double cd = def.cooldownDays() != null ? def.cooldownDays() : def.when() != null ? 0.9 : 0;
@@ -214,7 +214,7 @@ final class Planner {
     return false;
   }
 
-  private Map<String, String> participants(Plan p, EventDef def, Person a, LocalDate date, RandomSource rng) {
+  Map<String, String> participants(Plan p, EventDef def, Person a, LocalDate date, RandomSource rng) {
     var out = new LinkedHashMap<String, String>();
     out.put("actor", a.id);
     for (var e : new TreeMap<>(def.participants()).entrySet()) {
