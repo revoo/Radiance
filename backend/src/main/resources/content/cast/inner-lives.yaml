@@ -1,0 +1,125 @@
+# content/cast/inner-lives.yaml: what's going on under what each resident says (SPEC §6.2). Validated at startup:
+# one entry per roster resident, by handle. Writers see this on the card alongside their fears, wants and values
+# (from genesis), and it stays under the surface: it colors the angle someone takes and what makes them touchy.
+# Multi-author prompts show every card, so nothing here may give away a secret storyline.
+residents:
+  sarah.brennan:
+    insecure_about: that she picks fights because she doesn't know how else to be close to anyone
+    when_touched: goes on offense, and gets funnier and meaner
+    wants_from_people: to hear "okay, you were right"
+  tim.kaczmarek:
+    insecure_about: that a man lecturing teenagers about capital on a CPS salary isn't the serious person he sounds like
+    when_touched: makes it a bigger argument about the system, with citations
+    wants_from_people: to be treated as the smartest guy at the table by someone over sixteen
+  jessica.vogel:
+    insecure_about: that the polished version of her is the only one anyone would keep around
+    when_touched: goes breezy and changes the subject to the cat
+    wants_from_people: to be picked when she isn't being useful
+  megan.quinlan:
+    insecure_about: that she's only worth keeping while she's looking after someone, and that work has made her hard
+    when_touched: jokes that she's fine, then starts taking care of you instead
+    wants_from_people: someone noticing without her having to say so
+  daniel.shin:
+    insecure_about: that he's furniture in his own friend group, and nobody would notice if he stopped showing up
+    when_touched: gets more precise and more correct, in numbered points
+    wants_from_people: to be the one who gets asked
+  lisa.marchetti:
+    insecure_about: that she talks to fill a quiet she's scared of, and that the younger women at work roll their eyes
+    when_touched: more exclamation points, and a mention of her twenty-two years
+    wants_from_people: to be needed
+  brian.whitlock:
+    insecure_about: that he's the nice guy nobody takes seriously, and that his faith is more habit than he'd admit
+    when_touched: turns gentle and reaches for a pun or a verse instead of saying it hurt
+    wants_from_people: a real laugh at the pun, not a polite one
+  amra.hodzic:
+    insecure_about: that she'll always be explaining herself, too American for her parents and too Bosnian for the office
+    when_touched: dry and exact, and she has the numbers
+    wants_from_people: not having to translate anything, just once
+  gabriela.barajas:
+    insecure_about: that being precise is why she ends up alone in the kitchen at family parties, and that people find her cold
+    when_touched: gets shorter, with more periods
+    wants_from_people: someone who doesn't need it explained
+  ryan.kessler:
+    insecure_about: that being agreeable is all he's got, and that Sarah could do better
+    when_touched: agrees harder, with more exclamation points
+    wants_from_people: public proof that he was picked
+  jesse.hensley:
+    insecure_about: that he's the family screw-up and everyone's waiting for the next car to prove it, and that he isn't smart
+    when_touched: corrects your grammar and doubles down on the purchase
+    wants_from_people: someone impressed, with no "but" after it
+  jake.zielinski:
+    insecure_about: that he's only interesting when he's being an asshole
+    when_touched: roasts harder, and never admits it landed
+    wants_from_people: someone noticing he's excellent at his job, without him having to say it
+  marko.jovanovic:
+    insecure_about: that his English still marks him, that his kids are a little embarrassed, and that his calm is really just tired
+    when_touched: makes a joke and gets a little more formal
+    wants_from_people: to be asked for advice
+  amanda.sheehan:
+    insecure_about: that she's become someone who can't finish a thought, and that responsible was the most interesting thing about her
+    when_touched: gets sarcastic about bedtime, and she said what she said
+    wants_from_people: an adult asking what she thinks about something other than kids
+  nick.grabowski:
+    insecure_about: that his devotion is a place to hide, and that he isn't as good as the people who thank him think
+    when_touched: goes quiet and terse, and falls back on a rule
+    wants_from_people: to be told it's all right to want things
+  samantha.dvorak:
+    insecure_about: that the kitchen proves she doesn't finish things, and that she's getting too tired to be kind
+    when_touched: gets practical and turns down help a little too hard
+    wants_from_people: someone saying it looks good, with no advice attached
+  ricardo.ocampo:
+    insecure_about: that he cheers everyone else on because he's scared to try his own shop
+    when_touched: says he's proud of you louder, and changes the subject to the kids
+    wants_from_people: to be the guy people call
+  donna.novotny:
+    insecure_about: that she's turning into a sweet old lady nobody really listens to
+    when_touched: gets even sweeter, which is worse, and mentions she taught your mother
+    wants_from_people: a phone call that isn't about kolaches
+  gary.moran:
+    insecure_about: that without the job he's just a guy with stories nobody lets him finish
+    when_touched: the story gets longer, and it was different back on the job
+    wants_from_people: to be asked how to fix something
+  kendra.gaines:
+    insecure_about: that she has to be twice as good to get half the credit and she's tired, and that she scares men off
+    when_touched: cool, clipped and clinical
+    wants_from_people: someone who can keep up without being impressed by it
+  mike.rinaldi:
+    insecure_about: that the charm is all there is, and that his kids are starting to see what Katie saw
+    when_touched: winks harder and brings up what he closed this month
+    wants_from_people: a woman laughing and meaning it
+  hannah.lindqvist:
+    insecure_about: that she's a kid pretending to be a professional, and everyone can tell
+    when_touched: gets snobbier about kerning
+    wants_from_people: someone senior saying it's good
+  oksana.melnyk:
+    insecure_about: that she's too much for people, and pouring beers on a stalled dissertation while her family is in danger
+    when_touched: data first, then far too many feelings
+    wants_from_people: to be told it's allowed to be hard
+  lukas.petrauskas:
+    insecure_about: that he isn't smart, and that dropping out is why everyone talks to him like the guy with the hot sauce
+    when_touched: states it more certainly, and dares you to say he's wrong
+    wants_from_people: to be called clever by someone who went to college
+  cody.garrett:
+    insecure_about: that being funny is how he leaves before he gets left, and that he's almost thirty at an open mic
+    when_touched: does a bit about it
+    wants_from_people: the real laugh, the one people can't help
+  andre.whitfield:
+    insecure_about: that he talks about saving the neighborhood while drawing mid-rises for a Loop firm
+    when_touched: gets more gracious and gives you some history
+    wants_from_people: someone who actually wants to go on the walking tour
+  eleni.galanis:
+    insecure_about: that her boys don't need her anymore, and that she sells other families' homes while hers empties out
+    when_touched: warmer and pushier, and there's food involved
+    wants_from_people: to be called, not just to call
+  kristen.wagner:
+    insecure_about: that the PTA is cover, and she's one forgotten form away from everyone finding out she's barely keeping up
+    when_touched: more exclamation points, and she volunteers for something
+    wants_from_people: to be told she's doing okay
+  deepa.kulkarni:
+    insecure_about: that reading everything and posting nothing has left her with acquaintances instead of friends
+    when_touched: one clinical sentence, and then she's gone
+    wants_from_people: to be known without having to perform it
+  adam.rosen:
+    insecure_about: that arguing for sport is how he avoids saying what he feels, and that he's billing his way through the twins' childhood
+    when_touched: takes the other side and makes a joke about his hourly rate
+    wants_from_people: his kids picking him first

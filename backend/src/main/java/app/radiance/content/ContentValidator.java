@@ -41,6 +41,7 @@ final class ContentValidator {
     v.arcs();
     v.rules();
     v.roster();
+    v.innerLives();
     v.tables();
     return v.problems;
   }
@@ -450,6 +451,23 @@ final class ContentValidator {
   }
 
   // ------------------------------------------------------------------------------------------
+
+  private void innerLives() {
+    String w = "cast/inner-lives.yaml";
+    var lives = lib.innerLives().residents();
+    var handles = new java.util.HashSet<String>();
+    for (var r : lib.roster().residents()) {
+      handles.add(r.resolvedHandle());
+      var life = lives.get(r.resolvedHandle());
+      if (life == null) problem(w, "no entry for " + r.resolvedHandle());
+      else if (blank(life.insecureAbout()) || blank(life.whenTouched()) || blank(life.wantsFromPeople())) problem(w, r.resolvedHandle() + " needs all three lines");
+    }
+    for (String h : lives.keySet()) if (!handles.contains(h)) problem(w, h + " is not in the roster");
+  }
+
+  private static boolean blank(String s) {
+    return s == null || s.isBlank();
+  }
 
   private void roster() {
     var r = lib.roster();

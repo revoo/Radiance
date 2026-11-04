@@ -27,6 +27,7 @@ public record ContentLibrary(
     EngagementRules engagement,
     PacingRules pacing,
     Roster roster,
+    InnerLives innerLives,
     Map<String, List<Map<String, Object>>> tables,
     Map<String, String> prompts,
     List<ContentProperties.BlacklistEntry> blacklist) {

@@ -352,6 +352,7 @@ public final class ContextPacketBuilder {
     list(sb, "Sample posts", v.path("samplePosts"));
     list(sb, "Sample comments", v.path("sampleComments"));
     sb.append("Right now: ").append(mood(p)).append(doing(p, t)).append(".\n");
+    underneath(sb, p, t);
     var constraints = constraintLines(p, t);
     if (!constraints.isEmpty()) sb.append("Constraints: ").append(String.join(" ", constraints)).append('\n');
     var arcs = new ArrayList<String>();
@@ -441,6 +442,36 @@ public final class ContextPacketBuilder {
   private String remembered(app.radiance.memory.MemoryRow m) {
     if (m.eventId() == null) return m.text();
     return sql.queryOne("SELECT gist FROM post WHERE event_id = ? AND gist IS NOT NULL LIMIT 1", List.of(m.eventId()), r -> r.str("gist")).orElse(null);
+  }
+
+  /**
+   * What's going on under what they say (SPEC §1, the focus since v1.8): what they're insecure about, how it shows
+   * and what they fish for, from content; and what they want, fear and believe, from genesis, which no prompt read
+   * until now. One want and one fear at a time, turning over by the day, so they aren't all on about the same thing.
+   */
+  private void underneath(StringBuilder sb, Person p, long t) {
+    if (p.user) return;
+    var life = lib.innerLives().residents().get(p.handle);
+    if (life != null) {
+      sb.append("Underneath, never said out loud: insecure ").append(life.insecureAbout()).append("; when that's touched, ")
+          .append(life.whenTouched()).append("; wants from people: ").append(life.wantsFromPeople()).append(".\n");
+    }
+    var row = personas.get(p.id);
+    if (row == null) return;
+    long day = world.date(t).toEpochDay();
+    var mind = new ArrayList<String>();
+    pick(row.desiresJson(), day, p.handle).ifPresent(x -> mind.add("wants: " + x));
+    pick(row.fearsJson(), day, p.handle).ifPresent(x -> mind.add("afraid of: " + x));
+    if (!mind.isEmpty()) sb.append("On their mind lately: ").append(String.join("; ", mind)).append(".\n");
+    var values = new ArrayList<String>();
+    Json.tree(row.valuesJson() == null ? "[]" : row.valuesJson()).forEach(x -> values.add(x.asString("")));
+    if (!values.isEmpty()) sb.append("Believes in: ").append(String.join("; ", values)).append(".\n");
+  }
+
+  private static java.util.Optional<String> pick(String json, long day, String handle) {
+    var all = new ArrayList<String>();
+    Json.tree(json == null ? "[]" : json).forEach(x -> all.add(x.asString("")));
+    return all.isEmpty() ? java.util.Optional.empty() : java.util.Optional.of(all.get((int) Math.floorMod(day + handle.hashCode(), (long) all.size())));
   }
 
   /** Their catchphrases, less any they've used lately. Regression: "I have receipts" in 92 of one person's items in a month. */

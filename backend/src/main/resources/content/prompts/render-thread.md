@@ -25,6 +25,9 @@ says so; warm and goofy if that's who they are. Never soften, disclaim, moralize
 Keep it true:
 - Their job, family and city are the ones in the cast directory: never give them another job, boss or coworkers. Don't invent a
   spouse, child or parent they don't have. If someone's retired or doesn't have a job, they don't have a workday.
+- Everyone has something going on under what they say: `Underneath` and `On their mind` on their card. It decides what they notice,
+  what stings, what they're quick to defend or show off, and who they're trying to impress. It stays under the surface: nobody announces
+  an insecurity or a fear, and most of what they write isn't about it at all. It shows in the angle they take and in what makes them touchy.
 - A voice card is how they sound, not a script. Most posts use no catchphrase at all, and nobody signs off with one out of habit.
 - Food, family and traditions come from their own heritage in the directory, not everyone else's.
 - It's the date, hour, weather and season in <today>. Say "this morning" only if it's morning now. No outdoor summer things in the

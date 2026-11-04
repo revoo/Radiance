@@ -1,15 +1,29 @@
 # Progress
 
 ## Resume here
-- **The pivot (R, 2026-11-03; SPEC §1 v1.8).** Believability in the moment over continuity over weeks. The test for any work: does it make the next 20 minutes feel more real and alive? Must hold: the last few minutes make sense, private stays private. Good enough: stable facts mostly stick. Frozen: arcs and long soaks; an arc that causes a bug gets cut with `arc-blacklist`. Focus: depth of character, rhythm of the community.
+- **The pivot (R, 2026-11-03; SPEC §1 v1.8).** Believability in the moment over continuity over weeks. The test for any work: does it make the next 30 minutes feel more real and alive? Must hold: the last few minutes make sense, private stays private. Good enough: stable facts mostly stick. Frozen: arcs and long soaks; an arc that causes a bug gets cut with `arc-blacklist`. Focus: depth of character, rhythm of the community.
 - **Where the pivot meets what's built:**
   - *Character depth is authored and unused.* Every resident has fears, desires and values in `persona`, and no prompt reads them. No insecurities field exists yet.
-  - *A fresh world is thin.* Live on 2026-11-03: 56 posts and 17 comments, none a reply between residents. Only the last 48 h of history is FULL fidelity, and an evening hour airs 2–3 posts and 1–3 comments, so about one new thing in 20 minutes unless R causes it.
+  - *A fresh world is thin.* Live on 2026-11-03: 56 posts and 17 comments, none a reply between residents. Only the last 48 h of history is FULL fidelity, and an evening hour airs 2–3 posts and 1–3 comments, so about two or three new things in 30 minutes unless R causes them.
   - *The engine plans a day ahead and stances are assigned in code (P1, P3).* Compatible: code still decides who speaks and how, and depth goes into how they write it. But a thread can only catch fire if the planner lets it: replies between residents are rare and capped.
   - *The feel bands (§10) will fail as activity rises* and describe a month, not 20 minutes. They move with it.
   - *Arcs are woven in, not bolted on:* planner, airing, prompts, Director tabs and genesis' pinned storylines. Freezing is free; removing would be a project and isn't proposed. `arc-blacklist` is already live-tunable.
   - *Just-finished work that's now past the line:* summaries during long chats. It was nearly done and is cheap, so it stays; no more in that direction.
-- **Proposed order:** (1) put wants, fears and values on the voice card, and author an insecurity for each of the 30; (2) measure and raise the next 20 minutes: more comments, residents answering each other, a fresh world starting at full fidelity, with the budget (about $0.05 a sim-day against $1 a day) leaving plenty of room; (3) threads that catch fire or die; (4) check the daily rise and fall once it's busier.
+- **The plan (R, 2026-11-03).** The batch writes what happened while R was gone. While he's on, residents post and talk more, generated live at a reasonable rate, starting the moment he logs in.
+  1. *Character depth* (in progress): wants, fears and values on the card, an authored inner life for each of the 30 (`cast/inner-lives.yaml`). Read by eye on real Haiku.
+  2. *Session chatter:* a loop that, while R is online, plans the next few minutes with the existing planner and renders them just before they air, so they can see what just happened. Going at once on login. A live-tunable rate.
+  3. *Threads that catch fire or die:* when a comment airs in a session, others may answer it, planned then and there.
+  4. *The batch's new job:* only what happened while R was gone. Stop pre-writing the hours he's online, and move that budget to the session.
+  5. *Check the daily rise and fall*, and let the feel bands move with all this.
+- **R's list for the session (2026-11-03), in the order I'd build it, after the chatter loop exists:**
+  - *Small human mess, which R expects to matter most:* typos with a quick correction, someone starting to type and stopping, a post edited or deleted, a reply to a two-day-old comment.
+  - *Arguments unfolding in front of you:* a couple in progress when you open the app, typing dots and replies arriving as you read, between residents and not only aimed at R. Today typing dots only show for what's aimed at R.
+  - *Presence:* new-post pills, reactions ticking up, people coming and going, texture in the contacts list ("Tim is at work", "Jessica was active 3 min ago").
+  - *Time of day:* heading to work, complaining about lunch, winding down.
+  - *Residents who come to R:* an unprompted DM, a tag on an old post of his, and being noticed when he's back ("there he is, where've you been?").
+  - *Traces of their relationships:* tagging each other, inside jokes, a public comment followed by "ok calling you". R sees only part of it.
+  - *Live moments everyone shares:* a Bears game or a storm, with the feed filling up as it happens.
+  - **Rule for all of these (R):** repetition kills them. Each has a cooldown and some randomness, and some logins stay quiet.
 - **R's UAT is under way (2026-11-03): iterate on his reports.** Live on a fresh world from `main`. Worlds are disposable until V2: no backfills. The 30-day soak and replays run from `/opt/hosting/radiance/soak` (`soak_up.sh`, `soak.py`, `uat_up.sh`, `uat.py`; own containers and data, real Haiku, fake images, fixture news because real feeds have nothing for future dates). Fixed so far: residents answering R far more often and on topic (each brief carries the words it answers), repeats and catchphrases, insults landing only after the model's reading, DM privacy (SPEC §5.6), dates in chats and canon, memory in long chats. Still open: stray lines from R's last post, kin facts that contradict (a resident's Ellie as niece and granddaughter), long texts from long-winded voices.
 - **Ready for R's UAT (2026-11-03).** docs/v1-readiness.md is the validated checklist, with findings and known limits. The approved avatars are in `/opt/hosting/radiance/avatars-approved`, the source for `data/avatars` in any new world. R is the only user: no stakeholder deliverables.
 - **First real calls, 2026-11-03.** Bake-off on the server with a throwaway data dir: 10 threads, Haiku 5.5, $0.0044, all

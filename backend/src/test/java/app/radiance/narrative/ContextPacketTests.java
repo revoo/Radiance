@@ -58,6 +58,29 @@ class ContextPacketTests {
     }
   }
 
+  /** Fears, wants and values were authored for all 30 and no prompt read them; insecurities are new. */
+  @Test
+  void aCardCarriesWhatsUnderneath_AndWhatsOnTheirMindTurnsOver() {
+    try (var sim = new Simulation(Simulation.Options.of(7, 1, Persona.WARM, dir)).run()) {
+      var w = sim.engine.world();
+      var builder = new ContextPacketBuilder(sim.sql, sim.lib, "Radiance", w);
+      var gaby = w.byHandle().get("gabriela.barajas");
+      var life = sim.lib.innerLives().residents().get("gabriela.barajas");
+      sim.sqlLane().run(() -> sim.sql.commit(new app.radiance.persistence.UnitOfWork().add("UPDATE persona SET desires_json = ?, fears_json = ?, values_json = ? WHERE actor_id = ?",
+          "[\"a greenhouse\",\"a promotion\",\"the two-flat\"]", "[\"being fooled twice\",\"Pilsen priced out\"]", "[\"being precise\"]", gaby.id)));
+      var fresh = new ContextPacketBuilder(sim.sql, sim.lib, "Radiance", w);
+      var today = fresh.people(java.util.Set.of(gaby.id), w.time, null);
+      assertThat(today).contains("Underneath", life.insecureAbout(), life.whenTouched(), life.wantsFromPeople(), "Believes in: being precise", "wants: ", "afraid of: ");
+      var minds = new java.util.HashSet<String>();
+      for (int d = 0; d < 6; d++) {
+        var card = fresh.people(java.util.Set.of(gaby.id), w.time + d * 86_400_000L, null);
+        minds.add(card.lines().filter(l -> l.startsWith("On their mind")).findFirst().orElseThrow());
+      }
+      assertThat(minds).as("what's on their mind turns over").hasSizeGreaterThan(1);
+      assertThat(builder).isNotNull();
+    }
+  }
+
   @Test
   void nonKnowersAreToldNotToHintAtASecretAndKnowersSeeIt() {
     try (var sim = new Simulation(Simulation.Options.of(7, 1, Persona.WARM, dir)).run()) {

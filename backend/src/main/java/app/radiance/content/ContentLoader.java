@@ -63,6 +63,7 @@ public final class ContentLoader {
     var engagement = one(sorted, "rules/engagement.yaml", SNAKE, EngagementRules.class, problems);
     var pacing = one(sorted, "rules/pacing.yaml", SNAKE, PacingRules.class, problems);
     var roster = one(sorted, "cast/roster.yaml", KEBAB, Roster.class, problems);
+    var innerLives = one(sorted, "cast/inner-lives.yaml", SNAKE, InnerLives.class, problems);
     var tables = tables(sorted, problems);
     var prompts = new java.util.TreeMap<String, String>();
     sorted.forEach((path, text) -> {
@@ -73,7 +74,7 @@ public final class ContentLoader {
 
     if (!problems.isEmpty()) throw new ContentException(problems);
     var library = new ContentLibrary(quirks, events, arcs, constraints, temperament,
-        weather == null ? Map.of() : Defs.ordered(weather), relationships, engagement, pacing, roster,
+        weather == null ? Map.of() : Defs.ordered(weather), relationships, engagement, pacing, roster, innerLives,
         tables, Defs.ordered(prompts), List.copyOf(blacklist));
     problems.addAll(ContentValidator.validate(library));
     if (!problems.isEmpty()) throw new ContentException(problems);
