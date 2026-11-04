@@ -7,19 +7,23 @@ import { fullTime, relativeTime } from "../ui/format.ts";
 import { Avatar, Name, RichText } from "../ui/kit.tsx";
 import { ReactionPicker } from "./ReactionPicker.tsx";
 import { ReactionSummary } from "./ReactionSummary.tsx";
+import { Sparks, useLanding, useSparks } from "./effects.tsx";
 
 /** A comment landed in the last few seconds: it flashes in, so live replies are hard to miss. */
 const FRESH_MS = 15_000;
 
-export function CommentItem({ comment, me, onReply, depth = 0 }: {
+export function CommentItem({ comment, me, onReply, depth = 0, toYou = false }: {
   comment: Comment;
   me: Actor | null | undefined;
   onReply: (c: Comment) => void;
   depth?: number;
+  /** It answers R: on his post, or under his comment. */
+  toYou?: boolean;
 }) {
   const react = useReact();
   const now = useWorldNow();
-  const fresh = !comment.author.you && now - comment.createdAt < FRESH_MS && !comment.id.startsWith("temp-");
+  const fresh = useLanding(comment.id, comment.createdAt, comment.author.you ? -1 : FRESH_MS);
+  const sparks = useSparks(fresh && toYou);
   return (
     <div className={depth ? "ml-11" : ""}>
       <div className="flex gap-2">
@@ -27,7 +31,8 @@ export function CommentItem({ comment, me, onReply, depth = 0 }: {
         <div className="min-w-0 flex-1">
           {/* the badge hangs off the bubble's right edge, over its padding, never over the words */}
           <div className="relative inline-block max-w-[calc(100%-3rem)]">
-            <div className={`rounded-2xl bg-panel-2 px-3 py-2 ${fresh ? "animate-flash" : ""}`}>
+            {sparks && <Sparks />}
+            <div className={`rounded-2xl bg-panel-2 px-3 py-2 ${fresh ? `land ${toYou ? "land-you" : ""}` : ""}`}>
               <Name actor={comment.author} className="text-[13px]" />
               <RichText text={comment.body} className="text-[15px] leading-snug" />
             </div>
@@ -64,7 +69,7 @@ export function CommentItem({ comment, me, onReply, depth = 0 }: {
       {comment.replies.length > 0 && (
         <div className="mt-2 space-y-2">
           {comment.replies.map((r) => (
-            <CommentItem key={r.id} comment={r} me={me} onReply={onReply} depth={1} />
+            <CommentItem key={r.id} comment={r} me={me} onReply={onReply} depth={1} toYou={comment.author.you} />
           ))}
         </div>
       )}
@@ -81,6 +86,7 @@ export function CommentBox({ postId, me, replyTo, onSent, inputRef }: {
   inputRef?: React.RefObject<HTMLTextAreaElement | null>;
 }) {
   const [text, setText] = useState("");
+  const [sent, setSent] = useState(0);
   const create = useCreateComment(postId, me);
   const own = useRef<HTMLTextAreaElement>(null);
   const ref = inputRef ?? own;
@@ -90,6 +96,7 @@ export function CommentBox({ postId, me, replyTo, onSent, inputRef }: {
     if (!t) return;
     create.mutate({ text: t, parentId: replyTo?.id ?? null });
     setText("");
+    setSent((n) => n + 1);
     onSent();
   };
   return (
@@ -121,7 +128,7 @@ export function CommentBox({ postId, me, replyTo, onSent, inputRef }: {
           aria-label="Send comment"
           className="rounded-full p-2 text-accent transition hover:bg-accent-soft disabled:text-faint disabled:hover:bg-transparent"
         >
-          <SendHorizontal className="size-4" />
+          <SendHorizontal key={sent} className={`size-4 ${sent > 0 ? "send-fly" : ""}`} />
         </button>
       </div>
     </div>

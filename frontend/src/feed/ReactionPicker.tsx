@@ -1,4 +1,5 @@
 import { ThumbsUp } from "lucide-react";
+import { Sparks } from "./effects.tsx";
 import { useEffect, useRef, useState } from "react";
 import { REACTION_KINDS, type ReactionKind } from "../api/types.ts";
 import { REACTION_COLOR, REACTION_EMOJI, REACTION_LABEL } from "../ui/format.ts";
@@ -116,6 +117,7 @@ export function ReactionPicker({ mine, onPick, compact = false }: {
             {REACTION_EMOJI[burst]}
           </span>
         )}
+        {burst && <Sparks count={6} />}
       </button>
     </div>
   );

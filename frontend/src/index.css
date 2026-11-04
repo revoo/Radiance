@@ -362,3 +362,165 @@ body {
     font-size: 19px;
   }
 }
+
+/* Game feel: what just happened gets a moment, once. See feed/effects.tsx. */
+@property --halo-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+/* a new post: light runs once around its edge */
+.halo::before {
+  content: "";
+  position: absolute;
+  inset: -1.5px;
+  padding: 1.5px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: conic-gradient(from var(--halo-angle), transparent 0deg, transparent 230deg, #ff8a00 285deg, #ff3d77 325deg, #7c4dff 360deg);
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  animation: halo-run 1500ms cubic-bezier(0.35, 0.1, 0.35, 1) forwards;
+}
+@keyframes halo-run {
+  0% {
+    --halo-angle: 0deg;
+    opacity: 0;
+  }
+  15%,
+  75% {
+    opacity: 1;
+  }
+  100% {
+    --halo-angle: 360deg;
+    opacity: 0;
+  }
+}
+/* R's own post gets a bloom too */
+.halo-you::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  animation: bloom 1400ms ease-out forwards;
+}
+@keyframes bloom {
+  0% {
+    box-shadow: 0 0 0 0 rgb(255 61 119 / 0.45);
+  }
+  100% {
+    box-shadow: 0 0 44px 14px rgb(124 77 255 / 0);
+  }
+}
+/* a comment landing: a small spring, its color settling, and one sweep of light */
+.land {
+  position: relative;
+  overflow: hidden;
+  transform-origin: left bottom;
+  animation: land 440ms cubic-bezier(0.34, 1.56, 0.64, 1) both, flash 1.6s ease-out;
+}
+.land::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 35%, rgb(255 61 119 / 0.2) 50%, transparent 65%);
+  transform: translateX(-120%);
+  animation: sweep 850ms ease-out 160ms forwards;
+}
+@keyframes land {
+  0% {
+    transform: translateY(8px) scale(0.94);
+    opacity: 0;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes sweep {
+  100% {
+    transform: translateX(120%);
+  }
+}
+/* an answer to R: the bubble glows for a moment */
+.land-you {
+  animation: land 440ms cubic-bezier(0.34, 1.56, 0.64, 1) both, flash 1.6s ease-out, answer-glow 1.8s ease-out;
+}
+@keyframes answer-glow {
+  0%,
+  30% {
+    box-shadow: 0 0 0 1.5px rgb(255 61 119 / 0.55), 0 0 18px rgb(255 61 119 / 0.3);
+  }
+  100% {
+    box-shadow: 0 0 0 1.5px rgb(255 61 119 / 0), 0 0 18px rgb(255 61 119 / 0);
+  }
+}
+.spark {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px;
+  border-radius: 9999px;
+  animation: spark 620ms cubic-bezier(0.15, 0.7, 0.3, 1) both;
+}
+@keyframes spark {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--dx), var(--dy)) scale(0.2);
+    opacity: 0;
+  }
+}
+.count-bump {
+  display: inline-block;
+  font-weight: 700;
+  animation: count-bump 520ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes count-bump {
+  0% {
+    transform: scale(1.5);
+    color: var(--accent);
+  }
+  100% {
+    transform: none;
+  }
+}
+/* a thread catching fire */
+.ember {
+  display: inline-block;
+  transform-origin: bottom center;
+  animation: land 320ms ease-out both, ember 900ms ease-in-out 320ms infinite alternate;
+}
+@keyframes ember {
+  0% {
+    transform: scale(1) rotate(-4deg);
+  }
+  100% {
+    transform: scale(1.14) rotate(4deg);
+  }
+}
+/* the send icon takes off */
+.send-fly {
+  animation: send-fly 460ms cubic-bezier(0.3, 0.7, 0.3, 1);
+}
+@keyframes send-fly {
+  0% {
+    transform: none;
+    opacity: 1;
+  }
+  45% {
+    transform: translate(16px, -12px) rotate(-18deg);
+    opacity: 0;
+  }
+  46% {
+    transform: translate(-10px, 6px);
+    opacity: 0;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}

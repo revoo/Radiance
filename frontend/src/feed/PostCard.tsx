@@ -7,6 +7,7 @@ import { useLive, useWorldNow } from "../live/store.ts";
 import { fullTime, relativeTime } from "../ui/format.ts";
 import { Avatar, Card, Name, RichText } from "../ui/kit.tsx";
 import { CommentBox, CommentItem } from "./Comments.tsx";
+import { CommentCount, Sparks, useLanding, useSparks } from "./effects.tsx";
 import { ReactionPicker } from "./ReactionPicker.tsx";
 import { ReactionSummary } from "./ReactionSummary.tsx";
 import { PostPhoto } from "./PostPhoto.tsx";
@@ -19,6 +20,9 @@ const EMPTY: never[] = [];
  * two preview comments with "View N more", one level of replies, and a typing row while a resident is
  * writing. {@code expanded} shows the whole thread (the post page).
  */
+/** A post this recent shows up with a little light, including when the new-posts pill brings it in. */
+const NEW_POST_MS = 120_000;
+
 export function PostCard({ post, me, expanded = false }: { post: Post; me: Actor | null | undefined; expanded?: boolean }) {
   const [open, setOpen] = useState(expanded);
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
@@ -29,6 +33,8 @@ export function PostCard({ post, me, expanded = false }: { post: Post; me: Actor
   const liveTyping = useLive((s) => s.typing[post.id] ?? EMPTY);
   const typing = liveTyping.length ? liveTyping : post.typing;
   const temp = post.id.startsWith("temp-");
+  const landing = useLanding(post.id, post.createdAt, NEW_POST_MS);
+  const sparks = useSparks(landing && post.author.you);
   const short = post.body.length <= 85 && !post.body.includes("\n");
   const shown = open && comments.data ? comments.data : post.preview;
   const hidden = Math.max(0, post.commentCount - shown.reduce((n, c) => n + 1 + c.replies.length, 0));
@@ -39,7 +45,8 @@ export function PostCard({ post, me, expanded = false }: { post: Post; me: Actor
   };
 
   return (
-    <Card className={`animate-rise overflow-visible ${temp ? "opacity-70" : ""}`}>
+    <Card className={`animate-rise relative overflow-visible ${temp ? "opacity-70" : ""} ${landing ? (post.author.you ? "halo halo-you" : "halo") : ""}`}>
+      {sparks && <Sparks count={12} />}
       <article aria-label={`Post by ${post.author.name}`}>
         <header className="flex items-center gap-3 px-4 pt-4">
           <Avatar actor={post.author} ring={post.author.you} />
@@ -73,9 +80,7 @@ export function PostCard({ post, me, expanded = false }: { post: Post; me: Actor
           <div className="flex items-center justify-between px-4 pb-2">
             <ReactionSummary reactions={post.reactions} />
             {post.commentCount > 0 && (
-              <button onClick={() => setOpen(true)} className="text-sm text-muted hover:underline">
-                {post.commentCount} comment{post.commentCount === 1 ? "" : "s"}
-              </button>
+              <CommentCount count={post.commentCount} onClick={() => setOpen(true)} />
             )}
           </div>
         )}
@@ -109,6 +114,7 @@ export function PostCard({ post, me, expanded = false }: { post: Post; me: Actor
                 key={c.id}
                 comment={c}
                 me={me}
+                toYou={post.author.you}
                 onReply={(target) => {
                   setReplyTo(target);
                   focusBox();
