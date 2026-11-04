@@ -1,3 +1,4 @@
+import { usePeople } from "../api/queries.ts";
 import type { Typing } from "../api/types.ts";
 import { Avatar } from "../ui/kit.tsx";
 
@@ -6,6 +7,8 @@ import { Avatar } from "../ui/kit.tsx";
  * yet its words, so a slow render reads as anticipation instead of a gap.
  */
 export function TypingRow({ typing }: { typing: Typing[] }) {
+  // the live event only carries a name: regression, everyone typing showed as their initials
+  const people = usePeople("all").data;
   if (typing.length === 0) return null;
   const names = typing.map((t) => t.name.split(" ")[0]);
   const text =
@@ -18,7 +21,7 @@ export function TypingRow({ typing }: { typing: Typing[] }) {
     <div className="animate-rise flex items-center gap-2 py-1" role="status" aria-live="polite">
       <span className="flex -space-x-2">
         {typing.slice(0, 3).map((t) => (
-          <Avatar key={t.actorId} actor={{ id: t.actorId, name: t.name, handle: "" }} size="xs" link={false} />
+          <Avatar key={t.actorId} actor={people?.find((p) => p.id === t.actorId) ?? { id: t.actorId, name: t.name, handle: "" }} size="xs" link={false} />
         ))}
       </span>
       <span className="flex items-center gap-1.5 rounded-2xl bg-panel-2 px-3 py-1.5 text-xs text-muted">

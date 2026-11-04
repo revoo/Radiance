@@ -1,8 +1,8 @@
-import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { keys } from "../api/queries.ts";
 import { live } from "../live/store.ts";
-import { ME, mockFetch, post, renderWith } from "../test/render.tsx";
+import { ME, mockFetch, post, renderWith, SARAH } from "../test/render.tsx";
 import { PostCard } from "./PostCard.tsx";
 import { TypingRow } from "./TypingRow.tsx";
 
@@ -78,13 +78,23 @@ describe("PostCard", () => {
 });
 
 describe("TypingRow", () => {
+  /** Regression: the live event only carries a name, so everyone typing showed as their initials. */
+  it("shows the person's real photo", async () => {
+    vi.stubGlobal("fetch", mockFetch({ "GET /api/people": [{ ...SARAH, id: "01ANN", name: "Ann Lee", avatarUrl: "/api/media/ann" }] }).fn);
+    const { container } = renderWith(<TypingRow typing={[{ actorId: "01ANN", name: "Ann Lee" }]} />);
+    await waitFor(() => expect(container.querySelector("img")).toHaveAttribute("src", "/api/media/ann"));
+    vi.unstubAllGlobals();
+  });
+
   it("names one writer, two, or a crowd", () => {
     const t = (n: string) => ({ actorId: n, name: `${n} Doe` });
-    const { rerender } = renderWith(<TypingRow typing={[t("Ann")]} />);
+    const first = renderWith(<TypingRow typing={[t("Ann")]} />);
     expect(screen.getByRole("status")).toHaveTextContent("Ann is writing a comment");
-    rerender(<TypingRow typing={[t("Ann"), t("Bo")]} />);
+    first.unmount();
+    renderWith(<TypingRow typing={[t("Ann"), t("Bo")]} />);
     expect(screen.getByRole("status")).toHaveTextContent("Ann and Bo are writing comments");
-    rerender(<TypingRow typing={[t("Ann"), t("Bo"), t("Cy")]} />);
+    cleanup();
+    renderWith(<TypingRow typing={[t("Ann"), t("Bo"), t("Cy")]} />);
     expect(screen.getByRole("status")).toHaveTextContent("Ann and 2 others are writing comments");
   });
 });
