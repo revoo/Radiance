@@ -68,7 +68,7 @@ export function PostCard({ post, me, expanded = false }: { post: Post; me: Actor
 
         {post.body && (
         <div data-testid="post-text" className="px-4 pb-3 pt-3">
-          <RichText text={post.body} className={short ? "text-[22px] font-medium leading-snug tracking-tight" : "text-[15px] leading-relaxed"} />
+          <RichText text={post.body} className={short ? "text-[23px] font-medium leading-snug tracking-tight" : "text-base leading-relaxed"} />
         </div>
         )}
 

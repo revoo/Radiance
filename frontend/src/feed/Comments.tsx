@@ -33,8 +33,8 @@ export function CommentItem({ comment, me, onReply, depth = 0, toYou = false }: 
           <div className="relative inline-block max-w-[calc(100%-3rem)]">
             {sparks && <Sparks />}
             <div className={`rounded-2xl bg-panel-2 px-3 py-2 ${fresh ? `land ${toYou ? "land-you" : ""}` : ""}`}>
-              <Name actor={comment.author} className="text-[13px]" />
-              <RichText text={comment.body} className="text-[15px] leading-snug" />
+              <Name actor={comment.author} className="text-sm" />
+              <RichText text={comment.body} className="text-base leading-snug" />
             </div>
             {comment.reactions.total > 0 && (
               <span
@@ -120,7 +120,7 @@ export function CommentBox({ postId, me, replyTo, onSent, inputRef }: {
               send();
             }
           }}
-          className="max-h-40 flex-1 resize-none bg-transparent py-1.5 text-[15px] outline-none placeholder:text-faint"
+          className="max-h-40 flex-1 resize-none bg-transparent py-1.5 text-base outline-none placeholder:text-faint"
         />
         <button
           onClick={send}

@@ -13,7 +13,7 @@ type Theme = "system" | "light" | "dark";
 
 /** Most of a desktop screen, short of lines of text too long to read. */
 const PAGE_WIDTH = "w-full max-w-[2300px]";
-const FEED_WIDTH = "max-w-[40rem] xl:max-w-[45rem] 2xl:max-w-[51rem] min-[120rem]:max-w-[54rem]";
+const FEED_WIDTH = "max-w-[42rem] xl:max-w-[47rem] 2xl:max-w-[54rem] min-[120rem]:max-w-[57rem]";
 
 function readTheme(): Theme {
   try {

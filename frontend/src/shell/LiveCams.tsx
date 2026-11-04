@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useCameras } from "../api/queries.ts";
 import { Modal } from "../ui/kit.tsx";
 
 const ROTATE_EVERY = 20_000;
 const LICENSE = "https://creativecommons.org/licenses/by-sa/2.0/";
+/** How far a finger has to travel to mean "next". */
+const SWIPE_PX = 40;
 
 /** How old a picture is, in words. Never just "live": these update every few minutes. */
 export function camAge(takenAt: number, now: number): string {
@@ -56,11 +59,26 @@ export function LiveCams() {
 
   const camera = up.length ? up[index % up.length] : undefined;
   const next = up.length > 1 ? up[(index + 1) % up.length] : undefined;
+  const previous = up.length > 2 ? up[(index - 1 + up.length) % up.length] : undefined;
+  const count = up.length;
+  const touchStart = useRef<number | null>(null);
 
-  // load the next one ahead, so its turn starts with a picture
+  // load the next one ahead, so its turn starts with a picture; and the one before, for going back in the big view
   useEffect(() => {
     if (next) new Image().src = imageUrl(next.id, now);
-  }, [next, now]);
+    if (open && previous) new Image().src = imageUrl(previous.id, now);
+  }, [next, previous, open, now]);
+
+  // in the big view, the arrow keys go through the cameras
+  useEffect(() => {
+    if (!open || count < 2) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight") setIndex((i) => (i % count + 1) % count);
+      if (e.key === "ArrowLeft") setIndex((i) => (i % count - 1 + count) % count);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, count]);
 
   if (!camera) return null;
   const src = imageUrl(camera.id, now);
@@ -112,9 +130,52 @@ export function LiveCams() {
       </div>
       {open && (
         <Modal wide title={camera.name} onClose={() => setOpen(false)}>
-          <img src={src} alt={camera.name} className="max-h-[75vh] w-full rounded-xl bg-black object-contain" />
+          <div
+            className="relative"
+            onTouchStart={(e) => {
+              touchStart.current = e.touches[0]?.clientX ?? null;
+            }}
+            onTouchEnd={(e) => {
+              const from = touchStart.current;
+              const to = e.changedTouches[0]?.clientX;
+              touchStart.current = null;
+              if (from == null || to == null || count < 2 || Math.abs(to - from) < SWIPE_PX) return;
+              setIndex((i) => (i % count + (to < from ? 1 : -1) + count) % count);
+            }}
+          >
+            <img
+              key={camera.id}
+              src={src}
+              alt={camera.name}
+              onError={() => setFailed((f) => new Set(f).add(camera.id))}
+              className="cam-in max-h-[75vh] w-full rounded-xl bg-black object-contain"
+            />
+            {count > 1 && (
+              <>
+                <button
+                  type="button"
+                  aria-label="Previous camera"
+                  onClick={() => setIndex((i) => (i % count - 1 + count) % count)}
+                  className="absolute left-2 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm transition hover:scale-105 hover:bg-black/75"
+                >
+                  <ChevronLeft className="size-6" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Next camera"
+                  onClick={() => setIndex((i) => (i % count + 1) % count)}
+                  className="absolute right-2 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm transition hover:scale-105 hover:bg-black/75"
+                >
+                  <ChevronRight className="size-6" aria-hidden="true" />
+                </button>
+              </>
+            )}
+          </div>
           <div className="flex items-center justify-between gap-2 pt-2 text-sm text-muted">
-            <span>{camAge(camera.takenAt, now)}</span>
+            <span className="tabular-nums">
+              {camAge(camera.takenAt, now)}
+              {count > 1 && ` · ${(index % count) + 1} of ${count}`}
+            </span>
             <Credit />
           </div>
         </Modal>

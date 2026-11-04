@@ -95,6 +95,48 @@ describe("LiveCams", () => {
 });
 
 describe("seeing a camera bigger", () => {
+  const CAM3 = () => [...CAMS(), { id: "ike", name: "The Ike and the Blue Line", takenAt: AGO(1) }];
+
+  it("is a carousel: arrows go through the cameras, and wrap around", async () => {
+    setup(CAM3());
+    fireEvent.click(await screen.findByRole("button", { name: /bigger/ }));
+    expect(screen.getByText(/1 of 3/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Next camera" }));
+    expect(screen.getByText(/2 of 3/)).toBeInTheDocument();
+    expect(screen.getAllByRole("img", { name: "River West skyline" }).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: "Previous camera" }));
+    fireEvent.click(screen.getByRole("button", { name: "Previous camera" }));
+    expect(screen.getByText(/3 of 3/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Next camera" }));
+    expect(screen.getByText(/1 of 3/)).toBeInTheDocument();
+  });
+
+  it("goes through them with the arrow keys and a swipe, and a short drag isn't a swipe", async () => {
+    setup(CAM3());
+    fireEvent.click(await screen.findByRole("button", { name: /bigger/ }));
+    fireEvent.keyDown(window, { key: "ArrowRight" });
+    expect(screen.getByText(/2 of 3/)).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "ArrowLeft" });
+    expect(screen.getByText(/1 of 3/)).toBeInTheDocument();
+    const picture = screen.getByRole("dialog").querySelector("img")!.parentElement!;
+    fireEvent.touchStart(picture, { touches: [{ clientX: 300 }] });
+    fireEvent.touchEnd(picture, { changedTouches: [{ clientX: 100 }] });
+    expect(screen.getByText(/2 of 3/)).toBeInTheDocument();
+    fireEvent.touchStart(picture, { touches: [{ clientX: 300 }] });
+    fireEvent.touchEnd(picture, { changedTouches: [{ clientX: 290 }] });
+    expect(screen.getByText(/2 of 3/)).toBeInTheDocument();
+  });
+
+  it("skips a camera whose picture won't load, and has no arrows with only one left", async () => {
+    setup();
+    fireEvent.click(await screen.findByRole("button", { name: /bigger/ }));
+    expect(screen.getByRole("button", { name: "Next camera" })).toBeInTheDocument();
+    fireEvent.error(screen.getByRole("dialog").querySelector("img")!);
+    await screen.findByRole("heading", { name: "River West skyline" });
+    expect(screen.queryByRole("button", { name: "Next camera" })).toBeNull();
+    expect(screen.queryByText(/of 1/)).toBeNull();
+  });
+
   it("opens over everything: regression, it used to open inside the sticky rail and sit under the feed", async () => {
     setup();
     fireEvent.click(await screen.findByRole("button", { name: /bigger/ }));

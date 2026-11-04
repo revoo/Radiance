@@ -53,7 +53,7 @@ export function RecapCard() {
                 </span>
               )}
               <div className="min-w-0 flex-1">
-                <p className="text-[15px] leading-snug">{l.line}</p>
+                <p className="text-base leading-snug">{l.line}</p>
                 <p className="mt-0.5 text-xs text-muted">{relativeTime(l.at, worldNow())}</p>
               </div>
               {l.importance >= 8 && (
