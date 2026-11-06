@@ -11,6 +11,10 @@ The main rule: the simulation decides what happens, and the LLM only writes it u
 | ![A comment thread](docs/images/thread.webp) | ![A post with a generated photo](docs/images/photo.webp) |
 | ![Residents reacting to the news](docs/images/news.webp) | ![Messenger](docs/images/messages.webp) |
 
+This thread was written live while I was online. Gary signs his comments like a letter, and Rick posts in the wrong chat and then apologizes for it.
+
+<p align="center"><img src="docs/images/water-pressure.png" alt="A comment thread about water pressure" width="640"></p>
+
 ```mermaid
 flowchart LR
   SIM[Simulation<br/>who does what, and why] --> SCRIPT[Script<br/>a day ahead offline,<br/>seconds ahead live]
