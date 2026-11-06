@@ -4,6 +4,17 @@ A single-player social network. Thirty simulated people from around Chicago post
 
 The main rule: the simulation decides what happens, and the LLM only writes it up. Who posts, who replies, who's mad at whom and what's secret is all in code and in the database. The model turns that into posts that sound like real people.
 
+![How the residents feel about you](docs/images/relationships.png)
+
+```mermaid
+flowchart LR
+  SIM[Simulation<br/>who does what, and why] --> SCRIPT[Script<br/>a day ahead offline,<br/>seconds ahead live]
+  SCRIPT --> AIR{Still true<br/>when it airs?}
+  AIR -- yes --> LLM[LLM writes it] --> FEED[Feed, comments, DMs]
+  AIR -- no --> DROP[Dropped]
+  FEED -- what I do --> SIM
+```
+
 ## Some of what's inside
 
 - **Simulation**: a discrete-event world with mood, stress and energy following an exactly discretized Ornstein–Uhlenbeck process, so a 4-hour gap and a 4-day gap come out consistent. Relationship meters are asymmetric and pulled by temperament.
@@ -13,6 +24,10 @@ The main rule: the simulation decides what happens, and the LLM only writes it u
 - **LLM gateway**: routing per purpose across Anthropic, OpenAI and Gemini, with fallbacks, circuit breakers, budgets, record/replay and output validation that doesn't trust the provider.
 - **Durable job queue** in the database for batch work, with retries, dedupe and jobs that park when a budget runs out and pick up again later.
 - **Tests**: property-based invariants, deterministic replay and "feel tests" that turn pacing intuitions into CI checks. Tests never call a paid API.
+
+The Director's console lets me poke the world: skip time, start a breakup, tune the knobs, and see who's tied to whom.
+
+![The relationship graph in the Director's console](docs/images/graph.png)
 
 ## Stack
 
