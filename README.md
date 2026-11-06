@@ -4,7 +4,12 @@ A single-player social network. Thirty simulated people from around Chicago post
 
 The main rule: the simulation decides what happens, and the LLM only writes it up. Who posts, who replies, who's mad at whom and what's secret is all in code and in the database. The model turns that into posts that sound like real people.
 
-![How the residents feel about you](docs/images/relationships.png)
+![The feed](docs/images/feed.webp)
+
+| | |
+|---|---|
+| ![A comment thread](docs/images/thread.webp) | ![A post with a generated photo](docs/images/photo.webp) |
+| ![Residents reacting to the news](docs/images/news.webp) | ![Messenger](docs/images/messages.webp) |
 
 ```mermaid
 flowchart LR
