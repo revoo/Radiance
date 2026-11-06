@@ -270,7 +270,7 @@ public final class NightlyBatch {
     int planned = 0;
     long rows = 0;
     if (scripted < now) {
-      var gap = kind == Kind.BACKFILL && arrival > 0 ? arrivalGap(scripted, now) : Fidelities.backfill(scripted, now, engine.knobs());
+      var gap = kind == Kind.BACKFILL && arrival > 0 ? arrivalGap(scripted, now, offset) : Fidelities.backfill(scripted, now, engine.knobs());
       if (!gap.isEmpty() && gap.getFirst().fidelity() == null) timeSkip(scripted, gap.getFirst().end());
       var usable = headlines.stream().filter(h -> h.publishedAt() <= now).toList();
       var back = writer.write(gap, usable, weather, primeHours(now, w.zone), ContentOrigin.BACKFILL);
@@ -372,9 +372,14 @@ public final class NightlyBatch {
     return out;
   }
 
-  /** A login's gap in drop-in mode: structure only up to the last {@code arrival}, then that much in full. */
-  List<app.radiance.sim.Slice> arrivalGap(long scripted, long now) {
-    long cut = Math.max(scripted, now - arrival);
+  /**
+   * A login's gap in drop-in mode: structure only up to the last {@code arrival}, then that much in full. Back
+   * within that window, it starts where his last visit ended: that stretch already had its live chatter.
+   */
+  List<app.radiance.sim.Slice> arrivalGap(long scripted, long now, long offset) {
+    long lastVisit = sql.queryOne("SELECT COALESCE(MAX(ended_at), 0) AS t FROM session_log WHERE started_at < (SELECT MAX(started_at) FROM session_log)",
+        List.of(), r -> r.lng("t")).orElse(0L);
+    long cut = Math.min(now, Math.max(Math.max(scripted, now - arrival), lastVisit == 0 ? 0 : lastVisit + offset));
     var out = new ArrayList<app.radiance.sim.Slice>(Fidelities.structure(scripted, cut));
     out.addAll(Fidelities.slices(cut, now, app.radiance.kernel.Fidelity.FULL));
     out.removeIf(s -> s.end() <= s.start());

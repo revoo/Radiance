@@ -320,6 +320,22 @@ class NightlyBatchTests {
     assertThat(count("SELECT COUNT(*) AS n FROM post WHERE air_status = 'AIRED' AND body IS NULL")).isZero();
   }
 
+  /** Back soon after a visit: the arrival starts where that visit ended, since its stretch had live chatter. */
+  @Test
+  void aQuickReturnOnlyFillsTheTimeSinceTheLastVisit() {
+    batch(offline(), db.holder).run(NightlyBatch.Kind.NIGHTLY);
+    db.clock.set(db.clock.nowMs() + 3 * DAY);
+    long left = db.clock.nowMs() - 10 * 60_000L;
+    db.lane.run(() -> db.sql.commit(new app.radiance.persistence.UnitOfWork()
+        .add("INSERT INTO session_log (id, started_at, ended_at) VALUES ('earlier', ?, ?)", left - 600_000L, left)
+        .add("INSERT INTO session_log (id, started_at, ended_at) VALUES ('now', ?, ?)", db.clock.nowMs(), db.clock.nowMs())));
+    var r = batch(offline(), db.holder).withArrival(java.time.Duration.ofMinutes(45)).run(NightlyBatch.Kind.BACKFILL);
+    assertThat(r.status()).isEqualTo("DONE");
+    long before = db.sql.queryOne("SELECT COUNT(*) AS n FROM post WHERE origin = 'BACKFILL' AND created_at < ?",
+        List.of(left), x -> x.lng("n")).orElseThrow();
+    assertThat(before).as("the last visit's stretch isn't written again").isZero();
+  }
+
   /** The arrival window only changes a login's backfill: a nightly run still scripts the day ahead. */
   @Test
   void theArrivalWindowLeavesANightlyRunAlone() {
