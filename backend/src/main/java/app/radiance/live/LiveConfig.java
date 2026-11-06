@@ -40,7 +40,7 @@ class LiveConfig {
       @Value("${radiance.content.softening-check:true}") boolean softening,
       @Value("${radiance.session.idle-timeout:10m}") Duration idleTimeout,
       @Value("${radiance.social.cold-shoulder-rate:1.0}") double coldShoulderRate, WeatherSources weatherSources,
-      HeadlineFeeds headlineFeeds) {
+      HeadlineFeeds headlineFeeds, @Value("${radiance.live.drop-in:false}") boolean dropIn) {
     var backfill = new LivePlay.Backfill() {
       @Override
       public boolean running() {
@@ -53,6 +53,6 @@ class LiveConfig {
       }
     };
     return new LivePlay(sql, lane, engine, actions, appraiser, gateway, clock, lease, backfill, world.networkName(),
-        softening, idleTimeout, coldShoulderRate).withNews(weatherSources, headlineFeeds).withChatter().withPictures(new OnlinePictures(sql, lane, engine, engine.lib(), batch.imageWork()));
+        softening, idleTimeout, coldShoulderRate).withNews(weatherSources, headlineFeeds).withChatter().dropIn(dropIn).withPictures(new OnlinePictures(sql, lane, engine, engine.lib(), batch.imageWork()));
   }
 }

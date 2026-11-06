@@ -21,3 +21,9 @@ radiance:
     enabled: true
   llm:
     mode: live
+  # Drop-in mode (ADR 0024): no nightly batch, nothing spent while nobody's on, and each login is a short, busy show
+  live:
+    drop-in: true
+  social:
+    user-salience: 3.0
+    max-user-share-of-attention: 0.8

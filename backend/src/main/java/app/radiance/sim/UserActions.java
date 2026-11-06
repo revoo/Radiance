@@ -216,6 +216,7 @@ public final class UserActions {
 
   /** The community's next small move while R is on: see {@link Chatter}. */
   public Chatter.Beat chatter(Chatter.State st, long now, long lands, RandomSource rng) {
+    if (st.dropIn) st.heSaidLately = heSaidLately(now);
     return engine.locked(w -> new Chatter(engine.lib(), engine.knobs(), w, chatterPlan(w, now), st, now, lands, rng, hisLines(w)).next());
   }
 
@@ -225,6 +226,15 @@ public final class UserActions {
     return sql.query("SELECT body FROM (SELECT body, created_at FROM post WHERE author_id = ? AND body IS NOT NULL AND air_status = 'AIRED'"
         + " UNION ALL SELECT body, created_at FROM comment WHERE author_id = ? AND body IS NOT NULL AND air_status = 'AIRED') ORDER BY created_at DESC LIMIT 12",
         List.of(w.userId, w.userId), r -> r.str("body")).stream().filter(x -> !x.isBlank() && x.length() <= 200).toList();
+  }
+
+  /** What R has said in public in the last three hours, newest first: what a resident might pick a fight about. */
+  private List<String> heSaidLately(long now) {
+    return sql.query("SELECT body FROM (SELECT body, created_at FROM post WHERE author_id = (SELECT id FROM actor WHERE kind <> 'BOT' LIMIT 1)"
+        + " AND body IS NOT NULL AND air_status = 'AIRED' AND created_at > ? UNION ALL SELECT body, created_at FROM comment"
+        + " WHERE author_id = (SELECT id FROM actor WHERE kind <> 'BOT' LIMIT 1) AND body IS NOT NULL AND air_status = 'AIRED' AND created_at > ?)"
+        + " ORDER BY created_at DESC LIMIT 8", List.of(now - 3 * 3_600_000L, now - 3 * 3_600_000L), r -> r.str("body"))
+        .stream().filter(x -> !x.isBlank() && x.length() <= 200).toList();
   }
 
   /** A resident deletes their own comment. Returns its post. */
@@ -422,9 +432,14 @@ public final class UserActions {
 
   /** Takes on news that broke since the batch, by residents who are online now (SPEC §5.12). */
   public Script takes(List<Headline> broke, int max, long now) {
+    return takes(broke, max, now, false);
+  }
+
+  /** As {@link #takes(List, int, long)}; {@code dropIn} (ADR 0024) lands them within minutes, by anyone who'd care, at any hour. */
+  public Script takes(List<Headline> broke, int max, long now, boolean dropIn) {
     return engine.locked(w -> {
       var plan = plan(w, now);
-      new Planner(engine.lib(), engine.knobs()).liveTakes(plan, broke, now, RandomSource.forSlice(w.seed, now).derive("live-takes"), max);
+      new Planner(engine.lib(), engine.knobs()).liveTakes(plan, broke, now, RandomSource.forSlice(w.seed, now).derive("live-takes"), max, dropIn);
       return plan.script;
     });
   }
@@ -653,24 +668,35 @@ public final class UserActions {
       // a shot at them gets a response to the shot: nobody carries on about their car
       boolean stung = said != null && Airing.UGLY.contains(said.stance);
       if (stung) stance = b.trait("agreeableness") < 40 ? Stance.MOCK : rng.chance(0.35) ? Stance.JOKE : Stance.DISAGREE;
-      String interaction = curt || stung ? "dm_curt" : stance == Stance.FLIRT ? "dm_flirt" : "dm_warm";
-      int count = curt || stung ? 1 : 1 + (rng.chance(0.4) ? 1 : 0) + (e.affinity > 30 && rng.chance(0.2) ? 1 : 0);
+      // they came to pick a fight (ADR 0024): they stay in it until R gives ground or they've said their piece
+      long fought = sql.queryOne("SELECT COUNT(*) AS n FROM dm_message WHERE thread_id = ? AND sender_id = ? AND created_at > ?"
+          + " AND brief_json LIKE '%calledOut%'", List.of(threadId, other, now - 30 * 60_000L), x -> x.lng("n")).orElse(0L);
+      boolean fighting = fought > 0;
+      boolean givesGround = said != null && said.stance != null && Set.of("SUPPORT", "HYPE", "CONGRATS", "JOKE").contains(said.stance);
+      if (fighting) stance = givesGround ? Stance.JOKE : b.trait("agreeableness") < 40 ? Stance.MOCK : Stance.DISAGREE;
+      String interaction = curt || stung || fighting ? "dm_curt" : stance == Stance.FLIRT ? "dm_flirt" : "dm_warm";
+      int count = fighting ? 1 + (rng.chance(0.45) ? 1 : 0) : curt || stung ? 1 : 1 + (rng.chance(0.4) ? 1 : 0) + (e.affinity > 30 && rng.chance(0.2) ? 1 : 0);
       long recent = sql.queryOne("SELECT COUNT(*) AS n FROM dm_message WHERE thread_id = ? AND sender_id = ?"
           + " AND created_at > ?", List.of(threadId, w.userId, now - 30 * 60_000L), x -> x.lng("n")).orElse(0L);
       // once, and then they've said it. Regression: past eight texts, Cody said "gtg, dish pit" in every reply for a month
       boolean wrappedUp = sql.queryOne("SELECT COUNT(*) AS n FROM dm_message WHERE thread_id = ? AND sender_id = ? AND created_at > ?"
           + " AND brief_json LIKE '%endConversation%'", List.of(threadId, other, now - 30 * 60_000L), x -> x.lng("n")).orElse(0L) > 0;
-      boolean wrapUp = !wrappedUp && (recent >= 12 || ("WORK".equals(b.location) && rng.chance(0.15)));
+      boolean wrapUp = !wrappedUp && (recent >= 12 || (fighting && fought >= 6) || ("WORK".equals(b.location) && rng.chance(0.15)));
       for (int i = 0; i < count; i++) {
         boolean last = i == count - 1;
-        String text = i == 0
+        String text = i == 0 && fighting
+            ? (givesGround ? "R seems to be backing down or being decent about it: they take it their way, maybe with one last jab"
+                : "keeps the argument going: they answer R's actual point and don't back down, digging in, mocking a weak argument or pushing back harder, in their own voice")
+            : i > 0 && fighting ? "one more text in the same heated burst, piling on their point"
+            : i == 0
             ? (curt ? "answer R's message curtly: short, cool, minimal effort, one line"
                 : stung ? "answer R's message: he just insulted them, and they react to that, hurt, annoyed or giving it back, however they would"
                 : "answer R's last message")
             : "a quick follow-up text in the same burst";
         if (last && wrapUp) text += "; then wrap the conversation up their way (gtg, ttyl, busy)";
         var extra = new java.util.LinkedHashMap<String, Object>();
-        extra.put("tone", curt ? "curt" : "normal");
+        extra.put("tone", curt || fighting ? "curt" : "normal");
+        if (fighting) extra.put("beat", "calledOut");
         extra.put("burst", i + 1);
         if (last && wrapUp) extra.put("endConversation", true);
         var brief = new Brief(null, "DM", text, stance.name(), w.userId, interaction, said == null ? List.of() : said.topics,

@@ -345,6 +345,11 @@ final class Planner {
 
   /** Online residents take on what broke since the batch (SPEC §5.12), {@code max} takes at most. */
   void liveTakes(Plan p, List<Headline> broke, long now, RandomSource rng, int max) {
+    liveTakes(p, broke, now, rng, max, false);
+  }
+
+  /** As above; {@code dropIn} (ADR 0024): anyone who'd care, at any hour, landing within minutes rather than half an hour. */
+  void liveTakes(Plan p, List<Headline> broke, long now, RandomSource rng, int max, boolean dropIn) {
     var w = p.w;
     var date = w.date(now);
     int hour = java.time.Instant.ofEpochMilli(now).atZone(w.zone).getHour();
@@ -352,7 +357,7 @@ final class Planner {
     int made = 0;
     while (made < max && !residents.isEmpty()) {
       var a = residents.remove(rng.nextInt(residents.size()));
-      if (Presence.curve(a, date, java.util.Set.of(), k.primeTimeBoost())[hour] <= 0) continue;
+      if (!dropIn && Presence.curve(a, date, java.util.Set.of(), k.primeTimeBoost())[hour] <= 0) continue;
       if (postsOn(p, a, now) >= STORYTELLER_POSTS_PER_DAY) continue;
       for (var def : new TreeMap<>(lib.events()).values()) {
         if (def.trigger() == null || def.trigger().headline() == null) continue;
@@ -362,7 +367,7 @@ final class Planner {
         var eligible = broke.stream().filter(h -> h.region().equals(region) && interest(a, h) >= min && !took(w, a, h)).toList();
         if (eligible.isEmpty()) continue;
         var h = pickHeadline(eligible, a, rng);
-        take(p, def, a, h, now + LiveResponder.delay(rng, 2 * MIN, 30 * MIN));
+        take(p, def, a, h, now + (dropIn ? 20_000 + made * 45_000L + LiveResponder.delay(rng, 15_000, 40_000) : LiveResponder.delay(rng, 2 * MIN, 30 * MIN)));
         w.fired.computeIfAbsent(a.id + "|news:" + h.id(), x -> new java.util.TreeSet<>()).add(now);
         made++;
         break;

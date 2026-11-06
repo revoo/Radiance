@@ -303,6 +303,32 @@ class NightlyBatchTests {
     assertThat(committed).isEqualTo(db.clock.nowMs());
   }
 
+  /** Drop-in mode (ADR 0024): a login after days away writes only the last stretch, and nothing ahead. */
+  @Test
+  void aDropInArrivalWritesOnlyTheLastStretch_AndNothingAhead() {
+    batch(offline(), db.holder).run(NightlyBatch.Kind.NIGHTLY);
+    db.clock.set(db.clock.nowMs() + 3 * DAY);
+    long now = db.clock.nowMs();
+    var r = batch(offline(), db.holder).withArrival(java.time.Duration.ofMinutes(45)).run(NightlyBatch.Kind.BACKFILL);
+    assertThat(r.status()).isEqualTo("DONE");
+    long older = db.sql.queryOne("SELECT COUNT(*) AS n FROM post WHERE origin = 'BACKFILL' AND created_at < ?",
+        List.of(now - 45 * 60_000L), x -> x.lng("n")).orElseThrow();
+    assertThat(older).as("days away are skipped, not written").isZero();
+    long scripted = db.sql.queryOne("SELECT scripted_until AS s FROM world", List.of(), x -> x.lng("s")).orElseThrow();
+    assertThat(scripted).as("no script ahead: live chatter covers the visit").isLessThanOrEqualTo(now);
+    assertThat(count("SELECT COUNT(*) AS n FROM post WHERE created_at > " + now)).isZero();
+    assertThat(count("SELECT COUNT(*) AS n FROM post WHERE air_status = 'AIRED' AND body IS NULL")).isZero();
+  }
+
+  /** The arrival window only changes a login's backfill: a nightly run still scripts the day ahead. */
+  @Test
+  void theArrivalWindowLeavesANightlyRunAlone() {
+    long now = db.clock.nowMs();
+    batch(offline(), db.holder).withArrival(java.time.Duration.ofMinutes(45)).run(NightlyBatch.Kind.NIGHTLY);
+    long scripted = db.sql.queryOne("SELECT scripted_until AS s FROM world", List.of(), x -> x.lng("s")).orElseThrow();
+    assertThat(scripted).isGreaterThan(now + 12 * HOUR);
+  }
+
   long nextFire(long now) {
     return batch(offline(), db.holder).nextRun(now);
   }

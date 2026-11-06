@@ -40,7 +40,8 @@ class BatchConfig {
       HeadlineFeeds headlines, app.radiance.media.MediaStore mediaStore, app.radiance.media.ImageGenerator generator,
       @Value("${radiance.media.images-per-sim-day:12}") int imagesPerDay, @Value("${radiance.media.daily-neuron-budget:9000}") int neuronBudget,
       @Value("${radiance.media.neurons-per-image:175}") int neuronsPerImage, app.radiance.llm.LlmConsole console,
-      @Value("${radiance.media.avatar-files:data/avatars}") java.nio.file.Path avatarFiles, app.radiance.media.PremiumImages premium) {
+      @Value("${radiance.media.avatar-files:data/avatars}") java.nio.file.Path avatarFiles, app.radiance.media.PremiumImages premium,
+      @Value("${radiance.live.drop-in:false}") boolean dropIn, @Value("${radiance.live.arrival-window:45m}") java.time.Duration arrivalWindow) {
     // a YAML list, so bind it rather than @Value it (SPEC §9: UTC Unix crons)
     List<String> crons = org.springframework.boot.context.properties.bind.Binder.get(env)
         .bind("radiance.batch.crons", org.springframework.boot.context.properties.bind.Bindable.listOf(String.class))
@@ -48,7 +49,8 @@ class BatchConfig {
     return new NightlyBatch(sql, admin, lane, lease, clock, lib, engine, writer, gateway, world.networkName(), crons,
         softening, weather, headlines)
         .withImages(new ImageWork(sql, lane, mediaStore, generator, lib, clock, new ImageWork.Limits(imagesPerDay, neuronBudget, neuronsPerImage)).withAvatarFiles(avatarFiles).withPremium(premium))
-        .withBudgetWindow(console);
+        .withBudgetWindow(console)
+        .withArrival(dropIn ? arrivalWindow : java.time.Duration.ZERO);
   }
 
   @Bean
@@ -77,9 +79,10 @@ class BatchConfig {
 
   @Bean
   BatchScheduler batchScheduler(NightlyBatch batch, Sql sql, LeaseHolder lease, WallClock clock,
-      @Value("${radiance.batch.enabled:true}") boolean enabled) {
-    // one-shot run modes (genesis, batch, bake-off) drive the batch themselves, or not at all
+      @Value("${radiance.batch.enabled:true}") boolean enabled, @Value("${radiance.live.drop-in:false}") boolean dropIn) {
+    // one-shot run modes (genesis, batch, bake-off) drive the batch themselves, or not at all;
+    // drop-in mode (ADR 0024) has no nightly batch: nothing runs, and nothing is spent, while R is away
     boolean oneShot = System.getProperty("radiance.mode") != null;
-    return new BatchScheduler(batch, sql, lease, clock, enabled && !oneShot);
+    return new BatchScheduler(batch, sql, lease, clock, enabled && !oneShot && !dropIn);
   }
 }

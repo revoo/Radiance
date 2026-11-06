@@ -84,6 +84,8 @@ public final class NightlyBatch {
   private final HeadlineFeeds headlineFeeds;
   private ImageWork imageWork;
   private app.radiance.llm.LlmConsole console;
+  /** Drop-in mode (ADR 0024): a login's backfill writes only this much, and nothing ahead. Zero: off. */
+  private long arrival;
   private final AtomicInteger running = new AtomicInteger();
 
   public NightlyBatch(Sql sql, SqlAdmin admin, WriterLane lane, LeaseHolder lease, WallClock clock, ContentLibrary lib,
@@ -122,6 +124,15 @@ public final class NightlyBatch {
   /** Gives each run its own spending window (SPEC §5.15: {@code usd:batch}). */
   public NightlyBatch withBudgetWindow(app.radiance.llm.LlmConsole console) {
     this.console = console;
+    return this;
+  }
+
+  /**
+   * Drop-in mode (ADR 0024): the backfill a login starts writes only the last {@code window} in full and skips
+   * the rest of the gap structure-only, and it writes no script ahead, since live chatter covers the session.
+   */
+  public NightlyBatch withArrival(java.time.Duration window) {
+    this.arrival = window.toMillis();
     return this;
   }
 
@@ -259,7 +270,7 @@ public final class NightlyBatch {
     int planned = 0;
     long rows = 0;
     if (scripted < now) {
-      var gap = Fidelities.backfill(scripted, now, engine.knobs());
+      var gap = kind == Kind.BACKFILL && arrival > 0 ? arrivalGap(scripted, now) : Fidelities.backfill(scripted, now, engine.knobs());
       if (!gap.isEmpty() && gap.getFirst().fidelity() == null) timeSkip(scripted, gap.getFirst().end());
       var usable = headlines.stream().filter(h -> h.publishedAt() <= now).toList();
       var back = writer.write(gap, usable, weather, primeHours(now, w.zone), ContentOrigin.BACKFILL);
@@ -274,7 +285,8 @@ public final class NightlyBatch {
     // 4–5. the next script, at the fidelity R's idle time calls for
     var fidelity = Fidelities.forIdle(w.lastSessionAt, now, engine.knobs());
     long from = Math.max(now, scriptedUntil());
-    long to = nextNight(wallStart) + offset + (long) (engine.knobs().scriptSlackHours() * HOUR);
+    long to = kind == Kind.BACKFILL && arrival > 0 ? from
+        : nextNight(wallStart) + offset + (long) (engine.knobs().scriptSlackHours() * HOUR);
     String hash;
     var usable = headlines.stream().filter(h -> h.publishedAt() <= now).toList();
     if (from < to) {
@@ -357,6 +369,15 @@ public final class NightlyBatch {
     var out = new TreeSet<Integer>();
     sql.query("SELECT started_at FROM session_log WHERE started_at >= ?", List.of(now - 14 * DAY), r -> r.lng("started_at"))
         .forEach(t -> out.add(Instant.ofEpochMilli(t).atZone(zone).getHour()));
+    return out;
+  }
+
+  /** A login's gap in drop-in mode: structure only up to the last {@code arrival}, then that much in full. */
+  List<app.radiance.sim.Slice> arrivalGap(long scripted, long now) {
+    long cut = Math.max(scripted, now - arrival);
+    var out = new ArrayList<app.radiance.sim.Slice>(Fidelities.structure(scripted, cut));
+    out.addAll(Fidelities.slices(cut, now, app.radiance.kernel.Fidelity.FULL));
+    out.removeIf(s -> s.end() <= s.start());
     return out;
   }
 

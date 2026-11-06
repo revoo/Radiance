@@ -96,6 +96,13 @@ public final class LivePlay {
   private static final long METER_HOLD = 15 * 60_000L;
   private static final long BROKE_WITHIN = 6 * 3_600_000L;
   private static final int MAX_TAKES_PER_REFRESH = 2;
+  /** Drop-in mode (ADR 0024): the login's news storm, from the last day's headlines, and how fast the room runs. */
+  private static final int DROP_IN_LOGIN_TAKES = 6;
+  private static final long DROP_IN_NEWS_WITHIN = 24 * 3_600_000L;
+  private static final long DROP_IN_OPENING = 5 * 60_000L;
+  private static final double DROP_IN_OPENING_PACE = 0.4, DROP_IN_PACE = 0.65, DROP_IN_REST_SCALE = 0.25;
+  private volatile boolean dropIn;
+  private volatile boolean loginRefresh;
 
   private final Sql sql;
   private final WriterLane lane;
@@ -223,6 +230,15 @@ public final class LivePlay {
     return this;
   }
 
+  /**
+   * Drop-in mode (ADR 0024): every login is a short show. The news comes in at once and residents pile on it,
+   * fights start and run longer, people DM R to argue about what he said, and the room moves faster.
+   */
+  public LivePlay dropIn(boolean on) {
+    this.dropIn = on;
+    return this;
+  }
+
   public LivePlay withNews(WeatherSources weatherSources, HeadlineFeeds headlineFeeds) {
     this.weatherSources = weatherSources;
     this.headlineFeeds = headlineFeeds;
@@ -256,10 +272,13 @@ public final class LivePlay {
     headlineFeeds.forWorld(seed, zone).refresh(wall);
     long batch = sql.queryOne("SELECT MAX(started_at) AS s FROM batch_run WHERE status IN ('DONE', 'PARTIAL')", List.of(),
         r -> r.isNull("s") ? 0L : r.lng("s")).orElse(0L);
-    var broke = new HeadlineRepository(sql).publishedBetween(Math.max(batch, t - BROKE_WITHIN), t + 1);
+    boolean storm = dropIn && loginRefresh;
+    loginRefresh = false;
+    long since = dropIn ? t - DROP_IN_NEWS_WITHIN : Math.max(batch, t - BROKE_WITHIN);
+    var broke = new HeadlineRepository(sql).publishedBetween(since, t + 1);
     if (broke.isEmpty()) return;
     actions.residentFriendRequests(1, t);
-    var script = actions.takes(broke, MAX_TAKES_PER_REFRESH, t);
+    var script = actions.takes(broke, storm ? DROP_IN_LOGIN_TAKES : MAX_TAKES_PER_REFRESH, t, dropIn);
     actions.save(script);
     script.posts.forEach(p -> render(p.id()));
   }
@@ -432,6 +451,12 @@ public final class LivePlay {
     dmSlots.clear();
     // a resident with a crush on R finds a reason to message him early in his session (SPEC §12 M8)
     crushAt = wall + 2 * 60_000L + (long) (sessionRng.nextDouble() * 18 * 60_000L);
+    if (dropIn) {
+      // the news comes in at login, not an hour into a visit that lasts ten minutes
+      lastRefresh = 0;
+      loginRefresh = true;
+      crushAt = wall + 60_000L + (long) (sessionRng.nextDouble() * 5 * 60_000L);
+    }
     startChatter(wall);
     String id = sessionId;
     lane.run(() -> sql.commit(new UnitOfWork().add("INSERT INTO session_log (id, started_at, ended_at) VALUES (?, ?, ?)",
@@ -935,6 +960,7 @@ public final class LivePlay {
       return;
     }
     chatterState = new app.radiance.sim.Chatter.State(chatterRests);
+    if (dropIn) chatterState.dropIn(DROP_IN_REST_SCALE);
     chatterPace = 0.8 + 0.5 * sessionRng.nextDouble();
     nextBeat = wall + draw(pacing.chatter().firstAfter());
     nextReaction = wall + draw(pacing.chatter().firstAfter()) + draw(pacing.chatter().reactionGap()) / 2;
@@ -951,8 +977,9 @@ public final class LivePlay {
   private void chatterTurn(long t, long wall) {
     if (chatterState == null) return;
     var rules = pacing.chatter();
+    double pace = !dropIn ? chatterPace : wall - sessionStart < DROP_IN_OPENING ? DROP_IN_OPENING_PACE : DROP_IN_PACE;
     if (wall >= nextReaction) {
-      nextReaction = wall + (long) (draw(rules.reactionGap()) * chatterPace);
+      nextReaction = wall + (long) (draw(rules.reactionGap()) * pace);
       actions.save(actions.chatterReaction(chatterState, t, t + 1_500, sessionRng));
     }
     if (wall >= noticeAt) {
@@ -965,7 +992,7 @@ public final class LivePlay {
     }
     // short of the budget, it goes quiet rather than spending what R's own replies need
     if (wall >= nextBeat && gateway.degradationLevel() < 2) {
-      nextBeat = wall + (long) (draw(rules.gap()) * chatterPace);
+      nextBeat = wall + (long) (draw(rules.gap()) * pace);
       long lead = draw(rules.lead());
       var beat = actions.chatter(chatterState, t, t + lead, sessionRng);
       actions.save(beat.script());
