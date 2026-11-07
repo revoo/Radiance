@@ -56,7 +56,8 @@ import org.springframework.scheduling.support.CronExpression;
  */
 public final class NightlyBatch {
 
-  public enum Kind { NIGHTLY, BACKFILL, MANUAL }
+  /** {@code ARRIVAL}: a login's backfill in drop-in mode (ADR 0024); without an arrival window it's a plain backfill. */
+  public enum Kind { NIGHTLY, BACKFILL, MANUAL, ARRIVAL }
 
   /** What one run did; {@code status} is DONE, PARTIAL (renders parked or retrying), DEFERRED or FAILED. */
   public record Report(String id, String status, long scriptFrom, long scriptTo, String fidelity, int planned,
@@ -128,7 +129,7 @@ public final class NightlyBatch {
   }
 
   /**
-   * Drop-in mode (ADR 0024): the backfill a login starts writes only the last {@code window} in full and skips
+   * Drop-in mode (ADR 0024): an {@link Kind#ARRIVAL}, the backfill a login starts, writes only the last {@code window} in full and skips
    * the rest of the gap structure-only, and it writes no script ahead, since live chatter covers the session.
    */
   public NightlyBatch withArrival(java.time.Duration window) {
@@ -270,7 +271,7 @@ public final class NightlyBatch {
     int planned = 0;
     long rows = 0;
     if (scripted < now) {
-      var gap = kind == Kind.BACKFILL && arrival > 0 ? arrivalGap(scripted, now, offset) : Fidelities.backfill(scripted, now, engine.knobs());
+      var gap = kind == Kind.ARRIVAL && arrival > 0 ? arrivalGap(scripted, now, offset) : Fidelities.backfill(scripted, now, engine.knobs());
       if (!gap.isEmpty() && gap.getFirst().fidelity() == null) timeSkip(scripted, gap.getFirst().end());
       var usable = headlines.stream().filter(h -> h.publishedAt() <= now).toList();
       var back = writer.write(gap, usable, weather, primeHours(now, w.zone), ContentOrigin.BACKFILL);
@@ -285,7 +286,7 @@ public final class NightlyBatch {
     // 4–5. the next script, at the fidelity R's idle time calls for
     var fidelity = Fidelities.forIdle(w.lastSessionAt, now, engine.knobs());
     long from = Math.max(now, scriptedUntil());
-    long to = kind == Kind.BACKFILL && arrival > 0 ? from
+    long to = kind == Kind.ARRIVAL && arrival > 0 ? from
         : nextNight(wallStart) + offset + (long) (engine.knobs().scriptSlackHours() * HOUR);
     String hash;
     var usable = headlines.stream().filter(h -> h.publishedAt() <= now).toList();

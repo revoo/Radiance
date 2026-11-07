@@ -49,7 +49,7 @@ class LiveConfig {
 
       @Override
       public void start() {
-        Thread.ofVirtual().name("live-backfill").start(() -> batch.run(NightlyBatch.Kind.BACKFILL));
+        Thread.ofVirtual().name("live-backfill").start(() -> batch.run(dropIn ? NightlyBatch.Kind.ARRIVAL : NightlyBatch.Kind.BACKFILL));
       }
     };
     return new LivePlay(sql, lane, engine, actions, appraiser, gateway, clock, lease, backfill, world.networkName(),

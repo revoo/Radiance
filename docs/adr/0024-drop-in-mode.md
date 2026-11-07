@@ -11,7 +11,7 @@ of that was never seen. R wants zero spend while he's away, and the most engagin
 ## Decision
 `radiance.live.drop-in: true` (on in `prod` and `offline`) changes only how the existing pieces are scheduled and weighted:
 - **No nightly batch.** The in-process scheduler stays off whatever `radiance.batch.enabled` says.
-- **A cheap arrival.** A login's backfill writes only the last `radiance.live.arrival-window` (45m) in full, starting no earlier than
+- **A cheap arrival.** A login's backfill (an `ARRIVAL` run; the first batch after genesis is still a full `BACKFILL`) writes only the last `radiance.live.arrival-window` (45m) in full, starting no earlier than
   where his last visit ended, and skips the rest of the gap structure-only (moods drift, arcs move on, nothing posts). It writes no
   script ahead: live chatter covers the visit. Old history stays where it was.
 - **A news storm at login.** The session's news refresh runs at login, not an hour in, looks at the last 24 hours of headlines, and lets

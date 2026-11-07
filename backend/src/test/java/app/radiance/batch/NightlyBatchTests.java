@@ -309,7 +309,7 @@ class NightlyBatchTests {
     batch(offline(), db.holder).run(NightlyBatch.Kind.NIGHTLY);
     db.clock.set(db.clock.nowMs() + 3 * DAY);
     long now = db.clock.nowMs();
-    var r = batch(offline(), db.holder).withArrival(java.time.Duration.ofMinutes(45)).run(NightlyBatch.Kind.BACKFILL);
+    var r = batch(offline(), db.holder).withArrival(java.time.Duration.ofMinutes(45)).run(NightlyBatch.Kind.ARRIVAL);
     assertThat(r.status()).isEqualTo("DONE");
     long older = db.sql.queryOne("SELECT COUNT(*) AS n FROM post WHERE origin = 'BACKFILL' AND created_at < ?",
         List.of(now - 45 * 60_000L), x -> x.lng("n")).orElseThrow();
@@ -329,11 +329,23 @@ class NightlyBatchTests {
     db.lane.run(() -> db.sql.commit(new app.radiance.persistence.UnitOfWork()
         .add("INSERT INTO session_log (id, started_at, ended_at) VALUES ('earlier', ?, ?)", left - 600_000L, left)
         .add("INSERT INTO session_log (id, started_at, ended_at) VALUES ('now', ?, ?)", db.clock.nowMs(), db.clock.nowMs())));
-    var r = batch(offline(), db.holder).withArrival(java.time.Duration.ofMinutes(45)).run(NightlyBatch.Kind.BACKFILL);
+    var r = batch(offline(), db.holder).withArrival(java.time.Duration.ofMinutes(45)).run(NightlyBatch.Kind.ARRIVAL);
     assertThat(r.status()).isEqualTo("DONE");
     long before = db.sql.queryOne("SELECT COUNT(*) AS n FROM post WHERE origin = 'BACKFILL' AND created_at < ?",
         List.of(left), x -> x.lng("n")).orElseThrow();
     assertThat(before).as("the last visit's stretch isn't written again").isZero();
+  }
+
+  /** Regression: the first batch after genesis is a BACKFILL, and the arrival window cut its two weeks of history. */
+  @Test
+  void anArrivalWindowLeavesAPlainBackfillWhole() {
+    batch(offline(), db.holder).run(NightlyBatch.Kind.NIGHTLY);
+    long from = db.clock.nowMs();
+    db.clock.set(from + 3 * DAY);
+    batch(offline(), db.holder).withArrival(java.time.Duration.ofMinutes(45)).run(NightlyBatch.Kind.BACKFILL);
+    long older = db.sql.queryOne("SELECT COUNT(*) AS n FROM post WHERE origin = 'BACKFILL' AND created_at < ?",
+        List.of(db.clock.nowMs() - DAY), x -> x.lng("n")).orElseThrow();
+    assertThat(older).as("the gap is written as before").isPositive();
   }
 
   /** The arrival window only changes a login's backfill: a nightly run still scripts the day ahead. */
