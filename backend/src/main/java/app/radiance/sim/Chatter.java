@@ -24,7 +24,7 @@ import java.util.TreeMap;
  */
 public final class Chatter {
 
-  public enum Kind { POST, COMMENT, REPLY, ARGUMENT, LATE_REPLY, TYPO, TYPING, TAKE_BACK, TAG, OFFLINE, WRONG_CHAT, AWKWARD, PULLED_IN, ASKED_FIRST, TALKED_ABOUT, GOSSIP, QUOTED, NEIGHBORHOOD, SAVED_SEAT, DM_PHOTO, PASS }
+  public enum Kind { POST, COMMENT, REPLY, ARGUMENT, LATE_REPLY, TYPO, TYPING, TAKE_BACK, TAG, OFFLINE, WRONG_CHAT, AWKWARD, PULLED_IN, ASKED_FIRST, TALKED_ABOUT, GOSSIP, QUOTED, NEIGHBORHOOD, SAVED_SEAT, DM_PHOTO, PICKED_FIGHT, CALLED_OUT, PASS }
 
   /** One turn: what to air, and for a bit of typing that comes to nothing, who and where. */
   public record Beat(Kind kind, Script script, String typingActor, String typingPost, String takeBack) {
@@ -61,12 +61,27 @@ public final class Chatter {
     final Map<String, Integer> saidOn = new HashMap<>();
     /** Something happening on one block right now, good for an hour. */
     Local local;
+    /** Drop-in mode (ADR 0024): short visits, so more happens, sooner, and fights are the main event. */
+    boolean dropIn;
+    /** How long moments rest, as a share of {@link #REST}: short visits can't wait hours for one. */
+    double restScale = 1;
+    /** What R has said in public in the last few hours, for residents who take issue with it in a DM. */
+    List<String> heSaidLately = List.of();
+    final java.util.Set<String> calledOutLines = new java.util.HashSet<>();
+    final java.util.Set<String> calledOutBy = new java.util.HashSet<>();
 
     public State() {}
 
     /** A session that remembers when each moment last happened: logging in again doesn't make it new. */
     public State(Map<Kind, Long> remembered) {
       this.lastOf = remembered;
+    }
+
+    /** Drop-in mode (ADR 0024): moments rest {@code restScale} as long, and the session leans on fights and news. */
+    public State dropIn(double restScale) {
+      this.dropIn = true;
+      this.restScale = restScale;
+      return this;
     }
   }
 
@@ -75,7 +90,11 @@ public final class Chatter {
   private static final Map<Kind, Long> REST = Map.ofEntries(Map.entry(Kind.ARGUMENT, 6 * MIN), Map.entry(Kind.LATE_REPLY, 20 * MIN), Map.entry(Kind.TYPO, 7 * MIN),
       Map.entry(Kind.TYPING, 5 * MIN), Map.entry(Kind.TAKE_BACK, 25 * MIN), Map.entry(Kind.POST, 3 * MIN), Map.entry(Kind.TAG, 10 * MIN), Map.entry(Kind.OFFLINE, 15 * MIN),
       Map.entry(Kind.WRONG_CHAT, 25 * MIN), Map.entry(Kind.AWKWARD, 20 * MIN), Map.entry(Kind.PULLED_IN, 90 * MIN), Map.entry(Kind.ASKED_FIRST, 3 * HOUR),
-      Map.entry(Kind.TALKED_ABOUT, 2 * HOUR), Map.entry(Kind.GOSSIP, 6 * HOUR), Map.entry(Kind.QUOTED, 4 * HOUR), Map.entry(Kind.NEIGHBORHOOD, 4 * HOUR), Map.entry(Kind.SAVED_SEAT, 8 * HOUR), Map.entry(Kind.DM_PHOTO, 45 * MIN));
+      Map.entry(Kind.TALKED_ABOUT, 2 * HOUR), Map.entry(Kind.GOSSIP, 6 * HOUR), Map.entry(Kind.QUOTED, 4 * HOUR), Map.entry(Kind.NEIGHBORHOOD, 4 * HOUR), Map.entry(Kind.SAVED_SEAT, 8 * HOUR), Map.entry(Kind.DM_PHOTO, 45 * MIN),
+      Map.entry(Kind.PICKED_FIGHT, 8 * MIN), Map.entry(Kind.CALLED_OUT, 12 * MIN));
+  /** Drop-in mode: the share of turns for something out of the ordinary, the share that open on a fight, and a room never emptier than this. */
+  private static final double DROP_IN_SPECIAL = 0.35, DROP_IN_CALL_OUT = 0.45, DROP_IN_NEWS_FIRST = 0.55;
+  private static final int DROP_IN_ROOM = 6;
   /** The share of turns that try for something out of the ordinary, when one has rested long enough. */
   private static final double SOMETHING_SPECIAL = 0.22;
   private static final java.util.Set<String> FEED_TEXTURE = java.util.Set.of("borrow_something", "who_knows_a_guy", "meme_post", "throwback", "locked_out");
@@ -125,20 +144,29 @@ public final class Chatter {
     if (around.isEmpty()) return Beat.of(Kind.PASS, plan.script);
     if (!st.opened) {
       st.opened = true;
-      if (rng.chance(OPENS_ON_AN_ARGUMENT)) {
+      if (st.dropIn || rng.chance(OPENS_ON_AN_ARGUMENT)) {
         var opening = startArgument(around);
+        if (opening == null && st.dropIn) opening = pickFight(around);
         if (opening != null) return opening;
       }
     }
-    if (st.argument != null && rng.chance(0.75)) {
+    if (st.argument != null && rng.chance(st.dropIn ? 0.85 : 0.75)) {
       var turn = continueArgument();
       if (turn != null) return turn;
+    }
+    if (st.dropIn && !st.heSaidLately.isEmpty() && rested(Kind.CALLED_OUT) && rng.chance(DROP_IN_CALL_OUT)) {
+      var called = calledOut(around);
+      if (called != null) return called;
+    }
+    if (st.dropIn && st.argument == null && rested(Kind.PICKED_FIGHT) && rng.chance(0.5)) {
+      var fight = pickFight(around);
+      if (fight != null) return fight;
     }
     if (st.local != null && now < st.local.until() && rng.chance(0.35)) {
       var more = aroundTheBlock();
       if (more != null) return more;
     }
-    if (rng.chance(SOMETHING_SPECIAL)) {
+    if (rng.chance(st.dropIn ? DROP_IN_SPECIAL : SOMETHING_SPECIAL)) {
       var special = special(around);
       if (special != null) return special;
     }
@@ -208,6 +236,16 @@ public final class Chatter {
       var e = user == null ? null : w.edgeOrNull(p.id, user);
       if (e != null && e.connected) here.add(p);
     }
+    if (st.dropIn && here.size() < DROP_IN_ROOM) {
+      // a short visit never finds the room empty: friends who'd usually be on later are on now
+      var more = new ArrayList<Person>();
+      for (var p : w.residents()) {
+        var e = user == null ? null : w.edgeOrNull(p.id, user);
+        if (e != null && e.connected && !here.contains(p) && st.lastBy.getOrDefault(p.id, Long.MIN_VALUE) <= now - PERSON_RESTS) more.add(p);
+      }
+      for (int i = more.size() - 1; i > 0; i--) java.util.Collections.swap(more, i, rng.nextInt(i + 1));
+      here.addAll(more.subList(0, Math.min(more.size(), DROP_IN_ROOM - here.size())));
+    }
     if (!here.isEmpty()) return here;
     // nobody R knows is on: a friend who's about to be
     for (var p : w.residents()) {
@@ -218,7 +256,7 @@ public final class Chatter {
   }
 
   private boolean rested(Kind kind) {
-    return st.lastOf.getOrDefault(kind, Long.MIN_VALUE) <= now - REST.getOrDefault(kind, 0L);
+    return st.lastOf.getOrDefault(kind, Long.MIN_VALUE) <= now - (long) (REST.getOrDefault(kind, 0L) * st.restScale);
   }
 
   private void used(Kind kind, String person) {
@@ -294,8 +332,10 @@ public final class Chatter {
         return Beat.of(Kind.COMMENT, plan.script);
       }
     }
+    var news = st.dropIn ? threads.stream().filter(i -> i.headlineId != null).toList() : List.<Item>of();
     for (int tries = 0; tries < 6; tries++) {
-      var post = threads.get(Math.min(rng.nextInt(threads.size()), rng.nextInt(threads.size())));
+      var post = !news.isEmpty() && rng.chance(DROP_IN_NEWS_FIRST) ? news.get(rng.nextInt(news.size()))
+          : threads.get(Math.min(rng.nextInt(threads.size()), rng.nextInt(threads.size())));
       if (Planner.crowded(w, post, 0)) continue;
       var b = pick(around, x -> !avoids(x, post.authorId) && !post.commenters.contains(x.id) && (knows(x, post.authorId) || post.headlineId != null));
       if (b == null) continue;
@@ -358,7 +398,7 @@ public final class Chatter {
     var b = around.stream().filter(x -> !avoids(x, other.authorId) && !avoids(x, author))
         .max(Comparator.comparingDouble((Person x) -> x.trait("argumentativeness") + 20 * rng.nextDouble()).thenComparing(x -> x.id)).orElse(null);
     if (b == null) return null;
-    st.argument = new Argument(post.id, opener.authorId, b.id, opener.id, 3 + rng.nextInt(4));
+    st.argument = new Argument(post.id, opener.authorId, b.id, opener.id, st.dropIn ? 5 + rng.nextInt(5) : 3 + rng.nextInt(4));
     return argumentTurn(st.argument);
   }
 
@@ -670,6 +710,58 @@ public final class Chatter {
         null, null, null, 2);
     used(Kind.SAVED_SEAT, a.id);
     return Beat.of(Kind.SAVED_SEAT, plan.script);
+  }
+
+  /**
+   * Drop-in mode: someone goes after a take on the news, and the poster bites. Code picks the fighter, the most
+   * argumentative person around who isn't the poster's ex, and the poster answers next as the argument carries on.
+   */
+  Beat pickFight(List<Person> around) {
+    var takes = threads().stream().filter(i -> i.headlineId != null && !i.authorId.equals(w.userId)
+        && st.saidOn.getOrDefault(i.id, 0) < THREAD_BURNS_OUT && !Planner.crowded(w, i, 0))
+        .sorted(Comparator.comparingDouble((Item i) -> -i.controversy - rng.nextDouble() * 0.3).thenComparing(i -> i.id)).toList();
+    for (var post : takes) {
+      var author = w.person(post.authorId);
+      if (author == null) continue;
+      var b = around.stream().filter(x -> !avoids(x, post.authorId) && !post.commenters.contains(x.id))
+          .max(Comparator.comparingDouble((Person x) -> x.trait("argumentativeness") - x.trait("agreeableness") / 2 + 30 * rng.nextDouble()).thenComparing(x -> x.id)).orElse(null);
+      if (b == null) continue;
+      var stance = b.trait("agreeableness") < 40 && rng.chance(0.5) ? Stance.MOCK : Stance.DISAGREE;
+      var c = plan.comment("chatter-fight:" + b.id + ":" + post.id, lands, post.id, null, b.id,
+          brief(post, stance, post.authorId, "debate_exchange", "goes after this take: says plainly why it's wrong, in their own voice, and doesn't hedge"));
+      st.argument = new Argument(post.id, b.id, post.authorId, c.id(), 5 + rng.nextInt(5));
+      used(Kind.PICKED_FIGHT, b.id);
+      st.lastOf.put(Kind.ARGUMENT, now);
+      st.saidOn.merge(post.id, 1, Integer::sum);
+      return Beat.of(Kind.PICKED_FIGHT, plan.script);
+    }
+    return null;
+  }
+
+  /**
+   * Drop-in mode: someone takes issue with something R just said in public, and tells him so in a DM. The words they
+   * quote are his, exactly; code picks who, the people likeliest to argue and least fond of him first.
+   */
+  Beat calledOut(List<Person> around) {
+    var lines = st.heSaidLately.stream().filter(x -> !st.calledOutLines.contains(x)).toList();
+    if (lines.isEmpty() || w.userId == null) return null;
+    String line = lines.get(rng.nextInt(lines.size()));
+    var pool = new ArrayList<Person>(around);
+    for (var p : w.residents()) if (!pool.contains(p) && w.edgeOrNull(p.id, w.userId) != null) pool.add(p);
+    var b = pool.stream().filter(x -> !st.calledOutBy.contains(x.id) && w.edgeOrNull(x.id, w.userId) != null && !avoids(x, w.userId))
+        .max(Comparator.comparingDouble((Person x) -> x.trait("argumentativeness") - x.trait("agreeableness") / 2
+            - w.edge(x.id, w.userId).affinity / 2 + 30 * rng.nextDouble()).thenComparing(x -> x.id)).orElse(null);
+    if (b == null) return null;
+    var stance = b.trait("agreeableness") < 40 ? Stance.MOCK : Stance.DISAGREE;
+    var extra = new java.util.LinkedHashMap<String, Object>(Plan.extra("beat", "calledOut"));
+    extra.put("said", line);
+    plan.dm("chatter-called-out:" + b.id + ":" + now, lands, b.id, w.userId, new Brief(null, "DM",
+        "messages R out of nowhere to pick a fight about something he said in public: \"" + line + "\". They quote or point at it and tell him why he's wrong or out of line, sharp and a bit heated, in their own voice, no greeting. Nothing else he said is known to them",
+        stance.name(), w.userId, "dm_curt", List.of(), 0, 0, extra));
+    st.calledOutLines.add(line);
+    st.calledOutBy.add(b.id);
+    used(Kind.CALLED_OUT, b.id);
+    return Beat.of(Kind.CALLED_OUT, plan.script);
   }
 
   /** Someone thinks better of what they just said. Never once R or anyone has answered it. */

@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockFetch } from "../test/render.tsx";
 import { live } from "./store.ts";
-import { useHeartbeat } from "./useHeartbeat.ts";
+import { AWAY_AFTER, useHeartbeat } from "./useHeartbeat.ts";
 
 afterEach(() => live.reset());
 
@@ -29,5 +29,24 @@ describe("useHeartbeat", () => {
     renderHook(() => useHeartbeat(false), { wrapper });
     await new Promise((r) => setTimeout(r, 20));
     expect(m.calls).toHaveLength(0);
+  });
+
+  it("stops beating when nobody's touched the page for a while, and beats again on the next input", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const m = mockFetch({ "POST /api/session/heartbeat": { worldTime: Date.now(), scriptedUntil: 0, backfilling: false, sessionActive: true } });
+      vi.spyOn(globalThis, "fetch").mockImplementation(m.fn);
+      renderHook(() => useHeartbeat(true), { wrapper });
+      const beats = () => m.calls.filter((c) => c.url === "/api/session/heartbeat").length;
+      await waitFor(() => expect(beats()).toBe(1));
+      await vi.advanceTimersByTimeAsync(AWAY_AFTER + 60_000);
+      const whenAway = beats();
+      await vi.advanceTimersByTimeAsync(5 * 60_000);
+      expect(beats()).toBe(whenAway);
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "a" }));
+      await waitFor(() => expect(beats()).toBe(whenAway + 1));
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

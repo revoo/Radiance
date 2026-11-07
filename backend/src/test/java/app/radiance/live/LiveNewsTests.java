@@ -208,4 +208,21 @@ class LiveNewsTests {
     live.refreshNow(t);
     assertThat(count("SELECT COUNT(*) AS n FROM post WHERE headline_id IS NOT NULL")).isZero();
   }
+
+  /** Drop-in mode (ADR 0024): the login brings the day's news, and a handful of residents take it on within minutes. */
+  @Test
+  void aDropInLoginBringsANewsStormThatLandsWithinMinutes() throws Exception {
+    live.dropIn(true);
+    live.touch();
+    long t = db.clock.nowMs();
+    broke(t - 10 * HOUR); // older than an ordinary session looks, inside the day a drop-in looks at
+    live.refreshNow(t);
+    long storm = count("SELECT COUNT(*) AS n FROM post WHERE headline_id IS NOT NULL");
+    assertThat(storm).as("more than an ordinary refresh's two").isGreaterThan(2L);
+    long last = db.sql.queryOne("SELECT MAX(created_at) AS m FROM post WHERE headline_id IS NOT NULL", List.of(), r -> r.lng("m")).orElseThrow();
+    assertThat(last - t).as("all of it within the first visit").isLessThanOrEqualTo(8 * 60_000L);
+
+    live.refreshNow(t + 1_000);
+    assertThat(count("SELECT COUNT(*) AS n FROM post WHERE headline_id IS NOT NULL") - storm).as("only the login storms").isLessThanOrEqualTo(2L);
+  }
 }

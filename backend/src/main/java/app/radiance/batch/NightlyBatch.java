@@ -56,7 +56,8 @@ import org.springframework.scheduling.support.CronExpression;
  */
 public final class NightlyBatch {
 
-  public enum Kind { NIGHTLY, BACKFILL, MANUAL }
+  /** {@code ARRIVAL}: a login's backfill in drop-in mode (ADR 0024); without an arrival window it's a plain backfill. */
+  public enum Kind { NIGHTLY, BACKFILL, MANUAL, ARRIVAL }
 
   /** What one run did; {@code status} is DONE, PARTIAL (renders parked or retrying), DEFERRED or FAILED. */
   public record Report(String id, String status, long scriptFrom, long scriptTo, String fidelity, int planned,
@@ -84,6 +85,8 @@ public final class NightlyBatch {
   private final HeadlineFeeds headlineFeeds;
   private ImageWork imageWork;
   private app.radiance.llm.LlmConsole console;
+  /** Drop-in mode (ADR 0024): a login's backfill writes only this much, and nothing ahead. Zero: off. */
+  private long arrival;
   private final AtomicInteger running = new AtomicInteger();
 
   public NightlyBatch(Sql sql, SqlAdmin admin, WriterLane lane, LeaseHolder lease, WallClock clock, ContentLibrary lib,
@@ -122,6 +125,15 @@ public final class NightlyBatch {
   /** Gives each run its own spending window (SPEC §5.15: {@code usd:batch}). */
   public NightlyBatch withBudgetWindow(app.radiance.llm.LlmConsole console) {
     this.console = console;
+    return this;
+  }
+
+  /**
+   * Drop-in mode (ADR 0024): an {@link Kind#ARRIVAL}, the backfill a login starts, writes only the last {@code window} in full and skips
+   * the rest of the gap structure-only, and it writes no script ahead, since live chatter covers the session.
+   */
+  public NightlyBatch withArrival(java.time.Duration window) {
+    this.arrival = window.toMillis();
     return this;
   }
 
@@ -259,7 +271,7 @@ public final class NightlyBatch {
     int planned = 0;
     long rows = 0;
     if (scripted < now) {
-      var gap = Fidelities.backfill(scripted, now, engine.knobs());
+      var gap = kind == Kind.ARRIVAL && arrival > 0 ? arrivalGap(scripted, now, offset) : Fidelities.backfill(scripted, now, engine.knobs());
       if (!gap.isEmpty() && gap.getFirst().fidelity() == null) timeSkip(scripted, gap.getFirst().end());
       var usable = headlines.stream().filter(h -> h.publishedAt() <= now).toList();
       var back = writer.write(gap, usable, weather, primeHours(now, w.zone), ContentOrigin.BACKFILL);
@@ -274,7 +286,8 @@ public final class NightlyBatch {
     // 4–5. the next script, at the fidelity R's idle time calls for
     var fidelity = Fidelities.forIdle(w.lastSessionAt, now, engine.knobs());
     long from = Math.max(now, scriptedUntil());
-    long to = nextNight(wallStart) + offset + (long) (engine.knobs().scriptSlackHours() * HOUR);
+    long to = kind == Kind.ARRIVAL && arrival > 0 ? from
+        : nextNight(wallStart) + offset + (long) (engine.knobs().scriptSlackHours() * HOUR);
     String hash;
     var usable = headlines.stream().filter(h -> h.publishedAt() <= now).toList();
     if (from < to) {
@@ -357,6 +370,20 @@ public final class NightlyBatch {
     var out = new TreeSet<Integer>();
     sql.query("SELECT started_at FROM session_log WHERE started_at >= ?", List.of(now - 14 * DAY), r -> r.lng("started_at"))
         .forEach(t -> out.add(Instant.ofEpochMilli(t).atZone(zone).getHour()));
+    return out;
+  }
+
+  /**
+   * A login's gap in drop-in mode: structure only up to the last {@code arrival}, then that much in full. Back
+   * within that window, it starts where his last visit ended: that stretch already had its live chatter.
+   */
+  List<app.radiance.sim.Slice> arrivalGap(long scripted, long now, long offset) {
+    long lastVisit = sql.queryOne("SELECT COALESCE(MAX(ended_at), 0) AS t FROM session_log WHERE started_at < (SELECT MAX(started_at) FROM session_log)",
+        List.of(), r -> r.lng("t")).orElse(0L);
+    long cut = Math.min(now, Math.max(Math.max(scripted, now - arrival), lastVisit == 0 ? 0 : lastVisit + offset));
+    var out = new ArrayList<app.radiance.sim.Slice>(Fidelities.structure(scripted, cut));
+    out.addAll(Fidelities.slices(cut, now, app.radiance.kernel.Fidelity.FULL));
+    out.removeIf(s -> s.end() <= s.start());
     return out;
   }
 

@@ -599,4 +599,57 @@ class LivePlayTests {
     actions.answerMentions(script, post, List.of(kristen), db.clock.nowMs());
     assertThat(script.comments).isEmpty();
   }
+
+  /**
+   * Drop-in mode (ADR 0024): nothing is spent while R is away. A session spends; once it ends, a day of the loop
+   * running makes no model call at all and starts no backfill.
+   */
+  @Test
+  void nothingIsSpentWhileRIsAway() throws Exception {
+    var calls = new java.util.concurrent.atomic.AtomicInteger();
+    var inner = gateway(null);
+    var counting = new LlmGateway() {
+      @Override
+      public <T> LlmResult<T> call(LlmRequest<T> request) {
+        calls.incrementAndGet();
+        return inner.call(request);
+      }
+
+      @Override
+      public <T> List<LlmResult<T>> callAll(List<LlmRequest<T>> requests) {
+        return requests.stream().map(this::call).toList();
+      }
+
+      @Override
+      public PromptBudget budgetFor(Purpose purpose) {
+        return inner.budgetFor(purpose);
+      }
+
+      @Override
+      public int degradationLevel() {
+        return 0;
+      }
+    };
+    var live = live(counting).withChatter().dropIn(true);
+    live.touch();
+    play(live, Duration.ofMinutes(3));
+    assertThat(live.awaitIdle(Duration.ofSeconds(20))).isTrue();
+    assertThat(calls.get()).as("a visit is lively, and that costs something").isPositive();
+
+    // R closes the tab: no more heartbeats, and the session times out
+    for (int i = 0; i < 12 * 60; i++) {
+      db.clock.advance(Duration.ofSeconds(1));
+      live.tick();
+    }
+    assertThat(live.awaitIdle(Duration.ofSeconds(20))).isTrue();
+    int atLeave = calls.get();
+    backfillStarted.set(false);
+    for (int i = 0; i < 24 * 60; i++) {
+      db.clock.advance(Duration.ofMinutes(1));
+      live.tick();
+    }
+    assertThat(live.awaitIdle(Duration.ofSeconds(20))).isTrue();
+    assertThat(calls.get()).as("a day away costs nothing").isEqualTo(atLeave);
+    assertThat(backfillStarted.get()).as("nothing is written while he's away").isFalse();
+  }
 }

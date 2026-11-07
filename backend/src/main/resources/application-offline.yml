@@ -4,3 +4,5 @@ radiance:
     dev-login: true
   llm:
     mode: fake
+  live:
+    drop-in: true                      # ADR 0024, as in prod
